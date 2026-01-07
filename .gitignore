@@ -1,0 +1,7 @@
+@'
+bin/
+obj/
+publish/
+DockBarSetup.exe
+DockBar-win-x64.zip
+'@ | Set-Content -Encoding utf8 .gitignore

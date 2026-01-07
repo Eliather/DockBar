@@ -1,0 +1,74 @@
+<Window x:Class="DockBar.StoreAppPickerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:DockBar"
+        Title="{local:Loc Key=Store_Title}"
+        SizeToContent="Height"
+        Width="420"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        WindowStyle="ToolWindow"
+        Background="{Binding BackgroundBrush}"
+        Foreground="{Binding ForegroundBrush}">
+    <Window.Resources>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{Binding ForegroundBrush}"/>
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="#1f1f1f"/>
+            <Setter Property="Foreground" Value="{Binding ForegroundBrush}"/>
+            <Setter Property="BorderBrush" Value="#444"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Margin" Value="6,0,0,0"/>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Foreground" Value="{Binding ForegroundBrush}"/>
+        </Style>
+    </Window.Resources>
+    <StackPanel Margin="12" Orientation="Vertical">
+        <TextBlock Text="{local:Loc Key=Store_Search}" FontWeight="SemiBold"/>
+        <TextBox x:Name="SearchBox"
+                 Margin="0,4,0,8"
+                 Height="28"
+                 VerticalContentAlignment="Center"
+                 TextChanged="SearchBox_TextChanged"
+                 Background="#111"
+                 Foreground="{Binding ForegroundBrush}"
+                 BorderBrush="#333"
+                 BorderThickness="1"/>
+
+        <ListBox x:Name="AppsList"
+                 ItemsSource="{Binding AppsView}"
+                 Height="320"
+                 BorderBrush="#333"
+                 BorderThickness="1"
+                 Background="#0d0d0d"
+                 Foreground="{Binding ForegroundBrush}"
+                 MouseDoubleClick="AppsList_MouseDoubleClick"
+                 SelectionMode="Single">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal" Margin="6">
+                        <StackPanel.Resources>
+                            <Style TargetType="FrameworkElement">
+                                <Setter Property="Margin" Value="0,0,8,0"/>
+                            </Style>
+                        </StackPanel.Resources>
+                        <Border Width="32" Height="32" Background="#111" CornerRadius="6" VerticalAlignment="Center">
+                            <Image Source="{Binding Icon}" Width="28" Height="28" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Orientation="Vertical">
+                            <TextBlock Text="{Binding FriendlyName}" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding AppId}" FontSize="12" Opacity="0.7"/>
+                        </StackPanel>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="{local:Loc Key=Common_Cancel}" IsCancel="True"/>
+            <Button Content="{local:Loc Key=Common_Add}" IsDefault="True" Click="Add_Click"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

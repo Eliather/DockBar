@@ -1,0 +1,304 @@
+<Window x:Class="DockBar.MainWindow"
+        x:Name="DockWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:conv="clr-namespace:DockBar.Converters"
+        Title="DockBar"
+        Width="320"
+        Height="600"
+        Topmost="True"
+        WindowStyle="None"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        RenderOptions.BitmapScalingMode="HighQuality"
+        Background="Transparent"
+        AllowsTransparency="False"
+        Loaded="Window_Loaded"
+        Activated="Window_Activated"
+        MouseEnter="Window_MouseEnter"
+        MouseLeave="Window_MouseLeave"
+        MouseMove="Window_MouseMove"
+        AllowDrop="True"
+        Drop="Window_Drop">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <conv:InverseBoolConverter x:Key="InverseBoolConverter"/>
+        <conv:IntEqualsMultiToVisibilityConverter x:Key="IntEqualsMultiToVisibilityConverter"/>
+        <conv:StringEqualsMultiToBoolConverter x:Key="StringEqualsMultiToBoolConverter"/>
+        <Style x:Key="CharmItemButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="root"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="12"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="root" Property="Background" Value="#22FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="root" Property="Background" Value="#33FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="BottomIconButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
+            <Setter Property="BorderBrush" Value="#444"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="root"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="root" Property="Background" Value="#22FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="root" Property="Background" Value="#33FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border Background="{Binding DockBackgroundBrush, RelativeSource={RelativeSource AncestorType=Window}}" Padding="10">
+        <Grid Margin="0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Normal mode paginated vertical list -->
+        <ItemsControl x:Name="NormalList"
+                      Grid.Row="0"
+                      ItemsSource="{Binding VisibleShortcuts}"
+                      HorizontalAlignment="Center"
+                      Visibility="{Binding IsEditMode, Converter={StaticResource InverseBoolConverter}}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Padding="6" Background="Transparent">
+                        <Button Style="{StaticResource CharmItemButtonStyle}"
+                                Click="Shortcut_Click"
+                                Tag="{Binding Path}">
+                            <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                                <Image Width="{Binding IconSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                       Height="{Binding IconSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                       Source="{Binding Icon}"
+                                       VerticalAlignment="Center"
+                                       Stretch="Uniform"
+                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                       SnapsToDevicePixels="True">
+                                    <Image.Effect>
+                                        <DropShadowEffect Color="#66000000"
+                                                          BlurRadius="10"
+                                                          ShadowDepth="0"
+                                                          Opacity="0.8"/>
+                                    </Image.Effect>
+                                </Image>
+                                <TextBlock Text="{Binding Name}"
+                                           Margin="0,8,0,0"
+                                           Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                           TextAlignment="Center"
+                                           TextWrapping="Wrap"
+                                           FontSize="12"
+                                           Opacity="0.9"/>
+                            </StackPanel>
+                        </Button>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- Edit mode horizontal scroll list -->
+        <ScrollViewer x:Name="EditListScroll"
+                      Grid.Row="0"
+                      Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibilityConverter}}"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding Shortcuts}"
+                          AlternationCount="1000"
+                          AllowDrop="True"
+                          PreviewMouseLeftButtonDown="ShortcutItem_PreviewMouseLeftButtonDown"
+                          PreviewMouseMove="ShortcutList_PreviewMouseMove"
+                          Drop="ShortcutList_Drop"
+                          DragOver="ShortcutList_DragOver">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Padding="6" Background="Transparent" x:Name="ItemBorder" BorderBrush="Transparent" BorderThickness="1">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="BorderBrush" Value="Transparent"/>
+                                    <Setter Property="BorderThickness" Value="1"/>
+                                    <Style.Triggers>
+                                        <DataTrigger>
+                                            <DataTrigger.Binding>
+                                                <MultiBinding Converter="{StaticResource StringEqualsMultiToBoolConverter}">
+                                                    <Binding Path="Path"/>
+                                                    <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="DragHoverPath"/>
+                                                </MultiBinding>
+                                            </DataTrigger.Binding>
+                                            <Setter Property="BorderBrush" Value="{Binding DataContext.DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                            <Setter Property="BorderThickness" Value="1.5"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Rectangle Height="1.5"
+                                           StrokeDashArray="2 2"
+                                           Stroke="{Binding DataContext.DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                           VerticalAlignment="Top">
+                                    <Rectangle.Visibility>
+                                        <MultiBinding Converter="{StaticResource IntEqualsMultiToVisibilityConverter}">
+                                            <Binding RelativeSource="{RelativeSource AncestorType=ContentPresenter}" Path="(ItemsControl.AlternationIndex)"/>
+                                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="DropInsertIndex"/>
+                                        </MultiBinding>
+                                    </Rectangle.Visibility>
+                                </Rectangle>
+                                <Button Style="{StaticResource CharmItemButtonStyle}"
+                                        Click="Shortcut_Click"
+                                        Tag="{Binding Path}"
+                                        IsHitTestVisible="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBoolConverter}}">
+                                    <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                                        <Image Width="{Binding IconSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                               Height="{Binding IconSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                               Source="{Binding Icon}"
+                                               VerticalAlignment="Center"
+                                               Stretch="Uniform"
+                                               RenderOptions.BitmapScalingMode="HighQuality"
+                                               SnapsToDevicePixels="True">
+                                            <Image.Effect>
+                                                <DropShadowEffect Color="#66000000"
+                                                                  BlurRadius="10"
+                                                                  ShadowDepth="0"
+                                                                  Opacity="0.8"/>
+                                            </Image.Effect>
+                                        </Image>
+                                        <TextBlock Text="{Binding Name}"
+                                                   Margin="0,8,0,0"
+                                                   Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                   TextAlignment="Center"
+                                                   TextWrapping="Wrap"
+                                                   FontSize="12"
+                                                   Opacity="0.9"/>
+                                    </StackPanel>
+                                </Button>
+                                <StackPanel Grid.Column="1"
+                                            Orientation="Horizontal"
+                                            VerticalAlignment="Center"
+                                            Visibility="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <Button Style="{StaticResource BottomIconButtonStyle}"
+                                            Width="28"
+                                            Height="28"
+                                            Content="✎"
+                                            Margin="4,0,0,0"
+                                            Click="Rename_Click"
+                                            Tag="{Binding Path}"/>
+                                    <Button Style="{StaticResource BottomIconButtonStyle}"
+                                            Width="28"
+                                            Height="28"
+                                            Content="🖼"
+                                            Margin="4,0,0,0"
+                                            Click="ChangeIcon_Click"
+                                            Tag="{Binding Path}"/>
+                                    <Button Style="{StaticResource BottomIconButtonStyle}"
+                                            Width="28"
+                                            Height="28"
+                                            Content="🗑"
+                                            Margin="4,0,0,0"
+                                            Click="Remove_Click"
+                                            Tag="{Binding Path}"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!-- Pagination controls (only normal mode) -->
+        <StackPanel x:Name="PaginationPanel"
+                    Grid.Row="1"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    Margin="0,8,0,4"
+                    Visibility="{Binding PaginationVisibility}">
+            <Button Style="{StaticResource BottomIconButtonStyle}"
+                    Content="◀"
+                    Width="28"
+                    Height="28"
+                    Click="PrevPage_Click"/>
+            <TextBlock Text="{Binding PageInfo}"
+                       Margin="8,0,8,0"
+                       VerticalAlignment="Center"
+                       Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
+            <Button Style="{StaticResource BottomIconButtonStyle}"
+                    Content="▶"
+                    Width="28"
+                    Height="28"
+                    Click="NextPage_Click"/>
+        </StackPanel>
+
+        <!-- Bottom buttons -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,10" >
+            <Button Style="{StaticResource BottomIconButtonStyle}"
+                    x:Name="AddButton"
+                    Content="+"
+                    Click="AddShortcutMenu_Click"/>
+            <Button Style="{StaticResource BottomIconButtonStyle}"
+                    Content="..."
+                    Margin="8,0,0,0"
+                    Click="Settings_Click"/>
+            <Button Style="{StaticResource BottomIconButtonStyle}"
+                    Content="✎"
+                    Margin="8,0,0,0"
+                    Click="ToggleEdit_Click"/>
+            <Button Style="{StaticResource BottomIconButtonStyle}"
+                    Content="×"
+                    Margin="8,0,0,0"
+                    Click="Close_Click"/>
+        </StackPanel>
+        </Grid>
+    </Border>
+</Window>

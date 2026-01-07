@@ -1,0 +1,19 @@
+<Application x:Class="DockBar.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             ShutdownMode="OnExplicitShutdown">
+    <Application.Resources>
+        <Style TargetType="Window">
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="Background" Value="#111"/>
+            <Setter Property="Foreground" Value="#f2f2f2"/>
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="#1f1f1f"/>
+            <Setter Property="Foreground" Value="#f2f2f2"/>
+            <Setter Property="BorderBrush" Value="#333"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8 6"/>
+        </Style>
+    </Application.Resources>
+</Application>

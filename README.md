@@ -1,24 +1,19 @@
 # DockBar
-A Simple Dockbar for Windows, Minimal and Practical
+A simple dockbar for Windows, minimal and practical.
 
-# DockBar
-<<<<<<< HEAD
-A Simple Dockbar for Windows, Minimal and Practical
-=======
+DockBar es una barra lateral tipo dock para Windows (WPF) con accesos directos, auto-ocultamiento suave y configuración persistente en AppData. Diseñada para ser liviana, sin polling agresivo y con enfoque en rendimiento.
 
-DockBar es una barra lateral tipo dock para Windows (WPF) con accesos directos, auto-ocultamiento suave y configuracion persistente en AppData. Disenada para ser liviana, sin polling agresivo y con enfoque en rendimiento.
-
-## Caracteristicas
+## Características
 
 - Barra lateral anclada a izquierda o derecha con ventana sin bordes y TopMost.
-- Auto-ocultamiento estilo Windows 8 (deslizamiento con un borde minimo visible).
-- Accesos directos con iconos: arrastrar y soltar .lnk, .exe o carpetas.
+- Auto-ocultamiento estilo Windows 8 (deslizamiento con un borde mínimo visible).
+- Accesos directos con íconos: arrastrar y soltar .lnk, .exe o carpetas.
 - Soporta accesos por URI/comando y apps de Microsoft Store.
-- Modo edicion: reordenar por arrastre, renombrar, cambiar icono y eliminar.
-- Paginacion en modo normal si excede el alto visible.
-- Selector de color tipo HTML (HEX + area HSV + swatches).
+- Modo edición: reordenar por arrastre, renombrar, cambiar ícono y eliminar.
+- Paginación en modo normal si excede el alto visible.
+- Selector de color tipo HTML (HEX + área HSV + swatches).
 - Ajustes persistentes en %AppData%\DockBar\shortcuts.json.
-- Icono de bandeja con menu (Abrir, Ajustes, Salir).
+- Ícono de bandeja con menú (Abrir, Ajustes, Salir).
 - Oculta su ventana en Alt+Tab y Win+Tab.
 
 ## Requisitos
@@ -33,32 +28,32 @@ En terminal dentro de la carpeta del proyecto:
 
 ```
 cd DockBar
- dotnet build
- dotnet run
+dotnet build
+dotnet run
 ```
 
 Si el build falla por archivo bloqueado, cierra la instancia de DockBar y vuelve a ejecutar.
 
-## Uso rapido
+## Uso rápido
 
 - Arrastra archivos .lnk/.exe/carpetas a la barra para agregar accesos.
-- Boton "...": abre Ajustes.
-- Boton lapiz: activa modo edicion (no se auto-oculta).
-- En modo edicion puedes arrastrar para reordenar.
+- Botón "...": abre Ajustes.
+- Botón lápiz: activa modo edición (no se auto-oculta).
+- En modo edición puedes arrastrar para reordenar.
 
 ## Funcionamiento general
 
-- Inicio: carga la configuracion desde AppData; si no existe o esta corrupta, crea un JSON predeterminado y avisa.
+- Inicio: carga la configuración desde AppData; si no existe o está corrupta, crea un JSON predeterminado y avisa.
 - Ventana: sin bordes, anclada a un lado y TopMost; se oculta en Alt+Tab y Win+Tab.
-- Bandeja: crea el icono en el tray para abrir, cambiar lado, ajustes y salir.
-- Monitor: usa el monitor mas cercano para calcular alto completo y posicion.
+- Bandeja: crea el ícono en el tray para abrir, cambiar lado, ajustes y salir.
+- Monitor: usa el monitor más cercano para calcular alto completo y posición.
 
 ## Ajustes
 
 La ventana de ajustes permite:
 
-- Ancho de barra y tamano de iconos.
-- Retardo de ocultamiento y velocidad de animacion.
+- Ancho de barra y tamaño de íconos.
+- Retardo de ocultamiento y velocidad de animación.
 - Transparencia y opacidad (afecta solo el efecto glass y el tinte del fondo).
 - Color de fondo con selector HSV y HEX.
 - Color de texto (claro u oscuro).
@@ -68,32 +63,32 @@ Nota: el color seleccionado se guarda al presionar Guardar.
 ## Selector de color (HEX + HSV)
 
 - Barra vertical de tono (Hue).
-- Area cuadrada de saturacion/valor (S/V).
-- Campo HEX (#RRGGBB) y swatches basicos.
-- No usa librerias externas; es un control WPF implementado en el proyecto.
+- Área cuadrada de saturación/valor (S/V).
+- Campo HEX (#RRGGBB) y swatches básicos.
+- No usa librerías externas; es un control WPF implementado en el proyecto.
 
-## Modo edicion
+## Modo edición
 
 - Desactiva el auto-ocultamiento y ensancha temporalmente la barra para editar.
 - Permite reordenar por arrastre y muestra indicadores visuales.
-- Botones por item: renombrar, cambiar icono y eliminar.
+- Botones por item: renombrar, cambiar ícono y eliminar.
 - El orden se guarda al soltar.
 
-## Paginacion
+## Paginación
 
-- En modo normal, calcula items por pagina segun alto del monitor e IconSize.
-- Si hay mas de una pagina, se muestran flechas de navegacion.
-- En modo edicion la lista usa scroll vertical.
+- En modo normal, calcula items por página según alto del monitor e IconSize.
+- Si hay más de una página, se muestran flechas de navegación.
+- En modo edición la lista usa scroll vertical.
 
-## Persistencia y ubicacion del JSON
+## Persistencia y ubicación del JSON
 
-Archivo de configuracion:
+Archivo de configuración:
 
 ```
 %AppData%\DockBar\shortcuts.json
 ```
 
-Si el JSON no existe o esta corrupto, la app muestra un mensaje y crea uno predeterminado.
+Si el JSON no existe o está corrupto, la app muestra un mensaje y crea uno predeterminado.
 
 ### Ejemplo de shortcuts.json
 
@@ -134,9 +129,9 @@ shell:AppsFolder\Microsoft.WindowsCalculator_8wekyb3d8bbwe!App
 
 ## Efecto glass y opacidad
 
-- El blur depende de DWM (si no esta activo, se omite).
-- El blur se aplica solo si "Usar transparencia" esta activado y la opacidad < 1.0.
-- La opacidad controla el tinte del fondo; iconos y texto no se transparentan.
+- El blur depende de DWM (si no está activo, se omite).
+- El blur se aplica solo si "Usar transparencia" está activado y la opacidad < 1.0.
+- La opacidad controla el tinte del fondo; íconos y texto no se transparentan.
 
 ## Accesos por comando o URI
 
@@ -148,69 +143,73 @@ com.epicgames.launcher://apps/fn%3A...&action=launch
 
 ## Auto-ocultamiento
 
-- Se oculta con animacion y deja 1-2px visibles para detectar hover.
+- Se oculta con animación y deja 1-2px visibles para detectar hover.
 - Usa eventos de mouse y DispatcherTimer (sin polling agresivo).
-- En modo edicion no se auto-oculta.
+- En modo edición no se auto-oculta.
 
 ## Drag and drop y acciones
 
 - Arrastrar archivos: .lnk, .exe o carpetas.
-- Accesos Store: se guardan como shell:AppsFolder y se resuelven con iconos de shell.
-- Accesos URI: se ejecutan via UseShellExecute.
+- Accesos Store: se guardan como shell:AppsFolder y se resuelven con íconos de shell.
+- Accesos URI: se ejecutan vía UseShellExecute.
 
 ## Rendimiento
 
 - Sin loops agresivos; usa timers y eventos.
-- Iconos se cargan con size alto para evitar pixelado.
-- El efecto glass depende de DWM (si no esta disponible, se omite).
+- Íconos se cargan con size alto para evitar pixelado.
+- El efecto glass depende de DWM (si no está disponible, se omite).
 
 ## Empaquetado
 
-### Opcion A: MSIX (recomendado)
+### Opción A: MSIX (recomendado)
 
 1) Instala Visual Studio 2022 con "Windows Application Packaging Project".
-2) Agrega un proyecto de empaquetado MSIX a la solucion.
-3) Configura el Appx Manifest (Nombre, Version, Logo).
-4) Establece DockBar como aplicacion principal.
+2) Agrega un proyecto de empaquetado MSIX a la solución.
+3) Configura el Appx Manifest (Nombre, Versión, Logo).
+4) Establece DockBar como aplicación principal.
 5) Compila en Release y genera el paquete.
 
-### Opcion B: Inno Setup (MSI/EXE)
+### Opción B: NSIS (EXE instalador)
 
 1) Publica la app:
 
 ```
- dotnet publish -c Release -r win-x64 --self-contained false
+dotnet publish -c Release -r win-x64 --self-contained false -o publish
 ```
 
-2) Crea un script .iss basico apuntando a la carpeta de publish.
-3) Genera instalador con Inno Setup.
+2) Genera el instalador:
 
-## Solucion de problemas
+```
+makensis DockBar.nsi
+```
 
-- No compila: asegurate de cerrar DockBar.exe.
+3) Se crea `DockBarSetup.exe`.
+
+## Solución de problemas
+
+- No compila: asegúrate de cerrar DockBar.exe.
 - El blur no aparece: DWM debe estar habilitado.
-- No aparece en Alt+Tab: es normal, la ventana se oculta a proposito.
+- No aparece en Alt+Tab: es normal, la ventana se oculta a propósito.
 - El JSON se regenera: revisa permisos en AppData o corrige el archivo corrupto.
 
 ## Estructura principal
 
-- MainWindow.xaml(.cs): UI y logica del dock.
+- MainWindow.xaml(.cs): UI y lógica del dock.
 - SettingsWindow.xaml(.cs): ajustes y selector de color.
 - Services/ConfigService.cs: carga/guardado JSON.
-- Services/IconService.cs: carga de iconos.
+- Services/IconService.cs: carga de íconos.
 
 ## Arquitectura y servicios
 
-- Models: datos de configuracion y accesos directos.
-- Services: carga/guardado de config, resolucion de iconos y apps Store.
+- Models: datos de configuración y accesos directos.
+- Services: carga/guardado de config, resolución de íconos y apps Store.
 - Windows: ventanas de UI y flujos (agregar, renombrar, ajustes).
 
 ## Notas de seguridad y privacidad
 
-- La app no envia datos ni usa red para telemetria.
+- La app no envía datos ni usa red para telemetría.
 - Todo se guarda localmente en AppData.
 
 ---
 
-Si quieres mas documentacion (XML docs o README extendido), se puede agregar.
->>>>>>> 74f093c (Initial release)
+Si quieres más documentación (XML docs o README extendido), se puede agregar.
