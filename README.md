@@ -220,4 +220,3 @@ makensis DockBar.nsi
 
 ---
 
-Si quieres más documentación (XML docs o README extendido), se puede agregar.
