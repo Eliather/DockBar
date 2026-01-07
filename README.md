@@ -3,6 +3,12 @@ A simple dockbar for Windows, minimal and practical.
 
 <img width="256" height="256" alt="Dock" src="https://github.com/user-attachments/assets/eb6fd915-77f7-4298-b41b-90a7d14f41d1" />
 
+
+
+https://github.com/user-attachments/assets/9a4ea52f-8131-471e-8bd3-89122aa3dec7
+
+
+
 DockBar es una barra lateral tipo dock para Windows (WPF) con accesos directos, auto-ocultamiento suave y configuración persistente en AppData. Diseñada para ser liviana, sin polling agresivo y con enfoque en rendimiento.
 
 ## Características
