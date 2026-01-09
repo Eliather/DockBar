@@ -47,6 +47,7 @@ public static class LocalizationService
             ["Tray_ToggleSide"] = "Cambiar lado (Izq/Der)",
             ["Tray_Settings"] = "Ajustes...",
             ["Tray_ConfigFolder"] = "Configuración",
+            ["Update_Menu"] = "Buscar actualizaciones...",
             ["Tray_Exit"] = "Salir",
 
             ["AddMenu_File"] = "Archivo / ejecutable...",
@@ -61,6 +62,13 @@ public static class LocalizationService
             ["Config_NotFound"] = "No existe configuración previa. Se creará un archivo predeterminado.",
             ["Config_ReadError"] = "No se pudo leer el archivo de configuración (corrupto o inaccesible). Se creará uno predeterminado.",
             ["AutoStart_Prompt"] = "¿Deseas iniciar DockBar con Windows?",
+
+            ["Update_Title"] = "Actualización",
+            ["Update_Available"] = "Hay una nueva versión disponible: {0}. ¿Deseas descargar e instalar ahora?",
+            ["Update_NoInstaller"] = "No se encontró el instalador en el release.",
+            ["Update_DownloadFailed"] = "No se pudo descargar el instalador.",
+            ["Update_UpToDate"] = "Ya tienes la versión más reciente.",
+            ["Update_CheckFailed"] = "No se pudo comprobar actualizaciones.",
 
             ["About_Title"] = "Acerca de DockBar",
             ["About_Version"] = "Versión",
@@ -108,6 +116,7 @@ public static class LocalizationService
             ["Tray_ToggleSide"] = "Switch side (Left/Right)",
             ["Tray_Settings"] = "Settings...",
             ["Tray_ConfigFolder"] = "Configuration",
+            ["Update_Menu"] = "Check for updates...",
             ["Tray_Exit"] = "Exit",
 
             ["AddMenu_File"] = "File / executable...",
@@ -122,6 +131,13 @@ public static class LocalizationService
             ["Config_NotFound"] = "No configuration found. A default one will be created.",
             ["Config_ReadError"] = "Could not read the configuration file (corrupt or inaccessible). A default one will be created.",
             ["AutoStart_Prompt"] = "Do you want DockBar to start with Windows?",
+
+            ["Update_Title"] = "Update",
+            ["Update_Available"] = "A new version is available: {0}. Do you want to download and install it now?",
+            ["Update_NoInstaller"] = "Installer not found in the release.",
+            ["Update_DownloadFailed"] = "Could not download the installer.",
+            ["Update_UpToDate"] = "You already have the latest version.",
+            ["Update_CheckFailed"] = "Could not check for updates.",
 
             ["About_Title"] = "About DockBar",
             ["About_Version"] = "Version",

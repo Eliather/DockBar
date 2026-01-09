@@ -7,6 +7,8 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Input;
@@ -41,6 +43,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private IntPtr _winEventHookLocation = IntPtr.Zero;
     private WinEventDelegate? _winEventDelegate;
     private bool _fullscreenCheckPending;
+    private bool _updateCheckRunning;
 
     public ObservableCollection<ShortcutItem> Shortcuts { get; } = new();
     public ObservableCollection<ShortcutItem> VisibleShortcuts { get; } = new();
@@ -260,6 +263,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         AlignDock(true);
         HookForegroundWatcher();
         ApplyGlassEffect();
+        Dispatcher.BeginInvoke(new Action(() => _ = CheckForUpdatesAsync(false)), DispatcherPriority.Background);
     }
 
     private void Window_Activated(object? sender, EventArgs e)
@@ -876,6 +880,78 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         var cfg = ConfigService.LoadConfig(out _, out _);
         ApplyAndSaveConfig(cfg);
+    }
+
+    public async Task CheckForUpdatesAsync(bool userInitiated)
+    {
+        if (_updateCheckRunning)
+        {
+            return;
+        }
+
+        _updateCheckRunning = true;
+        try
+        {
+            var latest = await UpdateService.GetLatestReleaseAsync(CancellationToken.None);
+            if (latest == null)
+            {
+                if (userInitiated)
+                {
+                    System.Windows.MessageBox.Show(this, LocalizationService.Get("Update_CheckFailed"), "DockBar", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+                return;
+            }
+
+            var current = UpdateService.GetCurrentVersion();
+            if (latest.Version <= current)
+            {
+                if (userInitiated)
+                {
+                    System.Windows.MessageBox.Show(this, LocalizationService.Get("Update_UpToDate"), LocalizationService.Get("Update_Title"), MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                return;
+            }
+
+            var prompt = string.Format(LocalizationService.Get("Update_Available"), latest.Version);
+            var result = System.Windows.MessageBox.Show(this, prompt, LocalizationService.Get("Update_Title"), MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (result != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(latest.InstallerUrl))
+            {
+                System.Windows.MessageBox.Show(this, LocalizationService.Get("Update_NoInstaller"), LocalizationService.Get("Update_Title"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var tempPath = Path.Combine(Path.GetTempPath(), $"DockBarSetup-{latest.Version}.exe");
+            var downloaded = await UpdateService.DownloadFileAsync(latest.InstallerUrl, tempPath, CancellationToken.None);
+            if (!downloaded)
+            {
+                System.Windows.MessageBox.Show(this, LocalizationService.Get("Update_DownloadFailed"), LocalizationService.Get("Update_Title"), MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = tempPath,
+                UseShellExecute = true
+            });
+            System.Windows.Application.Current.Shutdown();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+            if (userInitiated)
+            {
+                System.Windows.MessageBox.Show(this, LocalizationService.Get("Update_CheckFailed"), LocalizationService.Get("Update_Title"), MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+        finally
+        {
+            _updateCheckRunning = false;
+        }
     }
 
     private void SaveConfig()

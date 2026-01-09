@@ -35,6 +35,15 @@ public partial class App : System.Windows.Application
         contextMenu.Items.Add(LocalizationService.Get("Tray_Open"), null, (_, _) => ShowWindow());
         contextMenu.Items.Add(LocalizationService.Get("Tray_ToggleSide"), null, (_, _) => _window?.ToggleDockSide());
         contextMenu.Items.Add(LocalizationService.Get("Tray_Settings"), null, (_, _) => OpenSettingsWindow());
+        contextMenu.Items.Add(LocalizationService.Get("Update_Menu"), null, async (_, _) =>
+        {
+            if (_window == null)
+            {
+                _window = new MainWindow();
+            }
+
+            await _window.CheckForUpdatesAsync(true);
+        });
         contextMenu.Items.Add(LocalizationService.Get("Tray_ConfigFolder"), null, (_, _) => OpenConfigFolder());
         contextMenu.Items.Add(LocalizationService.Get("Tray_Exit"), null, (_, _) => ExitApp());
         _notifyIcon.ContextMenuStrip = contextMenu;
