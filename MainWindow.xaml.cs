@@ -37,8 +37,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private int _dropInsertIndex = -1;
     private double _preEditWidth;
     private bool _fullscreenActive;
-    private IntPtr _winEventHook = IntPtr.Zero;
+    private IntPtr _winEventHookForeground = IntPtr.Zero;
+    private IntPtr _winEventHookLocation = IntPtr.Zero;
     private WinEventDelegate? _winEventDelegate;
+    private bool _fullscreenCheckPending;
 
     public ObservableCollection<ShortcutItem> Shortcuts { get; } = new();
     public ObservableCollection<ShortcutItem> VisibleShortcuts { get; } = new();
@@ -912,15 +914,35 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void HookForegroundWatcher()
     {
         _winEventDelegate = new WinEventDelegate(WinEventProc);
-        _winEventHook = NativeMethods.SetWinEventHook(NativeMethods.EVENT_SYSTEM_FOREGROUND, NativeMethods.EVENT_SYSTEM_FOREGROUND, IntPtr.Zero, _winEventDelegate, 0, 0, NativeMethods.WINEVENT_OUTOFCONTEXT);
+        _winEventHookForeground = NativeMethods.SetWinEventHook(
+            NativeMethods.EVENT_SYSTEM_FOREGROUND,
+            NativeMethods.EVENT_SYSTEM_FOREGROUND,
+            IntPtr.Zero,
+            _winEventDelegate,
+            0,
+            0,
+            NativeMethods.WINEVENT_OUTOFCONTEXT);
+        _winEventHookLocation = NativeMethods.SetWinEventHook(
+            NativeMethods.EVENT_OBJECT_LOCATIONCHANGE,
+            NativeMethods.EVENT_OBJECT_LOCATIONCHANGE,
+            IntPtr.Zero,
+            _winEventDelegate,
+            0,
+            0,
+            NativeMethods.WINEVENT_OUTOFCONTEXT);
     }
 
     private void UnhookForegroundWatcher()
     {
-        if (_winEventHook != IntPtr.Zero)
+        if (_winEventHookForeground != IntPtr.Zero)
         {
-            NativeMethods.UnhookWinEvent(_winEventHook);
-            _winEventHook = IntPtr.Zero;
+            NativeMethods.UnhookWinEvent(_winEventHookForeground);
+            _winEventHookForeground = IntPtr.Zero;
+        }
+        if (_winEventHookLocation != IntPtr.Zero)
+        {
+            NativeMethods.UnhookWinEvent(_winEventHookLocation);
+            _winEventHookLocation = IntPtr.Zero;
         }
     }
 
@@ -932,7 +954,36 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void WinEventProc(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
     {
-        Dispatcher.Invoke(() => UpdateFullscreenState());
+        if (eventType == NativeMethods.EVENT_OBJECT_LOCATIONCHANGE)
+        {
+            if (idObject != NativeMethods.OBJID_WINDOW)
+            {
+                return;
+            }
+
+            var foreground = NativeMethods.GetForegroundWindow();
+            if (foreground == IntPtr.Zero || hwnd != foreground)
+            {
+                return;
+            }
+        }
+
+        ScheduleFullscreenCheck();
+    }
+
+    private void ScheduleFullscreenCheck()
+    {
+        if (_fullscreenCheckPending)
+        {
+            return;
+        }
+
+        _fullscreenCheckPending = true;
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            _fullscreenCheckPending = false;
+            UpdateFullscreenState();
+        }), DispatcherPriority.Background);
     }
 
     private void UpdateFullscreenState()
@@ -952,7 +1003,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 return;
             }
 
-            if (!NativeMethods.GetWindowRect(foreground, out var rect))
+            if (!TryGetWindowBounds(foreground, out var rect))
             {
                 SetFullscreen(false);
                 return;
@@ -966,19 +1017,28 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 return;
             }
 
-            var screenWidth = mi.rcMonitor.Right - mi.rcMonitor.Left;
-            var screenHeight = mi.rcMonitor.Bottom - mi.rcMonitor.Top;
-            var winWidth = rect.Right - rect.Left;
-            var winHeight = rect.Bottom - rect.Top;
-
-            // Consider fullscreen if window covers the monitor minus small tolerances.
-            var fullscreen = winWidth >= screenWidth - 2 && winHeight >= screenHeight - 2;
+            const int tolerance = 8;
+            var fullscreen =
+                Math.Abs(rect.Left - mi.rcMonitor.Left) <= tolerance &&
+                Math.Abs(rect.Top - mi.rcMonitor.Top) <= tolerance &&
+                Math.Abs(rect.Right - mi.rcMonitor.Right) <= tolerance &&
+                Math.Abs(rect.Bottom - mi.rcMonitor.Bottom) <= tolerance;
             SetFullscreen(fullscreen);
         }
         catch (Exception ex)
         {
             Debug.WriteLine(ex);
         }
+    }
+
+    private static bool TryGetWindowBounds(IntPtr hwnd, out NativeMethods.RECT rect)
+    {
+        rect = default;
+        if (NativeMethods.DwmGetWindowAttribute(hwnd, NativeMethods.DWMWA_EXTENDED_FRAME_BOUNDS, out rect, Marshal.SizeOf(typeof(NativeMethods.RECT))) == 0)
+        {
+            return true;
+        }
+        return NativeMethods.GetWindowRect(hwnd, out rect);
     }
 
     private void SetFullscreen(bool active)
@@ -1056,22 +1116,21 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void PrevPage_Click(object sender, RoutedEventArgs e)
     {
         if (IsEditMode) return;
-        if (_currentPage > 0)
-        {
-            _currentPage--;
-            UpdateVisibleItems();
-        }
+        var totalPages = Math.Max(1, (int)Math.Ceiling(Shortcuts.Count / (double)_itemsPerPage));
+        if (totalPages <= 1) return;
+
+        _currentPage = _currentPage <= 0 ? totalPages - 1 : _currentPage - 1;
+        UpdateVisibleItems();
     }
 
     private void NextPage_Click(object sender, RoutedEventArgs e)
     {
         if (IsEditMode) return;
         var totalPages = Math.Max(1, (int)Math.Ceiling(Shortcuts.Count / (double)_itemsPerPage));
-        if (_currentPage < totalPages - 1)
-        {
-            _currentPage++;
-            UpdateVisibleItems();
-        }
+        if (totalPages <= 1) return;
+
+        _currentPage = _currentPage >= totalPages - 1 ? 0 : _currentPage + 1;
+        UpdateVisibleItems();
     }
 
     private void UpdateItemsPerPage()
@@ -1216,9 +1275,12 @@ internal delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, In
 internal static class NativeMethods
 {
     public const uint EVENT_SYSTEM_FOREGROUND = 0x0003;
+    public const uint EVENT_OBJECT_LOCATIONCHANGE = 0x800B;
     public const uint WINEVENT_OUTOFCONTEXT = 0;
     public const uint MONITOR_DEFAULTTONEAREST = 2;
     public const int DWM_BB_ENABLE = 0x1;
+    public const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
+    public const int OBJID_WINDOW = 0;
     public const int GWL_EXSTYLE = -20;
     public const int WS_EX_TOOLWINDOW = 0x00000080;
     public const int WS_EX_APPWINDOW = 0x00040000;
@@ -1264,6 +1326,9 @@ internal static class NativeMethods
 
     [DllImport("dwmapi.dll", PreserveSig = true)]
     public static extern int DwmIsCompositionEnabled(out bool pfEnabled);
+
+    [DllImport("dwmapi.dll", PreserveSig = true)]
+    public static extern int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, out RECT pvAttribute, int cbAttribute);
 
     public static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
     public const uint SWP_NOSIZE = 0x0001;
