@@ -1,7 +1,6 @@
-@'
 bin/
 obj/
 publish/
 DockBarSetup.exe
+DockBarSetup.zip
 DockBar-win-x64.zip
-'@ | Set-Content -Encoding utf8 .gitignore
