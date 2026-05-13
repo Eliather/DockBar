@@ -3,48 +3,101 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:DockBar"
         Title="{local:Loc Key=AddLink_Title}"
-        SizeToContent="Height"
-        Width="360"
+        Width="560"
+        Height="360"
+        MinWidth="520"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
-        WindowStyle="ToolWindow"
-        Background="{Binding BackgroundBrush}"
-        Foreground="{Binding ForegroundBrush}">
-    <Window.Resources>
-        <Style TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{Binding ForegroundBrush}"/>
-        </Style>
-        <Style TargetType="Button">
-            <Setter Property="Width" Value="90"/>
-            <Setter Property="Margin" Value="6,0,0,0"/>
-            <Setter Property="Background" Value="#1f1f1f"/>
-            <Setter Property="Foreground" Value="{Binding ForegroundBrush}"/>
-            <Setter Property="BorderBrush" Value="#444"/>
-            <Setter Property="BorderThickness" Value="1"/>
-        </Style>
-    </Window.Resources>
-    <StackPanel Margin="16" Orientation="Vertical">
-        <TextBlock Text="{local:Loc Key=AddLink_Target}" FontWeight="SemiBold"/>
-        <TextBox x:Name="TargetBox"
-                 Height="28"
-                 VerticalContentAlignment="Center"
-                 Text="{Binding Target, UpdateSourceTrigger=PropertyChanged}"
-                 Background="#111"
-                 Foreground="{Binding ForegroundBrush}"
-                 BorderBrush="#333"
-                 BorderThickness="1"/>
-        <TextBlock Text="{local:Loc Key=AddLink_NameOptional}" FontWeight="SemiBold" Margin="0,10,0,0"/>
-        <TextBox x:Name="NameBox"
-                 Height="28"
-                 VerticalContentAlignment="Center"
-                 Text="{Binding DisplayName, UpdateSourceTrigger=PropertyChanged}"
-                 Background="#111"
-                 Foreground="{Binding ForegroundBrush}"
-                 BorderBrush="#333"
-                 BorderThickness="1"/>
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-            <Button Content="{local:Loc Key=Common_Cancel}" IsCancel="True"/>
-            <Button Content="{local:Loc Key=Common_Save}" IsDefault="True" Click="Save_Click"/>
-        </StackPanel>
-    </StackPanel>
+        ShowInTaskbar="False"
+        Background="{DynamicResource AppCanvasBrush}"
+        Foreground="{DynamicResource AppTextBrush}">
+    <Grid Margin="22">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0"
+                Style="{StaticResource DialogSurfaceStyle}"
+                Margin="0,0,0,18">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="120"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Margin="0,0,18,0">
+                    <TextBlock Text="{local:Loc Key=AddLink_Title}"
+                               Style="{StaticResource DialogWindowTitleStyle}"
+                               FontSize="24"/>
+                    <TextBlock Text="{local:Loc Key=AddLink_Subtitle}"
+                               Style="{StaticResource DialogWindowSubtitleStyle}"/>
+                </StackPanel>
+
+                <Border Grid.Column="1"
+                        Width="92"
+                        Height="92"
+                        HorizontalAlignment="Right"
+                        Background="{Binding BackgroundBrush}"
+                        BorderBrush="{DynamicResource AppBorderStrongBrush}"
+                        BorderThickness="1"
+                        CornerRadius="22">
+                    <Viewbox Width="42" Height="42"
+                             VerticalAlignment="Center"
+                             HorizontalAlignment="Center">
+                        <Grid Width="24" Height="24">
+                            <Path Data="M10.25,13.75L8,16C6.76,17.24 4.74,17.24 3.5,16C2.26,14.76 2.26,12.74 3.5,11.5L7.75,7.25C8.99,6.01 11.01,6.01 12.25,7.25"
+                                  Stroke="{Binding ForegroundBrush}"
+                                  StrokeThickness="1.8"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round"/>
+                            <Path Data="M13.75,10.25L16,8C17.24,6.76 19.26,6.76 20.5,8C21.74,9.24 21.74,11.26 20.5,12.5L16.25,16.75C15.01,17.99 12.99,17.99 11.75,16.75"
+                                  Stroke="{Binding ForegroundBrush}"
+                                  StrokeThickness="1.8"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round"/>
+                        </Grid>
+                    </Viewbox>
+                </Border>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="1"
+                Style="{StaticResource DialogCardStyle}">
+            <StackPanel>
+                <TextBlock Text="{local:Loc Key=AddLink_Target}"
+                           Style="{StaticResource DialogLabelStyle}"/>
+                <TextBox x:Name="TargetBox"
+                         Style="{StaticResource DialogTextBoxStyle}"
+                         Text="{Binding Target, UpdateSourceTrigger=PropertyChanged}"/>
+
+                <TextBlock Text="{local:Loc Key=AddLink_NameOptional}"
+                           Style="{StaticResource DialogLabelStyle}"
+                           Margin="0,18,0,8"/>
+                <TextBox x:Name="NameBox"
+                         Style="{StaticResource DialogTextBoxStyle}"
+                         Text="{Binding DisplayName, UpdateSourceTrigger=PropertyChanged}"/>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="2"
+                Style="{StaticResource DialogSurfaceStyle}"
+                Margin="0,18,0,0"
+                Padding="18">
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Right">
+                <Button Content="{local:Loc Key=Common_Cancel}"
+                        Style="{StaticResource DialogButtonSecondaryStyle}"
+                        Margin="0,0,10,0"
+                        IsCancel="True"/>
+                <Button Content="{local:Loc Key=Common_Save}"
+                        Style="{StaticResource DialogButtonPrimaryStyle}"
+                        IsDefault="True"
+                        Click="Save_Click"/>
+            </StackPanel>
+        </Border>
+    </Grid>
 </Window>

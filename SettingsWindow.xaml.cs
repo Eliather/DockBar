@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 using DockBar.Models;
 using DockBar.Services;
 
@@ -12,6 +13,8 @@ namespace DockBar;
 
 public partial class SettingsWindow : Window, INotifyPropertyChanged
 {
+    private const double GlassOpacity = 0.72;
+
     public DockConfig Config { get; }
 
     private SolidColorBrush _previewBrush = new(System.Windows.Media.Color.FromRgb(16, 16, 16));
@@ -25,6 +28,7 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
     private double _hue;
     private double _sat = 1.0;
     private double _val = 1.0;
+    private bool _syncingSettingsScroll;
 
     public SolidColorBrush PreviewBrush
     {
@@ -80,6 +84,8 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
 
     public string HexColor => $"#{_pendingR:X2}{_pendingG:X2}{_pendingB:X2}";
 
+    public string GlassStatusText => LocalizationService.Get(Config.UseTransparency ? "Settings_GlassOn" : "Settings_GlassOff");
+
     public string HexInput
     {
         get => _hexInput;
@@ -116,12 +122,14 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         Config = config;
         InitializeComponent();
         DataContext = this;
+        Config.BackgroundOpacity = Config.UseTransparency ? GlassOpacity : 1.0;
         _pendingR = Config.BackgroundR;
         _pendingG = Config.BackgroundG;
         _pendingB = Config.BackgroundB;
         SyncHsvFromPending();
         UpdatePreviewBrush();
         UpdateTextBrush();
+        Dispatcher.BeginInvoke(UpdateSettingsScrollBar, DispatcherPriority.Loaded);
     }
 
     private void UpdatePreviewBrush()
@@ -129,11 +137,12 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         var baseColor = System.Windows.Media.Color.FromRgb(_pendingR, _pendingG, _pendingB);
         var brush = new SolidColorBrush(baseColor)
         {
-            Opacity = Config.UseTransparency ? Config.BackgroundOpacity : 1.0
+            Opacity = Config.UseTransparency ? GlassOpacity : 1.0
         };
         brush.Freeze();
         PreviewBrush = brush;
         OnPropertyChanged(nameof(HexColor));
+        OnPropertyChanged(nameof(GlassStatusText));
         var hex = $"#{_pendingR:X2}{_pendingG:X2}{_pendingB:X2}";
         if (!string.Equals(HexInput, hex, StringComparison.OrdinalIgnoreCase))
         {
@@ -151,6 +160,7 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
 
     private void TransparencyToggled(object sender, RoutedEventArgs e)
     {
+        Config.BackgroundOpacity = Config.UseTransparency ? GlassOpacity : 1.0;
         UpdatePreviewBrush();
     }
 
@@ -169,6 +179,38 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         var backgroundBrush = new SolidColorBrush(backgroundColor);
         backgroundBrush.Freeze();
         SettingsBackgroundBrush = backgroundBrush;
+    }
+
+    private void SettingsScroller_ScrollChanged(object sender, ScrollChangedEventArgs e)
+    {
+        UpdateSettingsScrollBar();
+    }
+
+    private void SettingsScrollBar_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_syncingSettingsScroll || SettingsScroller == null)
+        {
+            return;
+        }
+
+        SettingsScroller.ScrollToVerticalOffset(e.NewValue);
+    }
+
+    private void UpdateSettingsScrollBar()
+    {
+        if (SettingsScroller == null || SettingsScrollBar == null)
+        {
+            return;
+        }
+
+        var canScroll = SettingsScroller.ScrollableHeight > 1;
+        _syncingSettingsScroll = true;
+        SettingsScrollBar.Minimum = 0;
+        SettingsScrollBar.Maximum = Math.Max(0, SettingsScroller.ScrollableHeight);
+        SettingsScrollBar.Value = Math.Min(SettingsScroller.VerticalOffset, SettingsScrollBar.Maximum);
+        SettingsScrollBar.IsEnabled = canScroll;
+        SettingsScrollBar.Visibility = canScroll ? Visibility.Visible : Visibility.Collapsed;
+        _syncingSettingsScroll = false;
     }
 
     private void NumericSettingChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -252,16 +294,15 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
 
     private void About_Click(object sender, RoutedEventArgs e)
     {
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString()
+        var version = Assembly.GetExecutingAssembly()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            ?? Assembly.GetExecutingAssembly().GetName().Version?.ToString()
             ?? LocalizationService.Get("About_UnknownVersion");
-        var message =
-            "DockBar\n\n" +
-            $"{LocalizationService.Get("About_Version")}: {version}\n" +
-            $"{LocalizationService.Get("About_DevelopedBy")}\n" +
-            $"{LocalizationService.Get("About_Description")}\n" +
-            $"{LocalizationService.Get("About_ConfigPath")}";
-
-        System.Windows.MessageBox.Show(this, message, LocalizationService.Get("About_Title"), MessageBoxButton.OK, MessageBoxImage.Information);
+        var aboutWindow = new AboutWindow(version)
+        {
+            Owner = this
+        };
+        aboutWindow.ShowDialog();
     }
 
     private void HueSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)

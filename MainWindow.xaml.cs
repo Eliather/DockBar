@@ -23,6 +23,8 @@ namespace DockBar;
 
 public partial class MainWindow : Window, INotifyPropertyChanged
 {
+    private const double GlassOpacity = 0.72;
+
     private readonly DispatcherTimer _hideTimer;
     private DockConfig _config = new();
     private bool _isHidden;
@@ -190,7 +192,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _config.Shortcuts ??= new();
         foreach (var item in _config.Shortcuts)
         {
-            item.Icon = ResolveIcon(item.Path, item.Icon);
+            item.Icon = ResolveIcon(item);
             Shortcuts.Add(item);
         }
         UpdateVisibleItems();
@@ -241,9 +243,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         var color = System.Windows.Media.Color.FromRgb(_config.BackgroundR, _config.BackgroundG, _config.BackgroundB);
         var opacity = _config.UseTransparency
-            ? Math.Clamp(_config.BackgroundOpacity, 0.2, 1.0)
+            ? GlassOpacity
             : 1.0;
-        var alpha = (byte)Math.Clamp((int)Math.Round(opacity * 255), 30, 255);
+        var alpha = (byte)Math.Clamp((int)Math.Round(opacity * 255), 0, 255);
         var brush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(alpha, color.R, color.G, color.B));
         brush.Freeze();
         DockBackgroundBrush = brush;
@@ -378,7 +380,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         _isHidden = false;
-        AnimateLeft(Left, GetShownLeft(SystemParameters.WorkArea));
+        AnimateLeft(Left, GetShownLeft(GetMonitorBounds()));
     }
 
     private void HideDockAnimated()
@@ -394,7 +396,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         _isHidden = true;
-        AnimateLeft(Left, GetHiddenLeft(SystemParameters.WorkArea));
+        AnimateLeft(Left, GetHiddenLeft(GetMonitorBounds()));
     }
 
     private void AnimateLeft(double from, double to)
@@ -426,11 +428,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         var files = (string[])e.Data.GetData(System.Windows.DataFormats.FileDrop);
+        var changed = false;
         foreach (var file in files)
         {
-            AddShortcut(file);
+            changed |= AddShortcut(file, persist: false);
         }
-        SaveConfig();
+        if (changed)
+        {
+            SaveConfig();
+        }
     }
 
     private void ShortcutItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -562,11 +568,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         return null;
     }
 
-    private void AddShortcut(string path, string? displayName = null, ImageSource? iconOverride = null)
+    private bool AddShortcut(string path, string? displayName = null, ImageSource? iconOverride = null, bool persist = true)
     {
         if (string.IsNullOrWhiteSpace(path))
         {
-            return;
+            return false;
         }
 
         var isFileOrDir = File.Exists(path) || Directory.Exists(path);
@@ -574,13 +580,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             if (!(Uri.TryCreate(path, UriKind.Absolute, out var uri) && !uri.IsFile && !string.IsNullOrWhiteSpace(uri.Scheme)))
             {
-                return;
+                return false;
             }
         }
 
         if (Shortcuts.Any(s => string.Equals(s.Path, path, StringComparison.OrdinalIgnoreCase)))
         {
-            return;
+            return false;
         }
 
         string? friendly = null;
@@ -611,7 +617,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         };
 
         Shortcuts.Add(item);
-        SaveConfig();
+        if (persist)
+        {
+            SaveConfig();
+        }
+        return true;
     }
 
     private void Shortcut_Click(object sender, RoutedEventArgs e)
@@ -705,7 +715,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             var item = Shortcuts.FirstOrDefault(s => string.Equals(s.Path, path, StringComparison.OrdinalIgnoreCase));
             if (item != null)
             {
-                item.Icon = IconService.GetIcon(target, (int)Math.Max(_config.IconSize * 4, 256));
+                item.IconPath = target;
+                item.Icon = IconService.GetIconFromPath(target, (int)Math.Max(_config.IconSize * 4, 256)) ?? item.Icon;
                 SaveConfig();
             }
         }
@@ -743,9 +754,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         if (dialog.ShowDialog() == true)
         {
+            var changed = false;
             foreach (var file in dialog.FileNames)
             {
-                AddShortcut(file);
+                changed |= AddShortcut(file, persist: false);
+            }
+
+            if (changed)
+            {
+                SaveConfig();
             }
         }
     }
@@ -857,7 +874,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             Shortcuts = shortcuts.Select(s => new ShortcutItem
             {
                 Name = s.Name,
-                Path = s.Path
+                Path = s.Path,
+                IconPath = s.IconPath
             }).ToList()
         };
     }
@@ -867,6 +885,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var prevAutoStart = _config.AutoStartEnabled;
         _config = updatedConfig;
         _dockSide = updatedConfig.DockSide;
+        _config.BackgroundOpacity = _config.UseTransparency ? GlassOpacity : 1.0;
         if (!_config.AutoStartPrompted && prevAutoStart != _config.AutoStartEnabled)
         {
             _config.AutoStartPrompted = true;
@@ -965,13 +984,23 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         UpdateVisibleItems();
     }
 
-    private ImageSource? ResolveIcon(string path, ImageSource? existing = null)
+    private ImageSource? ResolveIcon(ShortcutItem item)
     {
-        if (existing != null)
+        if (item.Icon != null)
         {
-            return existing;
+            return item.Icon;
         }
 
+        if (!string.IsNullOrWhiteSpace(item.IconPath) && File.Exists(item.IconPath))
+        {
+            var custom = IconService.GetIconFromPath(item.IconPath, (int)Math.Max(_config.IconSize * 4, 256));
+            if (custom != null)
+            {
+                return custom;
+            }
+        }
+
+        var path = item.Path;
         if (path.StartsWith("shell:AppsFolder", StringComparison.OrdinalIgnoreCase))
         {
             var (_, icon) = ShellItemService.GetShellItemInfo(path, 256);
@@ -1274,7 +1303,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 return;
             }
 
-            var opacity = Math.Clamp(_config.BackgroundOpacity, 0.2, 1.0);
+            var opacity = _config.UseTransparency ? GlassOpacity : 1.0;
             // Opacity 1.0 => sin efecto blur (solo color sólido)
             if (opacity >= 0.99)
             {

@@ -9,10 +9,21 @@ namespace DockBar.Services;
 
 public static class StoreAppService
 {
+    private static readonly object CacheLock = new();
+    private static List<StoreAppInfo>? _cachedApps;
+
     public static List<StoreAppInfo> GetInstalledApps()
     {
         try
         {
+            lock (CacheLock)
+            {
+                if (_cachedApps != null)
+                {
+                    return CloneApps(_cachedApps);
+                }
+            }
+
             var psi = new ProcessStartInfo
             {
                 FileName = "powershell",
@@ -89,16 +100,35 @@ public static class StoreAppService
                 }
             }
 
-            return apps
+            var orderedApps = apps
                 .GroupBy(a => a.AppId, StringComparer.OrdinalIgnoreCase)
                 .Select(g => g.First())
                 .OrderBy(a => a.FriendlyName ?? a.Name)
                 .ToList();
+
+            lock (CacheLock)
+            {
+                _cachedApps = orderedApps;
+            }
+
+            return CloneApps(orderedApps);
         }
         catch (Exception ex)
         {
             Debug.WriteLine(ex);
             return new List<StoreAppInfo>();
         }
+    }
+
+    private static List<StoreAppInfo> CloneApps(List<StoreAppInfo> apps)
+    {
+        return apps.Select(app => new StoreAppInfo
+        {
+            Name = app.Name,
+            FriendlyName = app.FriendlyName,
+            AppId = app.AppId,
+            PackageFamilyName = app.PackageFamilyName,
+            Icon = app.Icon
+        }).ToList();
     }
 }

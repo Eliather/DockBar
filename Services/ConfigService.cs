@@ -9,6 +9,7 @@ namespace DockBar.Services;
 public static class ConfigService
 {
     private const string FileName = "shortcuts.json";
+    private const double GlassOpacity = 0.72;
     public static string ConfigDirectory =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DockBar");
 
@@ -78,7 +79,7 @@ public static class ConfigService
         if (config.IconSize <= 0) config.IconSize = 40;
         if (config.HideAnimationMs <= 0) config.HideAnimationMs = 200;
         if (config.AutoHideDelaySeconds < 0) config.AutoHideDelaySeconds = 0;
-        if (config.BackgroundOpacity <= 0 || config.BackgroundOpacity > 1) config.BackgroundOpacity = 0.85;
+        config.BackgroundOpacity = config.UseTransparency ? GlassOpacity : 1.0;
         if (config.BackgroundR == 0 && config.BackgroundG == 0 && config.BackgroundB == 0)
         {
             // keep black; leave else as-is

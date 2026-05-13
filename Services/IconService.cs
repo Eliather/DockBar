@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -13,46 +14,152 @@ namespace DockBar.Services;
 
 public static class IconService
 {
+    private static readonly object CacheLock = new();
+    private static readonly Dictionary<string, ImageSource?> Cache = new(StringComparer.OrdinalIgnoreCase);
+
     public static ImageSource? GetIcon(string path, int preferredSize = 64)
     {
         try
         {
             var resolvedPath = ResolveShortcutTarget(path);
+            var cacheKey = BuildCacheKey("path", resolvedPath, preferredSize);
+            if (TryGetCached(cacheKey, out var cached))
+            {
+                return cached;
+            }
 
             if (!File.Exists(resolvedPath) && !Directory.Exists(resolvedPath))
             {
+                StoreCached(cacheKey, null);
                 return null;
             }
 
-            var jumbo = GetJumboIcon(resolvedPath);
-            if (jumbo != null)
+            var resolvedIcon = FreezeIfPossible(GetJumboIcon(resolvedPath))
+                ?? FreezeIfPossible(GetHighResIcon(resolvedPath, preferredSize));
+
+            if (resolvedIcon == null)
             {
-                return jumbo;
+                using var icon = Icon.ExtractAssociatedIcon(resolvedPath);
+                if (icon != null)
+                {
+                    resolvedIcon = FreezeIfPossible(Imaging.CreateBitmapSourceFromHIcon(
+                        icon.Handle,
+                        Int32Rect.Empty,
+                        BitmapSizeOptions.FromWidthAndHeight(preferredSize, preferredSize)));
+                }
             }
 
-            // Try high-res extraction first.
-            var high = GetHighResIcon(resolvedPath, preferredSize);
-            if (high != null)
-            {
-                return high;
-            }
-
-            using var icon = Icon.ExtractAssociatedIcon(resolvedPath);
-            if (icon == null)
-            {
-                return null;
-            }
-
-            return Imaging.CreateBitmapSourceFromHIcon(
-                icon.Handle,
-                Int32Rect.Empty,
-                BitmapSizeOptions.FromWidthAndHeight(preferredSize, preferredSize));
+            StoreCached(cacheKey, resolvedIcon);
+            return resolvedIcon;
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine(ex);
             return null;
         }
+    }
+
+    public static ImageSource? GetIconFromPath(string path, int preferredSize = 64)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return null;
+            }
+
+            var resolvedPath = ResolveShortcutTarget(path);
+            var cacheKey = BuildCacheKey("custom", resolvedPath, preferredSize);
+            if (TryGetCached(cacheKey, out var cached))
+            {
+                return cached;
+            }
+
+            if (!File.Exists(resolvedPath) && !Directory.Exists(resolvedPath))
+            {
+                StoreCached(cacheKey, null);
+                return null;
+            }
+
+            var ext = Path.GetExtension(resolvedPath).ToLowerInvariant();
+            if (ext is ".png" or ".jpg" or ".jpeg" or ".bmp" or ".gif")
+            {
+                var bitmap = LoadBitmap(resolvedPath, preferredSize);
+                StoreCached(cacheKey, bitmap);
+                return bitmap;
+            }
+
+            if (ext == ".ico")
+            {
+                using var icon = new Icon(resolvedPath);
+                var source = FreezeIfPossible(Imaging.CreateBitmapSourceFromHIcon(
+                    icon.Handle,
+                    Int32Rect.Empty,
+                    BitmapSizeOptions.FromWidthAndHeight(preferredSize, preferredSize)));
+                StoreCached(cacheKey, source);
+                return source;
+            }
+
+            var resolvedIcon = GetIcon(resolvedPath, preferredSize);
+            StoreCached(cacheKey, resolvedIcon);
+            return resolvedIcon;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+            return null;
+        }
+    }
+
+    private static ImageSource? LoadBitmap(string path, int size)
+    {
+        try
+        {
+            var bitmap = new BitmapImage();
+            bitmap.BeginInit();
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.DecodePixelWidth = Math.Max(size, 1);
+            bitmap.UriSource = new Uri(path, UriKind.Absolute);
+            bitmap.EndInit();
+            bitmap.Freeze();
+            return bitmap;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+            return null;
+        }
+    }
+
+    private static string BuildCacheKey(string kind, string path, int size)
+    {
+        return $"{kind}|{size}|{path}";
+    }
+
+    private static bool TryGetCached(string key, out ImageSource? image)
+    {
+        lock (CacheLock)
+        {
+            return Cache.TryGetValue(key, out image);
+        }
+    }
+
+    private static void StoreCached(string key, ImageSource? image)
+    {
+        lock (CacheLock)
+        {
+            Cache[key] = image;
+        }
+    }
+
+    private static ImageSource? FreezeIfPossible(ImageSource? image)
+    {
+        if (image is Freezable freezable && freezable.CanFreeze && !freezable.IsFrozen)
+        {
+            freezable.Freeze();
+        }
+
+        return image;
     }
 
     private static string ResolveShortcutTarget(string path)

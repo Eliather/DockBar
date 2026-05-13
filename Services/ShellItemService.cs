@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
@@ -10,6 +11,10 @@ namespace DockBar.Services;
 
 public static class ShellItemService
 {
+    private static readonly object CacheLock = new();
+    private static readonly Dictionary<string, string?> NameCache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Dictionary<string, ImageSource?> IconCache = new(StringComparer.OrdinalIgnoreCase);
+
     public static (string? displayName, ImageSource? icon) GetShellItemInfo(string shellPath, int size = 256)
     {
         try
@@ -29,8 +34,17 @@ public static class ShellItemService
     {
         try
         {
+            lock (CacheLock)
+            {
+                if (NameCache.TryGetValue(shellPath, out var cachedName))
+                {
+                    return cachedName;
+                }
+            }
+
             if (SHCreateItemFromParsingName(shellPath, IntPtr.Zero, typeof(IShellItem).GUID, out var itemPtr) != 0 || itemPtr == IntPtr.Zero)
             {
+                CacheName(shellPath, null);
                 return null;
             }
 
@@ -39,6 +53,7 @@ public static class ShellItemService
             var name = Marshal.PtrToStringUni(namePtr);
             Marshal.FreeCoTaskMem(namePtr);
             Marshal.ReleaseComObject(item);
+            CacheName(shellPath, name);
             return name;
         }
         catch (Exception ex)
@@ -52,8 +67,18 @@ public static class ShellItemService
     {
         try
         {
+            var cacheKey = $"{shellPath}|{size}";
+            lock (CacheLock)
+            {
+                if (IconCache.TryGetValue(cacheKey, out var cachedIcon))
+                {
+                    return cachedIcon;
+                }
+            }
+
             if (SHCreateItemFromParsingName(shellPath, IntPtr.Zero, typeof(IShellItemImageFactory).GUID, out var factoryPtr) != 0 || factoryPtr == IntPtr.Zero)
             {
+                CacheIcon(cacheKey, null);
                 return null;
             }
 
@@ -62,6 +87,7 @@ public static class ShellItemService
             if (hresult != 0 || hbitmap == IntPtr.Zero)
             {
                 Marshal.ReleaseComObject(factory);
+                CacheIcon(cacheKey, null);
                 return null;
             }
 
@@ -73,12 +99,33 @@ public static class ShellItemService
 
             DeleteObject(hbitmap);
             Marshal.ReleaseComObject(factory);
+            if (source.CanFreeze)
+            {
+                source.Freeze();
+            }
+            CacheIcon(cacheKey, source);
             return source;
         }
         catch (Exception ex)
         {
             Debug.WriteLine(ex);
             return null;
+        }
+    }
+
+    private static void CacheName(string shellPath, string? displayName)
+    {
+        lock (CacheLock)
+        {
+            NameCache[shellPath] = displayName;
+        }
+    }
+
+    private static void CacheIcon(string cacheKey, ImageSource? icon)
+    {
+        lock (CacheLock)
+        {
+            IconCache[cacheKey] = icon;
         }
     }
 

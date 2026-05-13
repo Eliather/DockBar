@@ -9,6 +9,7 @@ public class ShortcutItem : INotifyPropertyChanged
 {
     private string _name = string.Empty;
     private string _path = string.Empty;
+    private string? _iconPath;
 
     public string Name
     {
@@ -31,6 +32,19 @@ public class ShortcutItem : INotifyPropertyChanged
             if (_path != value)
             {
                 _path = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public string? IconPath
+    {
+        get => _iconPath;
+        set
+        {
+            if (_iconPath != value)
+            {
+                _iconPath = value;
                 OnPropertyChanged();
             }
         }

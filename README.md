@@ -1,222 +1,152 @@
 # DockBar
-A simple dockbar for Windows, minimal and practical.
+DockBar is a dock-style sidebar for Windows built with WPF. Version `1.5.1` focuses on making the product feel less like a utility window and more like a cohesive desktop tool.
 
 <img width="256" height="256" alt="Dock" src="https://github.com/user-attachments/assets/eb6fd915-77f7-4298-b41b-90a7d14f41d1" />
 
-
-
+Video demo:
 https://github.com/user-attachments/assets/9a4ea52f-8131-471e-8bd3-89122aa3dec7
 
+## Overview
+DockBar gives Windows a compact side dock with shortcuts, edit mode, smooth auto-hide, persistent configuration, and a redesigned settings experience.
 
+This version is built around three priorities:
 
-DockBar es una barra lateral tipo dock para Windows (WPF) con accesos directos, auto-ocultamiento suave y configuración persistente en AppData. Diseñada para ser liviana, sin polling agresivo y con enfoque en rendimiento.
+- Fast interaction without heavy background polling.
+- Small focused services instead of one oversized window class doing everything.
+- A cleaner interface direction for settings and dialogs, avoiding the old utility or "Windows 98 tool window" look.
 
-## Características
+## Release Summary
+DockBar `1.5.1` is a UI and UX cleanup release. The main goal was to modernize the dock controls and the configuration flow so the app feels more intentional, more readable, and less like an old WPF utility.
 
-- Barra lateral anclada a izquierda o derecha con ventana sin bordes y TopMost.
-- Auto-ocultamiento estilo Windows 8 (deslizamiento con un borde mínimo visible).
-- Accesos directos con íconos: arrastrar y soltar .lnk, .exe o carpetas.
-- Soporta accesos por URI/comando y apps de Microsoft Store.
-- Modo edición: reordenar por arrastre, renombrar, cambiar ícono y eliminar.
-- Paginación en modo normal si excede el alto visible.
-- Selector de color tipo HTML (HEX + área HSV + swatches).
-- Ajustes persistentes en %AppData%\DockBar\shortcuts.json.
-- Ícono de bandeja con menú (Abrir, Ajustes, Salir).
-- Oculta su ventana en Alt+Tab y Win+Tab.
+The biggest visible change is the settings experience: a denser layout, a single appearance panel where preview and color decisions happen together, a dedicated Glass toggle, cleaner sliders, and a themed About dialog that matches the rest of the product.
 
-## Requisitos
+## What It Does
+- Left or right borderless dock with topmost behavior.
+- Smooth auto-hide with a small reveal edge.
+- Drag and drop for `.lnk`, `.exe`, and folders.
+- URI / command shortcuts and Microsoft Store app support.
+- Edit mode for reorder, rename, icon changes, and removal.
+- Pagination in normal mode when the visible area is exceeded.
+- Tray icon with quick actions.
+- Hidden from Alt+Tab and Win+Tab.
+- Persistent config stored in `%AppData%\DockBar\shortcuts.json`.
 
-- Windows 10/11
+## What Changed In 1.5.1
+- Redesigned settings window with a more compact layout.
+- Preview and appearance controls now live in the same panel.
+- Visible custom vertical scroll rail on the right side of settings instead of relying only on the mouse wheel.
+- Refined vertical hue slider and scroll controls with a straighter tube-style track.
+- `Efecto Glass` replaces the old opacity control in the UI.
+- New themed `About` window instead of a default system message box.
+- Cleaner Spanish localization with proper UTF-8 text, accents, and `ñ`.
+- Shared dialog theme for settings, add shortcut, rename, and Store picker windows.
+- More polished dock action icons and hover tooltips in the main UI.
+
+## Performance Improvements
+- Icon caching in `IconService` to avoid reloading the same files repeatedly.
+- Shell item name and icon caching for `shell:AppsFolder` entries.
+- Session cache for Microsoft Store app discovery.
+- Batched config saves when adding multiple shortcuts in one action.
+
+## Requirements
+- Windows 10 or Windows 11
 - .NET SDK 9.0
-- VS Code (opcional) o terminal con dotnet
+- Visual Studio, VS Code, or terminal with `dotnet`
 
-## Compilar y ejecutar
-
-En terminal dentro de la carpeta del proyecto:
-
-```
-cd DockBar
+## Build And Run
+```bash
 dotnet build
 dotnet run
 ```
 
-Si el build falla por archivo bloqueado, cierra la instancia de DockBar y vuelve a ejecutar.
+If the build fails because the executable is locked, close DockBar first and build again.
 
-## Uso rápido
+## Configuration
+Config file:
 
-- Arrastra archivos .lnk/.exe/carpetas a la barra para agregar accesos.
-- Botón "...": abre Ajustes.
-- Botón lápiz: activa modo edición (no se auto-oculta).
-- En modo edición puedes arrastrar para reordenar.
-
-## Funcionamiento general
-
-- Inicio: carga la configuración desde AppData; si no existe o está corrupta, crea un JSON predeterminado y avisa.
-- Ventana: sin bordes, anclada a un lado y TopMost; se oculta en Alt+Tab y Win+Tab.
-- Bandeja: crea el ícono en el tray para abrir, cambiar lado, ajustes y salir.
-- Monitor: usa el monitor más cercano para calcular alto completo y posición.
-
-## Ajustes
-
-La ventana de ajustes permite:
-
-- Ancho de barra y tamaño de íconos.
-- Retardo de ocultamiento y velocidad de animación.
-- Transparencia y opacidad (afecta solo el efecto glass y el tinte del fondo).
-- Color de fondo con selector HSV y HEX.
-- Color de texto (claro u oscuro).
-
-Nota: el color seleccionado se guarda al presionar Guardar.
-
-## Selector de color (HEX + HSV)
-
-- Barra vertical de tono (Hue).
-- Área cuadrada de saturación/valor (S/V).
-- Campo HEX (#RRGGBB) y swatches básicos.
-- No usa librerías externas; es un control WPF implementado en el proyecto.
-
-## Modo edición
-
-- Desactiva el auto-ocultamiento y ensancha temporalmente la barra para editar.
-- Permite reordenar por arrastre y muestra indicadores visuales.
-- Botones por item: renombrar, cambiar ícono y eliminar.
-- El orden se guarda al soltar.
-
-## Paginación
-
-- En modo normal, calcula items por página según alto del monitor e IconSize.
-- Si hay más de una página, se muestran flechas de navegación.
-- En modo edición la lista usa scroll vertical.
-
-## Persistencia y ubicación del JSON
-
-Archivo de configuración:
-
-```
+```text
 %AppData%\DockBar\shortcuts.json
 ```
 
-Si el JSON no existe o está corrupto, la app muestra un mensaje y crea uno predeterminado.
+Example:
 
-### Ejemplo de shortcuts.json
-
-```
+```json
 {
   "DockSide": "Left",
   "DockWidth": 175,
   "IconSize": 40,
   "AutoHideDelaySeconds": 0,
   "HideAnimationMs": 200,
-  "UseTransparency": false,
-  "BackgroundOpacity": 0.85,
-  "BackgroundR": 0,
-  "BackgroundG": 0,
-  "BackgroundB": 0,
+  "UseTransparency": true,
+  "BackgroundOpacity": 0.72,
+  "BackgroundR": 17,
+  "BackgroundG": 24,
+  "BackgroundB": 39,
   "UseLightText": true,
+  "AutoStartEnabled": false,
   "Shortcuts": [
-    { "Name": "Explorador", "Path": "C:\\Windows\\explorer.exe" },
-    { "Name": "Mis documentos", "Path": "C:\\Users\\Public\\Documents" },
+    { "Name": "Explorer", "Path": "C:\\Windows\\explorer.exe" },
+    { "Name": "Documents", "Path": "C:\\Users\\Public\\Documents" },
     { "Name": "Steam", "Path": "C:\\Program Files (x86)\\Steam\\Steam.exe" }
   ]
 }
 ```
 
-## Apps de Microsoft Store
+Notes:
+- `UseTransparency` is still the persisted compatibility flag, but in the UI it is exposed as `Efecto Glass`.
+- `BackgroundOpacity` is now managed by the app: `0.72` when Glass is enabled and `1.0` when it is disabled.
 
-El selector de Store guarda rutas tipo:
+## Architecture
+- `MainWindow.xaml(.cs)`: dock UI, auto-hide, drag/drop, pagination, fullscreen behavior, and visual application of config.
+- `SettingsWindow.xaml(.cs)`: compact settings UI, live preview, color picker, and Glass toggle.
+- `AddLinkWindow.xaml(.cs)`: add custom shortcut path or URI.
+- `RenameWindow.xaml(.cs)`: rename shortcut dialog.
+- `StoreAppPickerWindow.xaml(.cs)`: Microsoft Store app picker.
+- `Models/`: configuration and shortcut models.
+- `Services/ConfigService.cs`: load and save config with backward-compatible defaults.
+- `Services/IconService.cs`: icon resolution and cache.
+- `Services/ShellItemService.cs`: shell item names, icons, and cache.
+- `Services/StoreAppService.cs`: installed Store app lookup and session cache.
+- `Resources/Theme.xaml`: shared colors, spacing, buttons, sliders, and scroll styling.
 
-```
-shell:AppsFolder\<AppId>
-```
+## Visual Direction
+The current UI direction is based on:
 
-Ejemplo:
+- Layered dark surfaces instead of flat black panels.
+- Rounded cards with tighter spacing and less wasted space.
+- Custom controls for sliders, buttons, and scroll rails instead of raw default WPF styling.
+- A unified appearance panel where preview and color decisions happen together.
+- Reusable theme resources instead of hardcoded one-off colors in each window.
 
-```
-shell:AppsFolder\Microsoft.WindowsCalculator_8wekyb3d8bbwe!App
-```
+## Packaging
+### Option A: MSIX
+1. Create a Windows packaging project in Visual Studio.
+2. Set DockBar as the main application.
+3. Configure manifest metadata and assets.
+4. Build in Release and generate the package.
 
-## Efecto glass y opacidad
-
-- El blur depende de DWM (si no está activo, se omite).
-- El blur se aplica solo si "Usar transparencia" está activado y la opacidad < 1.0.
-- La opacidad controla el tinte del fondo; íconos y texto no se transparentan.
-
-## Accesos por comando o URI
-
-Puedes agregar accesos por URI, por ejemplo:
-
-```
-com.epicgames.launcher://apps/fn%3A...&action=launch
-```
-
-## Auto-ocultamiento
-
-- Se oculta con animación y deja 1-2px visibles para detectar hover.
-- Usa eventos de mouse y DispatcherTimer (sin polling agresivo).
-- En modo edición no se auto-oculta.
-
-## Drag and drop y acciones
-
-- Arrastrar archivos: .lnk, .exe o carpetas.
-- Accesos Store: se guardan como shell:AppsFolder y se resuelven con íconos de shell.
-- Accesos URI: se ejecutan vía UseShellExecute.
-
-## Rendimiento
-
-- Sin loops agresivos; usa timers y eventos.
-- Íconos se cargan con size alto para evitar pixelado.
-- El efecto glass depende de DWM (si no está disponible, se omite).
-
-## Empaquetado
-
-### Opción A: MSIX (recomendado)
-
-1) Instala Visual Studio 2022 con "Windows Application Packaging Project".
-2) Agrega un proyecto de empaquetado MSIX a la solución.
-3) Configura el Appx Manifest (Nombre, Versión, Logo).
-4) Establece DockBar como aplicación principal.
-5) Compila en Release y genera el paquete.
-
-### Opción B: NSIS (EXE instalador)
-
-1) Publica la app:
-
-```
-dotnet publish -c Release -r win-x64 --self-contained false -o publish
+### Option B: NSIS installer
+```bash
+.\build-installer.ps1
 ```
 
-2) Genera el instalador:
+If you prefer the manual path:
 
+```bash
+dotnet publish DockBar.csproj -c Release -r win-x64 --self-contained false -o publish
+& "C:\Program Files (x86)\NSIS\makensis.exe" DockBar.nsi
 ```
-makensis DockBar.nsi
-```
 
-3) Se crea `DockBarSetup.exe`.
+This generates `DockBarSetup.exe`. The script auto-detects `makensis.exe` from `PATH` or the common NSIS install folders.
 
-## Solución de problemas
+## Troubleshooting
+- Glass effect does not appear: make sure DWM composition is enabled in Windows.
+- The dock still looks solid: disable and re-enable `Efecto Glass` to force a fresh config write.
+- The app is missing from Alt+Tab: this is intentional.
+- The JSON keeps regenerating: check `%AppData%` permissions and config validity.
+- Build is locked: close any running DockBar instance first.
 
-- No compila: asegúrate de cerrar DockBar.exe.
-- El blur no aparece: DWM debe estar habilitado.
-- No aparece en Alt+Tab: es normal, la ventana se oculta a propósito.
-- El JSON se regenera: revisa permisos en AppData o corrige el archivo corrupto.
-
-## Estructura principal
-
-- MainWindow.xaml(.cs): UI y lógica del dock.
-- SettingsWindow.xaml(.cs): ajustes y selector de color.
-- Services/ConfigService.cs: carga/guardado JSON.
-- Services/IconService.cs: carga de íconos.
-
-## Arquitectura y servicios
-
-- Models: datos de configuración y accesos directos.
-- Services: carga/guardado de config, resolución de íconos y apps Store.
-- Windows: ventanas de UI y flujos (agregar, renombrar, ajustes).
-
-## Notas de seguridad y privacidad
-
-- La app no envía datos ni usa red para telemetría.
-- Todo se guarda localmente en AppData.
-
----
-
+## Privacy
+- No telemetry.
+- No cloud sync.
+- No network dependency for local dock behavior.
