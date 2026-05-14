@@ -568,7 +568,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         return null;
     }
 
-    private bool AddShortcut(string path, string? displayName = null, ImageSource? iconOverride = null, bool persist = true)
+    private bool AddShortcut(string path, string? displayName = null, ImageSource? iconOverride = null, bool persist = true, string? arguments = null)
     {
         if (string.IsNullOrWhiteSpace(path))
         {
@@ -584,7 +584,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             }
         }
 
-        if (Shortcuts.Any(s => string.Equals(s.Path, path, StringComparison.OrdinalIgnoreCase)))
+        if (Shortcuts.Any(s =>
+                string.Equals(s.Path, path, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(s.Arguments ?? string.Empty, arguments ?? string.Empty, StringComparison.OrdinalIgnoreCase)))
         {
             return false;
         }
@@ -611,6 +613,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             Name = string.IsNullOrEmpty(name) ? path : name,
             Path = path,
+            Arguments = arguments,
             Icon = iconOverride
                    ?? shellIcon
                    ?? (isFileOrDir ? IconService.GetIcon(path, (int)Math.Max(_config.IconSize * 4, 256)) : null)
@@ -631,7 +634,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
-        if (sender is not System.Windows.Controls.Button button || button.Tag is not string path)
+        if (sender is not System.Windows.Controls.Button button || button.Tag is not ShortcutItem item)
         {
             return;
         }
@@ -640,7 +643,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             Process.Start(new ProcessStartInfo
             {
-                FileName = path,
+                FileName = item.Path,
+                Arguments = item.Arguments ?? string.Empty,
                 UseShellExecute = true
             });
         }
@@ -652,12 +656,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void Remove_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not System.Windows.Controls.Button button || button.Tag is not string path)
+        if (sender is not System.Windows.Controls.Button button || button.Tag is not ShortcutItem item)
         {
             return;
         }
 
-        var item = Shortcuts.FirstOrDefault(s => string.Equals(s.Path, path, StringComparison.OrdinalIgnoreCase));
         if (item != null)
         {
             Shortcuts.Remove(item);
@@ -667,12 +670,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void Rename_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not System.Windows.Controls.Button button || button.Tag is not string path)
+        if (sender is not System.Windows.Controls.Button button || button.Tag is not ShortcutItem item)
         {
             return;
         }
 
-        var item = Shortcuts.FirstOrDefault(s => string.Equals(s.Path, path, StringComparison.OrdinalIgnoreCase));
         if (item == null)
         {
             return;
@@ -697,7 +699,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void ChangeIcon_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not System.Windows.Controls.Button button || button.Tag is not string path)
+        if (sender is not System.Windows.Controls.Button button || button.Tag is not ShortcutItem item)
         {
             return;
         }
@@ -712,7 +714,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (dialog.ShowDialog() == true)
         {
             var target = dialog.FileName;
-            var item = Shortcuts.FirstOrDefault(s => string.Equals(s.Path, path, StringComparison.OrdinalIgnoreCase));
             if (item != null)
             {
                 item.IconPath = target;
@@ -727,14 +728,29 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var menu = new System.Windows.Controls.ContextMenu
         {
             PlacementTarget = sender as System.Windows.Controls.Button,
-            Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom
+            Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
+            Style = (Style)FindResource("DockContextMenuStyle")
         };
 
-        var fileItem = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("AddMenu_File") };
+        var menuItemStyle = (Style)FindResource("DockContextMenuItemStyle");
+
+        var fileItem = new System.Windows.Controls.MenuItem
+        {
+            Header = LocalizationService.Get("AddMenu_File"),
+            Style = menuItemStyle
+        };
         fileItem.Click += (_, _) => AddFileShortcut();
-        var storeItem = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("AddMenu_Store") };
+        var storeItem = new System.Windows.Controls.MenuItem
+        {
+            Header = LocalizationService.Get("AddMenu_Store"),
+            Style = menuItemStyle
+        };
         storeItem.Click += (_, _) => AddStoreAppFlow();
-        var uriItem = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("AddMenu_Uri") };
+        var uriItem = new System.Windows.Controls.MenuItem
+        {
+            Header = LocalizationService.Get("AddMenu_Uri"),
+            Style = menuItemStyle
+        };
         uriItem.Click += (_, _) => AddUriShortcut();
 
         menu.Items.Add(fileItem);
@@ -775,7 +791,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         };
         if (addLink.ShowDialog() == true)
         {
-            AddShortcut(addLink.Target, addLink.DisplayName);
+            AddShortcut(addLink.ResolvedTarget, addLink.DisplayName, persist: true, arguments: addLink.ResolvedArguments);
         }
     }
 
@@ -875,6 +891,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             {
                 Name = s.Name,
                 Path = s.Path,
+                Arguments = s.Arguments,
                 IconPath = s.IconPath
             }).ToList()
         };
@@ -978,6 +995,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _config.DockSide = _dockSide;
         _config.DockWidth = IsEditMode ? Math.Max(_preEditWidth, 175) : Math.Max(Width, 175);
         _config.IconSize = IconSize;
+        _config.BackgroundOpacity = _config.UseTransparency ? GlassOpacity : 1.0;
         _config.UseLightText = _config.UseLightText;
         _config.Shortcuts = Shortcuts.ToList();
         ConfigService.SaveConfig(_config);
@@ -1360,6 +1378,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 fTransitionOnMaximized = false
             };
             NativeMethods.DwmEnableBlurBehindWindow(hwnd, ref blur);
+
+            // Restore a normal client area when Glass is disabled so the dock
+            // returns to a fully opaque surface instead of keeping extended frame behavior.
+            var margins = new NativeMethods.MARGINS
+            {
+                cxLeftWidth = 0,
+                cxRightWidth = 0,
+                cyTopHeight = 0,
+                cyBottomHeight = 0
+            };
+            NativeMethods.DwmExtendFrameIntoClientArea(hwnd, ref margins);
         }
         catch (Exception ex)
         {

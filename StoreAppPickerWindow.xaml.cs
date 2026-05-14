@@ -1,9 +1,11 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
+using System.Windows.Threading;
 using DockBar.Models;
 using DockBar.Services;
 
@@ -16,6 +18,23 @@ public partial class StoreAppPickerWindow : Window, INotifyPropertyChanged
     public StoreAppInfo? SelectedApp { get; private set; }
     public SolidColorBrush BackgroundBrush { get; }
     public SolidColorBrush ForegroundBrush { get; }
+    private bool _isLoading = true;
+
+    public bool IsLoading
+    {
+        get => _isLoading;
+        private set
+        {
+            if (_isLoading != value)
+            {
+                _isLoading = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsEmpty));
+            }
+        }
+    }
+
+    public bool IsEmpty => !IsLoading && Apps.Count == 0;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -26,17 +45,22 @@ public partial class StoreAppPickerWindow : Window, INotifyPropertyChanged
         InitializeComponent();
         DataContext = this;
         AppsView = CollectionViewSource.GetDefaultView(Apps);
-        Loaded += (_, _) => LoadApps();
+        Loaded += async (_, _) => await LoadAppsAsync();
     }
 
-    private void LoadApps()
+    private async Task LoadAppsAsync()
     {
+        IsLoading = true;
+        await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+
+        var apps = await Task.Run(StoreAppService.GetInstalledApps);
         Apps.Clear();
-        foreach (var app in StoreAppService.GetInstalledApps())
+        foreach (var app in apps)
         {
             Apps.Add(app);
         }
         AppsView.Refresh();
+        IsLoading = false;
     }
 
     private void SearchBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)

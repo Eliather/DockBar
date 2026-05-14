@@ -1,5 +1,5 @@
 # DockBar
-DockBar is a dock-style sidebar for Windows built with WPF. Version `1.5.1` focuses on making the product feel less like a utility window and more like a cohesive desktop tool.
+DockBar is a dock-style sidebar for Windows built with WPF. Version `1.5.2` keeps refining the product around cleaner dialogs, better command handling, and a more polished configuration flow.
 
 <img width="256" height="256" alt="Dock" src="https://github.com/user-attachments/assets/eb6fd915-77f7-4298-b41b-90a7d14f41d1" />
 
@@ -16,9 +16,9 @@ This version is built around three priorities:
 - A cleaner interface direction for settings and dialogs, avoiding the old utility or "Windows 98 tool window" look.
 
 ## Release Summary
-DockBar `1.5.1` is a UI and UX cleanup release. The main goal was to modernize the dock controls and the configuration flow so the app feels more intentional, more readable, and less like an old WPF utility.
+DockBar `1.5.2` is a polish and reliability release. The focus here is on reducing rough edges in the add-shortcut flows, making installed-app selection feel faster and more intentional, and fixing a few behavioral issues that still leaked through after the larger `1.5.1` redesign.
 
-The biggest visible change is the settings experience: a denser layout, a single appearance panel where preview and color decisions happen together, a dedicated Glass toggle, cleaner sliders, and a themed About dialog that matches the rest of the product.
+The biggest visible changes are in the secondary dialogs: the installed-app picker is denser and loads with a real in-app loading state, the command/URI dialog is cleaner and validates input before saving, and the add-shortcut sub-menu now matches the visual language of the dock instead of falling back to a plain Windows menu.
 
 ## What It Does
 - Left or right borderless dock with topmost behavior.
@@ -31,16 +31,14 @@ The biggest visible change is the settings experience: a denser layout, a single
 - Hidden from Alt+Tab and Win+Tab.
 - Persistent config stored in `%AppData%\DockBar\shortcuts.json`.
 
-## What Changed In 1.5.1
-- Redesigned settings window with a more compact layout.
-- Preview and appearance controls now live in the same panel.
-- Visible custom vertical scroll rail on the right side of settings instead of relying only on the mouse wheel.
-- Refined vertical hue slider and scroll controls with a straighter tube-style track.
-- `Efecto Glass` replaces the old opacity control in the UI.
-- New themed `About` window instead of a default system message box.
-- Cleaner Spanish localization with proper UTF-8 text, accents, and `ñ`.
-- Shared dialog theme for settings, add shortcut, rename, and Store picker windows.
-- More polished dock action icons and hover tooltips in the main UI.
+## What Changed In 1.5.2
+- Compact redesign for the installed-app picker so the search bar is smaller and the list shows more apps by default.
+- The installed-app picker now renders immediately and shows an in-app loading state instead of appearing blank while Windows app enumeration completes.
+- `Agregar app o acceso` was simplified into a denser command/path dialog with better spacing and less unnecessary side content.
+- Command input now validates before saving and supports executable arguments such as `explorer.exe shell:Downloads`.
+- The add-shortcut sub-menu now uses the same dark visual language as the rest of the app instead of the default Windows context menu.
+- Fixed the Glass toggle path so disabling the effect forces opacity back to `1.0` and resets the DWM extended frame behavior correctly.
+- Updated text and naming around `Apps instaladas` so the UI better matches what the picker actually does.
 
 ## Performance Improvements
 - Icon caching in `IconService` to avoid reloading the same files repeatedly.
@@ -99,9 +97,9 @@ Notes:
 ## Architecture
 - `MainWindow.xaml(.cs)`: dock UI, auto-hide, drag/drop, pagination, fullscreen behavior, and visual application of config.
 - `SettingsWindow.xaml(.cs)`: compact settings UI, live preview, color picker, and Glass toggle.
-- `AddLinkWindow.xaml(.cs)`: add custom shortcut path or URI.
+- `AddLinkWindow.xaml(.cs)`: add executables, folders, URIs, or commands with validation.
 - `RenameWindow.xaml(.cs)`: rename shortcut dialog.
-- `StoreAppPickerWindow.xaml(.cs)`: Microsoft Store app picker.
+- `StoreAppPickerWindow.xaml(.cs)`: installed-app picker with async loading state.
 - `Models/`: configuration and shortcut models.
 - `Services/ConfigService.cs`: load and save config with backward-compatible defaults.
 - `Services/IconService.cs`: icon resolution and cache.

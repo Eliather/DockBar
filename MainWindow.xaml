@@ -135,7 +135,7 @@
                         <Border Padding="6" Background="Transparent">
                             <Button Style="{StaticResource CharmItemButtonStyle}"
                                     Click="Shortcut_Click"
-                                    Tag="{Binding Path}">
+                                    Tag="{Binding}">
                                 <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
                                     <Image Width="{Binding IconSize, RelativeSource={RelativeSource AncestorType=Window}}"
                                            Height="{Binding IconSize, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -221,7 +221,7 @@
                                     </Rectangle>
                                     <Button Style="{StaticResource CharmItemButtonStyle}"
                                             Click="Shortcut_Click"
-                                            Tag="{Binding Path}"
+                                            Tag="{Binding}"
                                             IsHitTestVisible="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBoolConverter}}">
                                         <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
                                             <Image Width="{Binding IconSize, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -256,7 +256,7 @@
                                                 Height="28"
                                                 Margin="4,0,0,0"
                                                 Click="Rename_Click"
-                                                Tag="{Binding Path}">
+                                                Tag="{Binding}">
                                             <Button.ToolTip>
                                                 <ToolTip Style="{StaticResource DockToolTipStyle}"
                                                          Content="{local:Loc Key=Dock_TooltipRename}"/>
@@ -273,7 +273,7 @@
                                                 Height="28"
                                                 Margin="4,0,0,0"
                                                 Click="ChangeIcon_Click"
-                                                Tag="{Binding Path}">
+                                                Tag="{Binding}">
                                             <Button.ToolTip>
                                                 <ToolTip Style="{StaticResource DockToolTipStyle}"
                                                          Content="{local:Loc Key=Dock_TooltipChangeIcon}"/>
@@ -298,7 +298,7 @@
                                                 Height="28"
                                                 Margin="4,0,0,0"
                                                 Click="Remove_Click"
-                                                Tag="{Binding Path}">
+                                                Tag="{Binding}">
                                             <Button.ToolTip>
                                                 <ToolTip Style="{StaticResource DockToolTipStyle}"
                                                          Content="{local:Loc Key=Dock_TooltipRemove}"/>

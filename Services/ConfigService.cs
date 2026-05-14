@@ -59,6 +59,7 @@ public static class ConfigService
     {
         try
         {
+            config.BackgroundOpacity = config.UseTransparency ? GlassOpacity : 1.0;
             Directory.CreateDirectory(ConfigDirectory);
             var options = new JsonSerializerOptions { WriteIndented = true };
             var json = JsonSerializer.Serialize(config, options);
