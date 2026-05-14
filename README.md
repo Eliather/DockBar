@@ -3,6 +3,9 @@ DockBar is a dock-style sidebar for Windows built with WPF. Version `1.5.2` keep
 
 <img width="256" height="256" alt="Dock" src="https://github.com/user-attachments/assets/eb6fd915-77f7-4298-b41b-90a7d14f41d1" />
 
+<img width="1920" height="1080" alt="{0A9D8F93-0DB9-42CC-979A-CF66218595FC}" src="https://github.com/user-attachments/assets/302484ca-4aa6-4e54-9b0d-35e484cdc4ff" />
+
+
 Video demo:
 https://github.com/user-attachments/assets/9a4ea52f-8131-471e-8bd3-89122aa3dec7
 
