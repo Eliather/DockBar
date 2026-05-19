@@ -11,6 +11,7 @@ public partial class App : System.Windows.Application
 {
     private WinForms.NotifyIcon? _notifyIcon;
     private MainWindow? _window;
+    private TrayMenuWindow? _trayMenu;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -31,11 +32,29 @@ public partial class App : System.Windows.Application
             Visible = true
         };
 
-        var contextMenu = new WinForms.ContextMenuStrip();
-        contextMenu.Items.Add(LocalizationService.Get("Tray_Open"), null, (_, _) => ShowWindow());
-        contextMenu.Items.Add(LocalizationService.Get("Tray_ToggleSide"), null, (_, _) => _window?.ToggleDockSide());
-        contextMenu.Items.Add(LocalizationService.Get("Tray_Settings"), null, (_, _) => OpenSettingsWindow());
-        contextMenu.Items.Add(LocalizationService.Get("Update_Menu"), null, async (_, _) =>
+        _notifyIcon.MouseUp += NotifyIcon_MouseUp;
+        _notifyIcon.DoubleClick += (_, _) => ShowWindow();
+    }
+
+    private void NotifyIcon_MouseUp(object? sender, WinForms.MouseEventArgs e)
+    {
+        if (e.Button != WinForms.MouseButtons.Right)
+        {
+            return;
+        }
+
+        Dispatcher.BeginInvoke(new Action(() => ShowTrayMenu(WinForms.Control.MousePosition)));
+    }
+
+    private void ShowTrayMenu(System.Drawing.Point anchorPoint)
+    {
+        _trayMenu?.Close();
+
+        var menu = new TrayMenuWindow();
+        menu.OpenRequested += (_, _) => ShowWindow();
+        menu.ToggleSideRequested += (_, _) => _window?.ToggleDockSide();
+        menu.SettingsRequested += (_, _) => OpenSettingsWindow();
+        menu.UpdateRequested += async (_, _) =>
         {
             if (_window == null)
             {
@@ -43,11 +62,19 @@ public partial class App : System.Windows.Application
             }
 
             await _window.CheckForUpdatesAsync(true);
-        });
-        contextMenu.Items.Add(LocalizationService.Get("Tray_ConfigFolder"), null, (_, _) => OpenConfigFolder());
-        contextMenu.Items.Add(LocalizationService.Get("Tray_Exit"), null, (_, _) => ExitApp());
-        _notifyIcon.ContextMenuStrip = contextMenu;
-        _notifyIcon.DoubleClick += (_, _) => ShowWindow();
+        };
+        menu.ConfigFolderRequested += (_, _) => OpenConfigFolder();
+        menu.ExitRequested += (_, _) => ExitApp();
+        menu.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_trayMenu, menu))
+            {
+                _trayMenu = null;
+            }
+        };
+
+        _trayMenu = menu;
+        menu.ShowAt(anchorPoint);
     }
 
     private static Icon LoadTrayIcon()
@@ -115,6 +142,7 @@ public partial class App : System.Windows.Application
 
     private void ExitApp()
     {
+        _trayMenu?.Close();
         _notifyIcon?.Dispose();
         _window?.Close();
         Shutdown();
@@ -122,6 +150,7 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _trayMenu?.Close();
         _notifyIcon?.Dispose();
         base.OnExit(e);
     }

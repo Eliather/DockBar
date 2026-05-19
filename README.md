@@ -1,5 +1,5 @@
 # DockBar
-DockBar is a dock-style sidebar for Windows built with WPF. Version `1.5.3` is a stability release focused on keeping the dock alive and populated after suspend, hibernate, and display resume events on laptops.
+DockBar is a dock-style sidebar for Windows built with WPF. Version `1.5.4` refines the tray experience with a custom quick-actions menu that matches the rest of the app instead of falling back to the classic white Windows menu.
 
 <img width="256" height="256" alt="Dock" src="https://github.com/user-attachments/assets/eb6fd915-77f7-4298-b41b-90a7d14f41d1" />
 
@@ -19,9 +19,9 @@ This version is built around three priorities:
 - A cleaner interface direction for settings and dialogs, avoiding the old utility or "Windows 98 tool window" look.
 
 ## Release Summary
-DockBar `1.5.3` is a focused recovery and reliability release. The main goal is to keep the dock from coming back empty after the machine resumes from suspend or hibernate, especially on laptops that sleep when the lid is closed.
+DockBar `1.5.4` is a UI polish release centered on the tray icon experience. The main change is replacing the standard Windows tray context menu with a styled in-app popup so quick actions feel consistent with DockBar's own visual language.
 
-The key change in this build is explicit recovery after power and display transitions: the window now restores its layout, refreshes visible shortcuts and icons, and reloads the persisted shortcut list if the in-memory collection comes back empty after resume.
+The tray menu now opens as a custom WPF surface with rounded corners, dark styling, inline icons, and the same shortcut actions as before. The previous `1.5.3` recovery improvements remain in place underneath.
 
 ## What It Does
 - Left or right borderless dock with topmost behavior.
@@ -34,11 +34,11 @@ The key change in this build is explicit recovery after power and display transi
 - Hidden from Alt+Tab and Win+Tab.
 - Persistent config stored in `%AppData%\DockBar\shortcuts.json`.
 
-## What Changed In 1.5.3
-- Added explicit dock recovery when Windows resumes from suspend or hibernate.
-- Added recovery after session unlock and display topology changes so the dock recalculates monitor bounds, pagination, and topmost state.
-- Visible shortcuts are rebuilt after resume and shortcut icons are refreshed to avoid a blank bar with stale UI state.
-- If the in-memory shortcut list comes back empty after resume, DockBar now reloads `%AppData%\DockBar\shortcuts.json` automatically instead of forcing a full app restart.
+## What Changed In 1.5.4
+- Replaced the tray icon's default `ContextMenuStrip` with a custom WPF popup menu.
+- The tray menu now matches DockBar's dark theme, rounded surfaces, spacing, and hover states.
+- Added inline vector icons and a compact header to make tray actions feel closer to tools like Wallpaper Engine.
+- Kept the same quick actions as before: open dock, switch side, settings, update check, config folder, and exit.
 
 ## Performance Improvements
 - Icon caching in `IconService` to avoid reloading the same files repeatedly.
