@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:DockBar"
         Title="DockBar"
-        Width="292"
+        Width="236"
         SizeToContent="Height"
         WindowStartupLocation="Manual"
         WindowStyle="None"
@@ -21,8 +21,8 @@
             <Setter Property="Background" Value="#00000000"/>
             <Setter Property="BorderBrush" Value="#00000000"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="12,11"/>
-            <Setter Property="Margin" Value="0,0,0,4"/>
+            <Setter Property="Padding" Value="9,8"/>
+            <Setter Property="Margin" Value="0,0,0,3"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
@@ -32,7 +32,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="12"
+                                CornerRadius="10"
                                 SnapsToDevicePixels="True">
                             <ContentPresenter Margin="{TemplateBinding Padding}"/>
                         </Border>
@@ -52,14 +52,14 @@
 
         <Style x:Key="TrayMenuLabelStyle" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{StaticResource AppTextBrush}"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
         <Style x:Key="TrayMenuIconStyle" TargetType="Path">
             <Setter Property="Stroke" Value="{StaticResource AppTextMutedBrush}"/>
-            <Setter Property="StrokeThickness" Value="1.85"/>
+            <Setter Property="StrokeThickness" Value="1.7"/>
             <Setter Property="StrokeStartLineCap" Value="Round"/>
             <Setter Property="StrokeEndLineCap" Value="Round"/>
             <Setter Property="StrokeLineJoin" Value="Round"/>
@@ -69,34 +69,34 @@
         </Style>
     </Window.Resources>
 
-    <Border Margin="10"
-            Padding="10"
+    <Border Margin="8"
+            Padding="8"
             Background="{DynamicResource AppSurfaceBrush}"
             BorderBrush="{DynamicResource AppBorderStrongBrush}"
             BorderThickness="1"
-            CornerRadius="18">
+            CornerRadius="16">
         <Border.Effect>
             <DropShadowEffect Color="#B0000000"
-                              BlurRadius="26"
+                              BlurRadius="22"
                               ShadowDepth="0"
-                              Opacity="0.42"/>
+                              Opacity="0.38"/>
         </Border.Effect>
 
         <StackPanel>
-            <Border Padding="12,10"
-                    Margin="0,0,0,8"
+            <Border Padding="10,8"
+                    Margin="0,0,0,6"
                     Background="{DynamicResource AppPanelBrush}"
                     BorderBrush="{DynamicResource AppBorderBrush}"
                     BorderThickness="1"
-                    CornerRadius="14">
+                    CornerRadius="12">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="10"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <Viewbox Width="20" Height="20">
+                    <Viewbox Width="16" Height="16">
                         <Grid Width="24" Height="24">
                             <Border Width="16"
                                     Height="18"
@@ -138,12 +138,12 @@
                     <StackPanel Grid.Column="2">
                         <TextBlock Text="DockBar"
                                    Foreground="{DynamicResource AppTextBrush}"
-                                   FontSize="14"
+                                   FontSize="13"
                                    FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding VersionTag}"
                                    Foreground="{DynamicResource AppTextMutedBrush}"
-                                   FontSize="11.5"
-                                   Margin="0,2,0,0"/>
+                                   FontSize="10.5"
+                                   Margin="0,1,0,0"/>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -152,11 +152,11 @@
                     Click="Open_Click">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="18"/>
-                        <ColumnDefinition Width="14"/>
+                        <ColumnDefinition Width="15"/>
+                        <ColumnDefinition Width="10"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Viewbox Grid.Column="0" Width="18" Height="18">
+                    <Viewbox Grid.Column="0" Width="15" Height="15">
                         <Grid Width="24" Height="24">
                             <Path Style="{StaticResource TrayMenuIconStyle}" Data="M5.5,18.25H18.5V8.5H12.5L10.5,6.25H5.5Z"/>
                             <Path Style="{StaticResource TrayMenuIconStyle}" Data="M10,14L15.25,8.75 M12.5,8.75H15.25V11.5"/>
@@ -172,11 +172,11 @@
                     Click="ToggleSide_Click">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="18"/>
-                        <ColumnDefinition Width="14"/>
+                        <ColumnDefinition Width="15"/>
+                        <ColumnDefinition Width="10"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Viewbox Grid.Column="0" Width="18" Height="18">
+                    <Viewbox Grid.Column="0" Width="15" Height="15">
                         <Grid Width="24" Height="24">
                             <Path Style="{StaticResource TrayMenuIconStyle}" Data="M8.5,7L4.5,12L8.5,17"/>
                             <Path Style="{StaticResource TrayMenuIconStyle}" Data="M15.5,7L19.5,12L15.5,17"/>
@@ -193,11 +193,11 @@
                     Click="Settings_Click">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="18"/>
-                        <ColumnDefinition Width="14"/>
+                        <ColumnDefinition Width="15"/>
+                        <ColumnDefinition Width="10"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Viewbox Grid.Column="0" Width="18" Height="18">
+                    <Viewbox Grid.Column="0" Width="15" Height="15">
                         <Grid Width="24" Height="24">
                             <Path Style="{StaticResource TrayMenuIconStyle}" Data="M6.5,8H17.5 M6.5,12H17.5 M6.5,16H17.5"/>
                         </Grid>
@@ -212,11 +212,11 @@
                     Click="Update_Click">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="18"/>
-                        <ColumnDefinition Width="14"/>
+                        <ColumnDefinition Width="15"/>
+                        <ColumnDefinition Width="10"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Viewbox Grid.Column="0" Width="18" Height="18">
+                    <Viewbox Grid.Column="0" Width="15" Height="15">
                         <Grid Width="24" Height="24">
                             <Path Style="{StaticResource TrayMenuIconStyle}" Data="M12,5.5V15.5"/>
                             <Path Style="{StaticResource TrayMenuIconStyle}" Data="M8.5,12L12,15.5L15.5,12"/>
@@ -230,18 +230,18 @@
             </Button>
 
             <Border Height="1"
-                    Margin="4,6,4,10"
+                    Margin="4,4,4,8"
                     Background="{DynamicResource AppBorderBrush}"/>
 
             <Button Style="{StaticResource TrayMenuButtonStyle}"
                     Click="ConfigFolder_Click">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="18"/>
-                        <ColumnDefinition Width="14"/>
+                        <ColumnDefinition Width="15"/>
+                        <ColumnDefinition Width="10"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Viewbox Grid.Column="0" Width="18" Height="18">
+                    <Viewbox Grid.Column="0" Width="15" Height="15">
                         <Grid Width="24" Height="24">
                             <Path Style="{StaticResource TrayMenuIconStyle}" Data="M4.5,8.25H10L12,10.25H19.5V17.5H4.5Z"/>
                             <Path Style="{StaticResource TrayMenuIconStyle}" Data="M4.5,8.25V6.5H10L12,8.25H19.5V10.25"/>
@@ -258,11 +258,11 @@
                     Margin="0,0,0,0">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="18"/>
-                        <ColumnDefinition Width="14"/>
+                        <ColumnDefinition Width="15"/>
+                        <ColumnDefinition Width="10"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Viewbox Grid.Column="0" Width="18" Height="18">
+                    <Viewbox Grid.Column="0" Width="15" Height="15">
                         <Grid Width="24" Height="24">
                             <Path Style="{StaticResource TrayMenuIconStyle}" Data="M8,8L16,16 M16,8L8,16"/>
                         </Grid>

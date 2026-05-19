@@ -80,10 +80,10 @@ public static class LocalizationService
             ["Store_PanelFooter"] = "Doble clic también agrega la app seleccionada.",
 
             ["Tray_Open"] = "Abrir",
-            ["Tray_ToggleSide"] = "Cambiar lado (Izq./Der.)",
+            ["Tray_ToggleSide"] = "Cambiar lado",
             ["Tray_Settings"] = "Ajustes...",
             ["Tray_ConfigFolder"] = "Configuración",
-            ["Update_Menu"] = "Buscar actualizaciones...",
+            ["Update_Menu"] = "Actualizar...",
             ["Tray_Exit"] = "Salir",
 
             ["AddMenu_File"] = "Archivo / ejecutable...",
@@ -197,10 +197,10 @@ public static class LocalizationService
             ["Store_PanelFooter"] = "Double-click also adds the selected app.",
 
             ["Tray_Open"] = "Open",
-            ["Tray_ToggleSide"] = "Switch side (Left/Right)",
+            ["Tray_ToggleSide"] = "Switch side",
             ["Tray_Settings"] = "Settings...",
             ["Tray_ConfigFolder"] = "Configuration",
-            ["Update_Menu"] = "Check for updates...",
+            ["Update_Menu"] = "Check updates...",
             ["Tray_Exit"] = "Exit",
 
             ["AddMenu_File"] = "File / executable...",
