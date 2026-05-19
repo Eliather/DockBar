@@ -1,5 +1,5 @@
 # DockBar
-DockBar is a dock-style sidebar for Windows built with WPF. Version `1.5.4` refines the tray experience with a custom quick-actions menu that matches the rest of the app instead of falling back to the classic white Windows menu.
+DockBar is a dock-style sidebar for Windows built with WPF. Version `1.5.5` refines the tray experience with a compact custom quick-actions menu that matches the rest of the app instead of falling back to the classic white Windows menu.
 
 <img width="256" height="256" alt="Dock" src="https://github.com/user-attachments/assets/eb6fd915-77f7-4298-b41b-90a7d14f41d1" />
 
@@ -19,9 +19,9 @@ This version is built around three priorities:
 - A cleaner interface direction for settings and dialogs, avoiding the old utility or "Windows 98 tool window" look.
 
 ## Release Summary
-DockBar `1.5.4` is a UI polish release centered on the tray icon experience. The main change is replacing the standard Windows tray context menu with a styled in-app popup so quick actions feel consistent with DockBar's own visual language.
+DockBar `1.5.5` is a UI polish release centered on the tray icon experience. The main change is replacing the standard Windows tray context menu with a styled in-app popup so quick actions feel consistent with DockBar's own visual language.
 
-The tray menu now opens as a custom WPF surface with rounded corners, dark styling, inline icons, and the same shortcut actions as before. The previous `1.5.3` recovery improvements remain in place underneath.
+The tray menu now opens as a custom WPF surface with rounded corners, dark styling, inline icons, and tighter proportions so it feels closer to a native Windows-side flyout. The previous `1.5.3` recovery improvements remain in place underneath.
 
 ## What It Does
 - Left or right borderless dock with topmost behavior.
@@ -34,10 +34,10 @@ The tray menu now opens as a custom WPF surface with rounded corners, dark styli
 - Hidden from Alt+Tab and Win+Tab.
 - Persistent config stored in `%AppData%\DockBar\shortcuts.json`.
 
-## What Changed In 1.5.4
+## What Changed In 1.5.5
 - Replaced the tray icon's default `ContextMenuStrip` with a custom WPF popup menu.
 - The tray menu now matches DockBar's dark theme, rounded surfaces, spacing, and hover states.
-- Added inline vector icons and a compact header to make tray actions feel closer to tools like Wallpaper Engine.
+- Added inline vector icons, a compact header, and a tighter layout to make tray actions feel closer to tools like Wallpaper Engine.
 - Kept the same quick actions as before: open dock, switch side, settings, update check, config folder, and exit.
 
 ## Performance Improvements
