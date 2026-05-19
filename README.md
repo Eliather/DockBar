@@ -1,5 +1,5 @@
 # DockBar
-DockBar is a dock-style sidebar for Windows built with WPF. Version `1.5.2` keeps refining the product around cleaner dialogs, better command handling, and a more polished configuration flow.
+DockBar is a dock-style sidebar for Windows built with WPF. Version `1.5.3` is a stability release focused on keeping the dock alive and populated after suspend, hibernate, and display resume events on laptops.
 
 <img width="256" height="256" alt="Dock" src="https://github.com/user-attachments/assets/eb6fd915-77f7-4298-b41b-90a7d14f41d1" />
 
@@ -19,9 +19,9 @@ This version is built around three priorities:
 - A cleaner interface direction for settings and dialogs, avoiding the old utility or "Windows 98 tool window" look.
 
 ## Release Summary
-DockBar `1.5.2` is a polish and reliability release. The focus here is on reducing rough edges in the add-shortcut flows, making installed-app selection feel faster and more intentional, and fixing a few behavioral issues that still leaked through after the larger `1.5.1` redesign.
+DockBar `1.5.3` is a focused recovery and reliability release. The main goal is to keep the dock from coming back empty after the machine resumes from suspend or hibernate, especially on laptops that sleep when the lid is closed.
 
-The biggest visible changes are in the secondary dialogs: the installed-app picker is denser and loads with a real in-app loading state, the command/URI dialog is cleaner and validates input before saving, and the add-shortcut sub-menu now matches the visual language of the dock instead of falling back to a plain Windows menu.
+The key change in this build is explicit recovery after power and display transitions: the window now restores its layout, refreshes visible shortcuts and icons, and reloads the persisted shortcut list if the in-memory collection comes back empty after resume.
 
 ## What It Does
 - Left or right borderless dock with topmost behavior.
@@ -34,14 +34,11 @@ The biggest visible changes are in the secondary dialogs: the installed-app pick
 - Hidden from Alt+Tab and Win+Tab.
 - Persistent config stored in `%AppData%\DockBar\shortcuts.json`.
 
-## What Changed In 1.5.2
-- Compact redesign for the installed-app picker so the search bar is smaller and the list shows more apps by default.
-- The installed-app picker now renders immediately and shows an in-app loading state instead of appearing blank while Windows app enumeration completes.
-- `Agregar app o acceso` was simplified into a denser command/path dialog with better spacing and less unnecessary side content.
-- Command input now validates before saving and supports executable arguments such as `explorer.exe shell:Downloads`.
-- The add-shortcut sub-menu now uses the same dark visual language as the rest of the app instead of the default Windows context menu.
-- Fixed the Glass toggle path so disabling the effect forces opacity back to `1.0` and resets the DWM extended frame behavior correctly.
-- Updated text and naming around `Apps instaladas` so the UI better matches what the picker actually does.
+## What Changed In 1.5.3
+- Added explicit dock recovery when Windows resumes from suspend or hibernate.
+- Added recovery after session unlock and display topology changes so the dock recalculates monitor bounds, pagination, and topmost state.
+- Visible shortcuts are rebuilt after resume and shortcut icons are refreshed to avoid a blank bar with stale UI state.
+- If the in-memory shortcut list comes back empty after resume, DockBar now reloads `%AppData%\DockBar\shortcuts.json` automatically instead of forcing a full app restart.
 
 ## Performance Improvements
 - Icon caching in `IconService` to avoid reloading the same files repeatedly.

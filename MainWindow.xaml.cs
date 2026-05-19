@@ -46,6 +46,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private WinEventDelegate? _winEventDelegate;
     private bool _fullscreenCheckPending;
     private bool _updateCheckRunning;
+    private readonly DispatcherTimer _systemRecoveryTimer;
+    private bool _reloadConfigOnRecovery;
 
     public ObservableCollection<ShortcutItem> Shortcuts { get; } = new();
     public ObservableCollection<ShortcutItem> VisibleShortcuts { get; } = new();
@@ -160,9 +162,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         _hideTimer = new DispatcherTimer();
         _hideTimer.Tick += HideTimer_Tick;
+        _systemRecoveryTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(600)
+        };
+        _systemRecoveryTimer.Tick += SystemRecoveryTimer_Tick;
 
         LoadConfigAndShortcuts();
         Shortcuts.CollectionChanged += Shortcuts_CollectionChanged;
+        RegisterSystemEventHandlers();
         UpdateVisibleItems();
     }
 
@@ -187,18 +195,27 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _dockSide = _config.DockSide;
 
         ApplyVisualConfig();
-
-        Shortcuts.Clear();
-        _config.Shortcuts ??= new();
-        foreach (var item in _config.Shortcuts)
-        {
-            item.Icon = ResolveIcon(item);
-            Shortcuts.Add(item);
-        }
-        UpdateVisibleItems();
+        ReplaceShortcuts(_config.Shortcuts);
 
         HandleAutoStartPrompt();
         AutoStartService.Apply(_config.AutoStartEnabled);
+    }
+
+    private void ReplaceShortcuts(System.Collections.Generic.IEnumerable<ShortcutItem>? shortcuts, bool forceIconRefresh = true)
+    {
+        Shortcuts.Clear();
+
+        foreach (var item in shortcuts ?? Enumerable.Empty<ShortcutItem>())
+        {
+            if (forceIconRefresh || item.Icon == null)
+            {
+                item.Icon = ResolveIcon(item);
+            }
+
+            Shortcuts.Add(item);
+        }
+
+        UpdateVisibleItems();
     }
 
     private void HandleAutoStartPrompt()
@@ -279,6 +296,108 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void MainWindow_SourceInitialized(object? sender, EventArgs e)
     {
         HideFromWindowSwitchers();
+    }
+
+    private void RegisterSystemEventHandlers()
+    {
+        Win32.SystemEvents.PowerModeChanged += SystemEvents_PowerModeChanged;
+        Win32.SystemEvents.SessionSwitch += SystemEvents_SessionSwitch;
+        Win32.SystemEvents.DisplaySettingsChanged += SystemEvents_DisplaySettingsChanged;
+    }
+
+    private void UnregisterSystemEventHandlers()
+    {
+        Win32.SystemEvents.PowerModeChanged -= SystemEvents_PowerModeChanged;
+        Win32.SystemEvents.SessionSwitch -= SystemEvents_SessionSwitch;
+        Win32.SystemEvents.DisplaySettingsChanged -= SystemEvents_DisplaySettingsChanged;
+    }
+
+    private void SystemEvents_PowerModeChanged(object? sender, Win32.PowerModeChangedEventArgs e)
+    {
+        if (e.Mode == Win32.PowerModes.Resume)
+        {
+            ScheduleDockRecovery(reloadConfigIfMissing: true);
+        }
+    }
+
+    private void SystemEvents_SessionSwitch(object? sender, Win32.SessionSwitchEventArgs e)
+    {
+        if (e.Reason is Win32.SessionSwitchReason.SessionUnlock or Win32.SessionSwitchReason.ConsoleConnect)
+        {
+            ScheduleDockRecovery(reloadConfigIfMissing: true);
+        }
+    }
+
+    private void SystemEvents_DisplaySettingsChanged(object? sender, EventArgs e)
+    {
+        ScheduleDockRecovery(reloadConfigIfMissing: false);
+    }
+
+    private void ScheduleDockRecovery(bool reloadConfigIfMissing)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(new Action(() => ScheduleDockRecovery(reloadConfigIfMissing)));
+            return;
+        }
+
+        _reloadConfigOnRecovery |= reloadConfigIfMissing;
+        _systemRecoveryTimer.Stop();
+        _systemRecoveryTimer.Start();
+    }
+
+    private void SystemRecoveryTimer_Tick(object? sender, EventArgs e)
+    {
+        _systemRecoveryTimer.Stop();
+        var reloadConfigIfMissing = _reloadConfigOnRecovery;
+        _reloadConfigOnRecovery = false;
+        RecoverDockAfterResume(reloadConfigIfMissing);
+    }
+
+    private void RecoverDockAfterResume(bool reloadConfigIfMissing)
+    {
+        try
+        {
+            BeginAnimation(Window.LeftProperty, null);
+            _isAnimating = false;
+            _fullscreenActive = false;
+            Visibility = Visibility.Visible;
+            Topmost = true;
+
+            UpdateItemsPerPage();
+            AlignDock(!_isHidden);
+            ApplyGlassEffect();
+            EnsureTopmost();
+
+            if (reloadConfigIfMissing && Shortcuts.Count == 0)
+            {
+                var loaded = ConfigService.LoadConfig(out _, out _);
+                _config.Shortcuts = loaded.Shortcuts ?? new();
+                ReplaceShortcuts(_config.Shortcuts);
+            }
+            else
+            {
+                RefreshShortcutIcons(force: true);
+                UpdateVisibleItems();
+            }
+
+            ScheduleFullscreenCheck();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+    }
+
+    private void RefreshShortcutIcons(bool force = false)
+    {
+        foreach (var item in Shortcuts)
+        {
+            if (force || item.Icon == null)
+            {
+                item.Icon = ResolveIcon(item);
+            }
+        }
     }
 
     private void AlignDock(bool showState)
@@ -1071,6 +1190,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     protected override void OnClosed(EventArgs e)
     {
+        _systemRecoveryTimer.Stop();
+        UnregisterSystemEventHandlers();
         UnhookForegroundWatcher();
         base.OnClosed(e);
     }
