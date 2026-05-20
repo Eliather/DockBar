@@ -70,7 +70,6 @@ public partial class App : System.Windows.Application
     {
         if (_trayMenu != null)
         {
-            _trayMenu.RequestClose();
             return;
         }
 

@@ -971,7 +971,22 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         _dockSide = _dockSide == DockSide.Left ? DockSide.Right : DockSide.Left;
         SaveConfig();
-        AlignDock(!_isHidden);
+        RevealDockOnCurrentSide();
+    }
+
+    private void RevealDockOnCurrentSide()
+    {
+        BeginAnimation(Window.LeftProperty, null);
+        _isAnimating = false;
+        _isHidden = false;
+        StopHideTimer();
+        AlignDock(true);
+        EnsureTopmost();
+
+        if (_config.AutoHideDelaySeconds > 0 && !IsEditMode)
+        {
+            StartHideTimer();
+        }
     }
 
     public void OpenSettings()

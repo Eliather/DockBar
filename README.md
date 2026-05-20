@@ -1,5 +1,5 @@
 # DockBar
-DockBar is a dock-style sidebar for Windows built with WPF. Version `1.5.5.2` stabilizes the custom tray menu by preventing duplicate popup spam and fixing crashes when any quick action is clicked.
+DockBar is a dock-style sidebar for Windows built with WPF. Version `1.5.5.3` fixes the remaining tray and side-switching regressions so the custom tray menu behaves predictably and `Cambiar lado` works in both directions.
 
 <img width="256" height="256" alt="Dock" src="https://github.com/user-attachments/assets/eb6fd915-77f7-4298-b41b-90a7d14f41d1" />
 
@@ -19,9 +19,9 @@ This version is built around three priorities:
 - A cleaner interface direction for settings and dialogs, avoiding the old utility or "Windows 98 tool window" look.
 
 ## Release Summary
-DockBar `1.5.5.2` is a tray stability hotfix. The focus here is on fixing two regressions in the new custom tray popup: repeated right clicks could spawn or drift the menu, and selecting any tray action could crash the app during close/deactivate re-entry.
+DockBar `1.5.5.3` is a follow-up hotfix for the tray and dock-side toggle flows. The focus here is on two remaining behavior bugs: right-clicking the tray repeatedly could still keep nudging the popup, and switching the dock to the right side could appear broken because the bar stayed hidden instead of revealing itself on the new edge.
 
-The popup logic now serializes tray toggles, closes in a controlled single path, and defers command execution until after the flyout has fully closed. The compact positioning and on-screen clamping from `1.5.5.1` remain in place.
+The tray popup now ignores extra right-click toggles while already open, and the dock now reveals itself immediately after changing sides so moving from left to right is visible and reliable.
 
 ## What It Does
 - Left or right borderless dock with topmost behavior.
@@ -34,11 +34,10 @@ The popup logic now serializes tray toggles, closes in a controlled single path,
 - Hidden from Alt+Tab and Win+Tab.
 - Persistent config stored in `%AppData%\DockBar\shortcuts.json`.
 
-## What Changed In 1.5.5.2
-- Fixed repeated right-click spam so the tray popup no longer stacks, reopens immediately, or appears to drift away from the tray area.
-- Fixed crashes triggered by clicking tray menu actions while the popup was closing or deactivating.
-- Tray commands now execute after the flyout has fully closed, avoiding close/deactivate re-entry issues.
-- The tray popup keeps the compact sizing and safe monitor clamping introduced in `1.5.5.1`.
+## What Changed In 1.5.5.3
+- Fixed the remaining tray right-click drift so extra clicks are ignored while the popup is already open.
+- Fixed `Cambiar lado` so switching the dock to the right side reveals the bar correctly instead of leaving it apparently missing.
+- The tray popup keeps the close/deactivate crash fix and the compact on-screen placement behavior from the previous hotfixes.
 
 ## Performance Improvements
 - Icon caching in `IconService` to avoid reloading the same files repeatedly.
