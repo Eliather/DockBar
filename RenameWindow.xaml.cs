@@ -22,6 +22,12 @@ public partial class RenameWindow : Window, INotifyPropertyChanged
         DataContext = this;
     }
 
+    private void Window_Loaded(object sender, RoutedEventArgs e)
+    {
+        NameBox.Focus();
+        NameBox.SelectAll();
+    }
+
     private void Save_Click(object sender, RoutedEventArgs e)
     {
         DialogResult = true;

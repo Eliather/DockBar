@@ -53,6 +53,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly DispatcherTimer _systemRecoveryTimer;
     private bool _reloadConfigOnRecovery;
     private int _recoveryPassesRemaining;
+    private bool _itemsPerPageRefreshQueued;
+    private bool _syncingEditModeScroll;
     private EdgeHotspotWindow? _edgeHotspot;
 
     public ObservableCollection<ShortcutItem> Shortcuts { get; } = new();
@@ -146,6 +148,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     AlignDock(true);
                     QueueDockRealign(true);
                     ShowDockAnimated();
+                    Dispatcher.BeginInvoke(new Action(UpdateEditModeScrollBar), DispatcherPriority.Loaded);
                 }
                 else
                 {
@@ -154,6 +157,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     AlignDock(!_isHidden);
                     QueueDockRealign(!_isHidden);
                     StartHideTimer();
+                    if (EditModeScrollBar != null)
+                    {
+                        EditModeScrollBar.Visibility = Visibility.Collapsed;
+                    }
                 }
                 OnPropertyChanged();
                 RefreshModeUI();
@@ -318,6 +325,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         AlignDock(true);
         HookForegroundWatcher();
         ApplyGlassEffect();
+        QueueItemsPerPageRefresh();
         Dispatcher.BeginInvoke(new Action(() => _ = CheckForUpdatesAsync(false)), DispatcherPriority.Background);
     }
 
@@ -337,7 +345,44 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             UpdateItemsPerPage();
             UpdateVisibleItems();
+            QueueItemsPerPageRefresh();
+            if (IsEditMode)
+            {
+                Dispatcher.BeginInvoke(new Action(UpdateEditModeScrollBar), DispatcherPriority.Loaded);
+            }
         }
+    }
+
+    private void EditListScroll_ScrollChanged(object sender, System.Windows.Controls.ScrollChangedEventArgs e)
+    {
+        UpdateEditModeScrollBar();
+    }
+
+    private void EditModeScrollBar_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_syncingEditModeScroll || EditListScroll == null)
+        {
+            return;
+        }
+
+        EditListScroll.ScrollToVerticalOffset(e.NewValue);
+    }
+
+    private void UpdateEditModeScrollBar()
+    {
+        if (EditListScroll == null || EditModeScrollBar == null)
+        {
+            return;
+        }
+
+        var canScroll = IsEditMode && EditListScroll.ScrollableHeight > 1;
+        _syncingEditModeScroll = true;
+        EditModeScrollBar.Minimum = 0;
+        EditModeScrollBar.Maximum = Math.Max(0, EditListScroll.ScrollableHeight);
+        EditModeScrollBar.Value = Math.Min(EditListScroll.VerticalOffset, EditModeScrollBar.Maximum);
+        EditModeScrollBar.IsEnabled = canScroll;
+        EditModeScrollBar.Visibility = canScroll ? Visibility.Visible : Visibility.Collapsed;
+        _syncingEditModeScroll = false;
     }
 
     private void Window_Activated(object? sender, EventArgs e)
@@ -1543,6 +1588,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void Shortcuts_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         UpdateVisibleItems();
+        if (IsEditMode)
+        {
+            Dispatcher.BeginInvoke(new Action(UpdateEditModeScrollBar), DispatcherPriority.Loaded);
+        }
     }
 
     private void UpdateVisibleItems()
@@ -1570,6 +1619,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         OnPropertyChanged(nameof(HasMultiplePages));
         OnPropertyChanged(nameof(PaginationVisibility));
+        QueueItemsPerPageRefresh();
     }
     public string PageInfo => $"{LocalizationService.Get("Common_Page")} {_currentPage + 1}/{Math.Max(1, (int)Math.Ceiling(Shortcuts.Count / (double)_itemsPerPage))}";
 
@@ -1595,25 +1645,91 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void UpdateItemsPerPage()
     {
-        const double chromeWithoutPagination = 72;
-        const double chromeWithPagination = 112;
-        const double itemVerticalChrome = 40;
-
-        var bounds = GetMonitorBounds();
-        var monitorHeight = bounds.Height > 0 ? bounds.Height : SystemParameters.PrimaryScreenHeight;
-        var perItem = Math.Max(IconSize + itemVerticalChrome, 1);
-        var usableHeight = Math.Max(1, monitorHeight - chromeWithoutPagination);
-        var count = Math.Max(1, (int)Math.Floor(usableHeight / perItem));
-
-        if (Shortcuts.Count > count)
+        if (TryMeasureItemsPerPage(out var measuredCount))
         {
-            usableHeight = Math.Max(1, monitorHeight - chromeWithPagination);
-            count = Math.Max(1, (int)Math.Floor(usableHeight / perItem));
+            _itemsPerPage = measuredCount;
+        }
+        else
+        {
+            const double fallbackItemVerticalChrome = 40;
+            const double fallbackChromeWithoutPagination = 72;
+            const double fallbackChromeWithPagination = 112;
+
+            var bounds = GetMonitorBounds();
+            var monitorHeight = bounds.Height > 0 ? bounds.Height : SystemParameters.PrimaryScreenHeight;
+            var perItem = Math.Max(IconSize + fallbackItemVerticalChrome, 1);
+            var usableHeight = Math.Max(1, monitorHeight - fallbackChromeWithoutPagination);
+            var count = Math.Max(1, (int)Math.Floor(usableHeight / perItem));
+
+            if (Shortcuts.Count > count)
+            {
+                usableHeight = Math.Max(1, monitorHeight - fallbackChromeWithPagination);
+                count = Math.Max(1, (int)Math.Floor(usableHeight / perItem));
+            }
+
+            _itemsPerPage = Math.Max(1, count);
         }
 
-        _itemsPerPage = Math.Max(1, count);
         OnPropertyChanged(nameof(HasMultiplePages));
         OnPropertyChanged(nameof(PaginationVisibility));
+    }
+
+    private void QueueItemsPerPageRefresh()
+    {
+        if (_itemsPerPageRefreshQueued || !IsLoaded || IsEditMode)
+        {
+            return;
+        }
+
+        _itemsPerPageRefreshQueued = true;
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            _itemsPerPageRefreshQueued = false;
+            RefreshItemsPerPageFromLayout();
+        }), DispatcherPriority.Render);
+    }
+
+    private void RefreshItemsPerPageFromLayout()
+    {
+        if (!TryMeasureItemsPerPage(out var measuredCount) || measuredCount == _itemsPerPage)
+        {
+            return;
+        }
+
+        _itemsPerPage = measuredCount;
+        UpdateVisibleItems();
+    }
+
+    private bool TryMeasureItemsPerPage(out int count)
+    {
+        count = 0;
+        if (!IsLoaded || IsEditMode || Shortcuts.Count == 0)
+        {
+            return false;
+        }
+
+        UpdateLayout();
+        NormalList.UpdateLayout();
+
+        if (DockLayoutRoot.RowDefinitions.Count == 0)
+        {
+            return false;
+        }
+
+        var availableHeight = DockLayoutRoot.RowDefinitions[0].ActualHeight;
+        if (availableHeight <= 1)
+        {
+            return false;
+        }
+
+        if (NormalList.ItemContainerGenerator.ContainerFromIndex(0) is not FrameworkElement firstItem ||
+            firstItem.ActualHeight <= 1)
+        {
+            return false;
+        }
+
+        count = Math.Max(1, (int)Math.Floor((availableHeight + 2) / firstItem.ActualHeight));
+        return true;
     }
 
     private void RefreshModeUI()

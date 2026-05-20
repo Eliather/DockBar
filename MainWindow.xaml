@@ -114,7 +114,7 @@
     </Window.Resources>
 
     <Border Background="{Binding DockBackgroundBrush, RelativeSource={RelativeSource AncestorType=Window}}" Padding="10">
-        <Grid Margin="0">
+        <Grid x:Name="DockLayoutRoot" Margin="0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
@@ -172,160 +172,181 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            <ScrollViewer x:Name="EditListScroll"
-                          Grid.Row="0"
-                          Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibilityConverter}}"
-                          VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Disabled">
-                <ItemsControl ItemsSource="{Binding Shortcuts}"
-                              AlternationCount="1000"
-                              AllowDrop="True"
-                              PreviewMouseLeftButtonDown="ShortcutItem_PreviewMouseLeftButtonDown"
-                              PreviewMouseMove="ShortcutList_PreviewMouseMove"
-                              Drop="ShortcutList_Drop"
-                              DragOver="ShortcutList_DragOver">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Padding="6" Background="Transparent" x:Name="ItemBorder" BorderBrush="Transparent" BorderThickness="1">
-                                <Border.Style>
-                                    <Style TargetType="Border">
-                                        <Setter Property="BorderBrush" Value="Transparent"/>
-                                        <Setter Property="BorderThickness" Value="1"/>
-                                        <Style.Triggers>
-                                            <DataTrigger>
-                                                <DataTrigger.Binding>
-                                                    <MultiBinding Converter="{StaticResource StringEqualsMultiToBoolConverter}">
-                                                        <Binding Path="Path"/>
-                                                        <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="DragHoverPath"/>
-                                                    </MultiBinding>
-                                                </DataTrigger.Binding>
-                                                <Setter Property="BorderBrush" Value="{Binding DataContext.DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
-                                                <Setter Property="BorderThickness" Value="1.5"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Border.Style>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Rectangle Height="1.5"
-                                               StrokeDashArray="2 2"
-                                               Stroke="{Binding DataContext.DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
-                                               VerticalAlignment="Top">
-                                        <Rectangle.Visibility>
-                                            <MultiBinding Converter="{StaticResource IntEqualsMultiToVisibilityConverter}">
-                                                <Binding RelativeSource="{RelativeSource AncestorType=ContentPresenter}" Path="(ItemsControl.AlternationIndex)"/>
-                                                <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="DropInsertIndex"/>
-                                            </MultiBinding>
-                                        </Rectangle.Visibility>
-                                    </Rectangle>
-                                    <Button Style="{StaticResource CharmItemButtonStyle}"
-                                            Click="Shortcut_Click"
-                                            Tag="{Binding}"
-                                            IsHitTestVisible="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBoolConverter}}">
-                                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
-                                            <Image Width="{Binding IconSize, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                   Height="{Binding IconSize, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                   Source="{Binding Icon}"
-                                                   VerticalAlignment="Center"
-                                                   Stretch="Uniform"
-                                                   RenderOptions.BitmapScalingMode="HighQuality"
-                                                   SnapsToDevicePixels="True">
-                                                <Image.Effect>
-                                                    <DropShadowEffect Color="#66000000"
-                                                                      BlurRadius="10"
-                                                                      ShadowDepth="0"
-                                                                      Opacity="0.8"/>
-                                                </Image.Effect>
-                                            </Image>
-                                            <TextBlock Text="{Binding Name}"
-                                                       Margin="0,8,0,0"
-                                                       Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                       TextAlignment="Center"
-                                                       TextWrapping="Wrap"
-                                                       FontSize="12"
-                                                       Opacity="0.9"/>
+            <Grid Grid.Row="0"
+                  Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibilityConverter}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <ScrollViewer x:Name="EditListScroll"
+                              Grid.Column="0"
+                              VerticalScrollBarVisibility="Hidden"
+                              HorizontalScrollBarVisibility="Disabled"
+                              ScrollChanged="EditListScroll_ScrollChanged">
+                    <ItemsControl ItemsSource="{Binding Shortcuts}"
+                                  AlternationCount="1000"
+                                  AllowDrop="True"
+                                  PreviewMouseLeftButtonDown="ShortcutItem_PreviewMouseLeftButtonDown"
+                                  PreviewMouseMove="ShortcutList_PreviewMouseMove"
+                                  Drop="ShortcutList_Drop"
+                                  DragOver="ShortcutList_DragOver">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="6" Background="Transparent" x:Name="ItemBorder" BorderBrush="Transparent" BorderThickness="1">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="BorderBrush" Value="Transparent"/>
+                                            <Setter Property="BorderThickness" Value="1"/>
+                                            <Style.Triggers>
+                                                <DataTrigger>
+                                                    <DataTrigger.Binding>
+                                                        <MultiBinding Converter="{StaticResource StringEqualsMultiToBoolConverter}">
+                                                            <Binding Path="Path"/>
+                                                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="DragHoverPath"/>
+                                                        </MultiBinding>
+                                                    </DataTrigger.Binding>
+                                                    <Setter Property="BorderBrush" Value="{Binding DataContext.DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                                    <Setter Property="BorderThickness" Value="1.5"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Rectangle Height="1.5"
+                                                   StrokeDashArray="2 2"
+                                                   Stroke="{Binding DataContext.DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                   VerticalAlignment="Top">
+                                            <Rectangle.Visibility>
+                                                <MultiBinding Converter="{StaticResource IntEqualsMultiToVisibilityConverter}">
+                                                    <Binding RelativeSource="{RelativeSource AncestorType=ContentPresenter}" Path="(ItemsControl.AlternationIndex)"/>
+                                                    <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="DropInsertIndex"/>
+                                                </MultiBinding>
+                                            </Rectangle.Visibility>
+                                        </Rectangle>
+                                        <Button Style="{StaticResource CharmItemButtonStyle}"
+                                                Click="Shortcut_Click"
+                                                Tag="{Binding}"
+                                                IsHitTestVisible="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBoolConverter}}">
+                                            <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                                                <Image Width="{Binding IconSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                       Height="{Binding IconSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                       Source="{Binding Icon}"
+                                                       VerticalAlignment="Center"
+                                                       Stretch="Uniform"
+                                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                                       SnapsToDevicePixels="True">
+                                                    <Image.Effect>
+                                                        <DropShadowEffect Color="#66000000"
+                                                                          BlurRadius="10"
+                                                                          ShadowDepth="0"
+                                                                          Opacity="0.8"/>
+                                                    </Image.Effect>
+                                                </Image>
+                                                <TextBlock Text="{Binding Name}"
+                                                           Margin="0,8,0,0"
+                                                           Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                           TextAlignment="Center"
+                                                           TextWrapping="Wrap"
+                                                           FontSize="12"
+                                                           Opacity="0.9"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <StackPanel Grid.Column="1"
+                                                    Orientation="Horizontal"
+                                                    VerticalAlignment="Center"
+                                                    Visibility="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <Button Style="{StaticResource BottomIconButtonStyle}"
+                                                    Width="28"
+                                                    Height="28"
+                                                    Margin="4,0,0,0"
+                                                    Click="Rename_Click"
+                                                    Tag="{Binding}">
+                                                <Button.ToolTip>
+                                                    <ToolTip Style="{StaticResource DockToolTipStyle}"
+                                                             Content="{local:Loc Key=Dock_TooltipRename}"/>
+                                                </Button.ToolTip>
+                                                <Viewbox Width="13" Height="13">
+                                                    <Grid Width="24" Height="24">
+                                                        <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M6.5,17.5L9.75,16.75L17.75,8.75L15.25,6.25L7.25,14.25Z"/>
+                                                        <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M14,7.5L16.5,10"/>
+                                                    </Grid>
+                                                </Viewbox>
+                                            </Button>
+                                            <Button Style="{StaticResource BottomIconButtonStyle}"
+                                                    Width="28"
+                                                    Height="28"
+                                                    Margin="4,0,0,0"
+                                                    Click="ChangeIcon_Click"
+                                                    Tag="{Binding}">
+                                                <Button.ToolTip>
+                                                    <ToolTip Style="{StaticResource DockToolTipStyle}"
+                                                             Content="{local:Loc Key=Dock_TooltipChangeIcon}"/>
+                                                </Button.ToolTip>
+                                                <Viewbox Width="13" Height="13">
+                                                    <Grid Width="24" Height="24">
+                                                        <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M5.5,6.75H18.5C19.05,6.75 19.5,7.2 19.5,7.75V16.25C19.5,16.8 19.05,17.25 18.5,17.25H5.5C4.95,17.25 4.5,16.8 4.5,16.25V7.75C4.5,7.2 4.95,6.75 5.5,6.75Z"/>
+                                                        <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M6.75,15L10.5,11.25L13,13.75L16.25,10.5L18,12.25"/>
+                                                        <Ellipse Width="3"
+                                                                 Height="3"
+                                                                 Stroke="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                 StrokeThickness="1.4"
+                                                                 Fill="Transparent"
+                                                                 HorizontalAlignment="Right"
+                                                                 VerticalAlignment="Top"
+                                                                 Margin="0,0,8,6"/>
+                                                    </Grid>
+                                                </Viewbox>
+                                            </Button>
+                                            <Button Style="{StaticResource BottomIconButtonStyle}"
+                                                    Width="28"
+                                                    Height="28"
+                                                    Margin="4,0,0,0"
+                                                    Click="Remove_Click"
+                                                    Tag="{Binding}">
+                                                <Button.ToolTip>
+                                                    <ToolTip Style="{StaticResource DockToolTipStyle}"
+                                                             Content="{local:Loc Key=Dock_TooltipRemove}"/>
+                                                </Button.ToolTip>
+                                                <Viewbox Width="13" Height="13">
+                                                    <Grid Width="24" Height="24">
+                                                        <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M9,7V5.75C9,5.06 9.56,4.5 10.25,4.5H13.75C14.44,4.5 15,5.06 15,5.75V7"/>
+                                                        <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M5.5,7H18.5"/>
+                                                        <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M7.75,8.5L8.5,18H15.5L16.25,8.5"/>
+                                                        <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M10,10.5V15 M14,10.5V15"/>
+                                                    </Grid>
+                                                </Viewbox>
+                                            </Button>
                                         </StackPanel>
-                                    </Button>
-                                    <StackPanel Grid.Column="1"
-                                                Orientation="Horizontal"
-                                                VerticalAlignment="Center"
-                                                Visibility="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}">
-                                        <Button Style="{StaticResource BottomIconButtonStyle}"
-                                                Width="28"
-                                                Height="28"
-                                                Margin="4,0,0,0"
-                                                Click="Rename_Click"
-                                                Tag="{Binding}">
-                                            <Button.ToolTip>
-                                                <ToolTip Style="{StaticResource DockToolTipStyle}"
-                                                         Content="{local:Loc Key=Dock_TooltipRename}"/>
-                                            </Button.ToolTip>
-                                            <Viewbox Width="13" Height="13">
-                                                <Grid Width="24" Height="24">
-                                                    <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M6.5,17.5L9.75,16.75L17.75,8.75L15.25,6.25L7.25,14.25Z"/>
-                                                    <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M14,7.5L16.5,10"/>
-                                                </Grid>
-                                            </Viewbox>
-                                        </Button>
-                                        <Button Style="{StaticResource BottomIconButtonStyle}"
-                                                Width="28"
-                                                Height="28"
-                                                Margin="4,0,0,0"
-                                                Click="ChangeIcon_Click"
-                                                Tag="{Binding}">
-                                            <Button.ToolTip>
-                                                <ToolTip Style="{StaticResource DockToolTipStyle}"
-                                                         Content="{local:Loc Key=Dock_TooltipChangeIcon}"/>
-                                            </Button.ToolTip>
-                                            <Viewbox Width="13" Height="13">
-                                                <Grid Width="24" Height="24">
-                                                    <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M5.5,6.75H18.5C19.05,6.75 19.5,7.2 19.5,7.75V16.25C19.5,16.8 19.05,17.25 18.5,17.25H5.5C4.95,17.25 4.5,16.8 4.5,16.25V7.75C4.5,7.2 4.95,6.75 5.5,6.75Z"/>
-                                                    <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M6.75,15L10.5,11.25L13,13.75L16.25,10.5L18,12.25"/>
-                                                    <Ellipse Width="3"
-                                                             Height="3"
-                                                             Stroke="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                             StrokeThickness="1.4"
-                                                             Fill="Transparent"
-                                                             HorizontalAlignment="Right"
-                                                             VerticalAlignment="Top"
-                                                             Margin="0,0,8,6"/>
-                                                </Grid>
-                                            </Viewbox>
-                                        </Button>
-                                        <Button Style="{StaticResource BottomIconButtonStyle}"
-                                                Width="28"
-                                                Height="28"
-                                                Margin="4,0,0,0"
-                                                Click="Remove_Click"
-                                                Tag="{Binding}">
-                                            <Button.ToolTip>
-                                                <ToolTip Style="{StaticResource DockToolTipStyle}"
-                                                         Content="{local:Loc Key=Dock_TooltipRemove}"/>
-                                            </Button.ToolTip>
-                                            <Viewbox Width="13" Height="13">
-                                                <Grid Width="24" Height="24">
-                                                    <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M9,7V5.75C9,5.06 9.56,4.5 10.25,4.5H13.75C14.44,4.5 15,5.06 15,5.75V7"/>
-                                                    <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M5.5,7H18.5"/>
-                                                    <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M7.75,8.5L8.5,18H15.5L16.25,8.5"/>
-                                                    <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M10,10.5V15 M14,10.5V15"/>
-                                                </Grid>
-                                            </Viewbox>
-                                        </Button>
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <Slider x:Name="EditModeScrollBar"
+                        Grid.Column="1"
+                        Width="16"
+                        Margin="10,0,0,0"
+                        Orientation="Vertical"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Stretch"
+                        Minimum="0"
+                        Maximum="0"
+                        Style="{StaticResource DialogVerticalScrollerStyle}"
+                        Visibility="Collapsed"
+                        ValueChanged="EditModeScrollBar_ValueChanged"/>
+            </Grid>
 
             <StackPanel x:Name="PaginationPanel"
                         Grid.Row="1"

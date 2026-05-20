@@ -3,47 +3,47 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:DockBar"
         Title="{local:Loc Key=Rename_Title}"
-        Width="500"
-        Height="300"
-        MinWidth="460"
+        Width="440"
+        SizeToContent="Height"
+        MinWidth="420"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
         Background="{DynamicResource AppCanvasBrush}"
-        Foreground="{DynamicResource AppTextBrush}">
-    <Grid Margin="22">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-
-        <Border Grid.Row="0"
-                Style="{StaticResource DialogSurfaceStyle}"
-                Margin="0,0,0,18">
-            <Grid>
+        Foreground="{DynamicResource AppTextBrush}"
+        Loaded="Window_Loaded">
+    <Border Margin="14"
+            Style="{StaticResource DialogSurfaceStyle}"
+            Padding="16">
+        <StackPanel>
+            <Grid Margin="0,0,0,14">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="110"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Margin="0,0,18,0">
+                <StackPanel Margin="0,0,14,0"
+                            VerticalAlignment="Center">
                     <TextBlock Text="{local:Loc Key=Rename_Title}"
-                               Style="{StaticResource DialogWindowTitleStyle}"
-                               FontSize="24"/>
+                               Style="{StaticResource DialogSectionTitleStyle}"
+                               FontSize="17"/>
                     <TextBlock Text="{local:Loc Key=Rename_Subtitle}"
-                               Style="{StaticResource DialogWindowSubtitleStyle}"/>
+                               Style="{StaticResource DialogMutedTextStyle}"
+                               FontSize="11"
+                               TextWrapping="Wrap"
+                               Margin="0,4,0,0"/>
                 </StackPanel>
 
                 <Border Grid.Column="1"
-                        Width="88"
-                        Height="88"
-                        HorizontalAlignment="Right"
+                        Width="58"
+                        Height="58"
                         Background="{Binding BackgroundBrush}"
                         BorderBrush="{DynamicResource AppBorderStrongBrush}"
                         BorderThickness="1"
-                        CornerRadius="22">
-                    <Viewbox Width="40" Height="40"
+                        CornerRadius="16"
+                        HorizontalAlignment="Right">
+                    <Viewbox Width="26"
+                             Height="26"
                              VerticalAlignment="Center"
                              HorizontalAlignment="Center">
                         <Grid Width="24" Height="24">
@@ -69,34 +69,40 @@
                     </Viewbox>
                 </Border>
             </Grid>
-        </Border>
 
-        <Border Grid.Row="1"
-                Style="{StaticResource DialogCardStyle}">
-            <StackPanel>
-                <TextBlock Text="{local:Loc Key=Rename_NewName}"
-                           Style="{StaticResource DialogLabelStyle}"/>
-                <TextBox x:Name="NameBox"
-                         Style="{StaticResource DialogTextBoxStyle}"
-                         Text="{Binding NewName, UpdateSourceTrigger=PropertyChanged}"/>
-            </StackPanel>
-        </Border>
+            <Border Style="{StaticResource DialogCardStyle}"
+                    Padding="12"
+                    Margin="0,0,0,14">
+                <StackPanel>
+                    <TextBlock Text="{local:Loc Key=Rename_NewName}"
+                               Style="{StaticResource DialogLabelStyle}"
+                               FontSize="11.5"
+                               Margin="0,0,0,6"/>
+                    <TextBox x:Name="NameBox"
+                             Style="{StaticResource DialogTextBoxStyle}"
+                             FontSize="12"
+                             Padding="11,7"
+                             Text="{Binding NewName, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+            </Border>
 
-        <Border Grid.Row="2"
-                Style="{StaticResource DialogSurfaceStyle}"
-                Margin="0,18,0,0"
-                Padding="18">
             <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="Right">
                 <Button Content="{local:Loc Key=Common_Cancel}"
-                        Style="{StaticResource DialogButtonSecondaryStyle}"
-                        Margin="0,0,10,0"
+                        Style="{StaticResource DialogSmallButtonStyle}"
+                        Width="96"
+                        FontSize="11.5"
+                        Margin="0,0,8,0"
                         IsCancel="True"/>
                 <Button Content="{local:Loc Key=Common_Save}"
-                        Style="{StaticResource DialogButtonPrimaryStyle}"
+                        Style="{StaticResource DialogSmallButtonStyle}"
+                        Background="{StaticResource AppAccentBrush}"
+                        BorderBrush="{StaticResource AppAccentStrongBrush}"
+                        Width="96"
+                        FontSize="11.5"
                         IsDefault="True"
                         Click="Save_Click"/>
             </StackPanel>
-        </Border>
-    </Grid>
+        </StackPanel>
+    </Border>
 </Window>

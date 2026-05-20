@@ -5,7 +5,6 @@ using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Threading;
 using DockBar.Models;
 using DockBar.Services;
 
@@ -28,7 +27,6 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
     private double _hue;
     private double _sat = 1.0;
     private double _val = 1.0;
-    private bool _syncingSettingsScroll;
 
     public SolidColorBrush PreviewBrush
     {
@@ -129,7 +127,6 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         SyncHsvFromPending();
         UpdatePreviewBrush();
         UpdateTextBrush();
-        Dispatcher.BeginInvoke(UpdateSettingsScrollBar, DispatcherPriority.Loaded);
     }
 
     private void UpdatePreviewBrush()
@@ -179,38 +176,6 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         var backgroundBrush = new SolidColorBrush(backgroundColor);
         backgroundBrush.Freeze();
         SettingsBackgroundBrush = backgroundBrush;
-    }
-
-    private void SettingsScroller_ScrollChanged(object sender, ScrollChangedEventArgs e)
-    {
-        UpdateSettingsScrollBar();
-    }
-
-    private void SettingsScrollBar_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (_syncingSettingsScroll || SettingsScroller == null)
-        {
-            return;
-        }
-
-        SettingsScroller.ScrollToVerticalOffset(e.NewValue);
-    }
-
-    private void UpdateSettingsScrollBar()
-    {
-        if (SettingsScroller == null || SettingsScrollBar == null)
-        {
-            return;
-        }
-
-        var canScroll = SettingsScroller.ScrollableHeight > 1;
-        _syncingSettingsScroll = true;
-        SettingsScrollBar.Minimum = 0;
-        SettingsScrollBar.Maximum = Math.Max(0, SettingsScroller.ScrollableHeight);
-        SettingsScrollBar.Value = Math.Min(SettingsScroller.VerticalOffset, SettingsScrollBar.Maximum);
-        SettingsScrollBar.IsEnabled = canScroll;
-        SettingsScrollBar.Visibility = canScroll ? Visibility.Visible : Visibility.Collapsed;
-        _syncingSettingsScroll = false;
     }
 
     private void NumericSettingChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
