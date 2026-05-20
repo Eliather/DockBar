@@ -389,10 +389,30 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="RepeatButton">
-                    <Border Height="4"
-                            VerticalAlignment="Center"
-                            Background="{StaticResource AppAccentBrush}"
-                            CornerRadius="3,0,0,3"/>
+                    <Grid VerticalAlignment="Center">
+                        <Border Height="8"
+                                VerticalAlignment="Center"
+                                CornerRadius="6"
+                                SnapsToDevicePixels="True">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                                    <GradientStop Color="{StaticResource AppColor.AccentStrong}" Offset="0"/>
+                                    <GradientStop Color="{StaticResource AppColor.Accent}" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                        <Border Height="3"
+                                Margin="4,0,4,0"
+                                VerticalAlignment="Center"
+                                CornerRadius="2">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                                    <GradientStop Color="#70FFFFFF" Offset="0"/>
+                                    <GradientStop Color="#00FFFFFF" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                    </Grid>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -404,38 +424,56 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="RepeatButton">
-                    <Border Height="4"
+                    <Border Height="8"
                             VerticalAlignment="Center"
-                            Background="#00000000"/>
+                            Background="#00000000"
+                            CornerRadius="6"/>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
 
     <Style x:Key="DialogSliderThumbStyle" TargetType="Thumb">
-        <Setter Property="Width" Value="16"/>
-        <Setter Property="Height" Value="16"/>
+        <Setter Property="Width" Value="20"/>
+        <Setter Property="Height" Value="20"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Thumb">
                     <Grid>
-                        <Ellipse x:Name="root"
-                                 Fill="{StaticResource AppSurfaceRaisedBrush}"
-                                 Stroke="{StaticResource AppAccentStrongBrush}"
-                                 StrokeThickness="2"/>
-                        <Ellipse Width="5"
-                                 Height="5"
+                        <Ellipse x:Name="glow"
+                                 Width="20"
+                                 Height="20"
                                  Fill="{StaticResource AppAccentBrush}"
-                                 HorizontalAlignment="Center"
-                                 VerticalAlignment="Center"/>
+                                 Opacity="0.22">
+                            <Ellipse.Effect>
+                                <DropShadowEffect BlurRadius="10"
+                                                  ShadowDepth="0"
+                                                  Opacity="0.65"
+                                                  Color="#5B8EFF"/>
+                            </Ellipse.Effect>
+                        </Ellipse>
+                        <Ellipse x:Name="root"
+                                 Width="16"
+                                 Height="16"
+                                 Fill="#F7FBFF"
+                                 Stroke="{StaticResource AppAccentStrongBrush}"
+                                 StrokeThickness="1.6"/>
+                        <Border Width="7"
+                                Height="7"
+                                CornerRadius="3.5"
+                                Background="{StaticResource AppAccentBrush}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"/>
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="root" Property="Stroke" Value="#9CC0FF"/>
+                            <Setter TargetName="root" Property="Stroke" Value="#B8D2FF"/>
+                            <Setter TargetName="glow" Property="Opacity" Value="0.3"/>
                         </Trigger>
                         <Trigger Property="IsDragging" Value="True">
-                            <Setter TargetName="root" Property="Fill" Value="{StaticResource AppPanelBrush}"/>
-                            <Setter TargetName="root" Property="Stroke" Value="#C9DEFF"/>
+                            <Setter TargetName="root" Property="Fill" Value="#FFFFFF"/>
+                            <Setter TargetName="root" Property="Stroke" Value="#D9E7FF"/>
+                            <Setter TargetName="glow" Property="Opacity" Value="0.4"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.4"/>
@@ -471,19 +509,25 @@
 
     <Style x:Key="DialogSliderStyle" TargetType="Slider">
         <Setter Property="Foreground" Value="{StaticResource AppAccentBrush}"/>
-        <Setter Property="Height" Value="26"/>
+        <Setter Property="Height" Value="30"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="IsMoveToPointEnabled" Value="True"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Slider">
-                    <Grid Height="26">
-                        <Border Height="6"
+                    <Grid Height="30"
+                          SnapsToDevicePixels="True">
+                        <Border Height="12"
                                 VerticalAlignment="Center"
-                                Background="{StaticResource AppInputBrush}"
+                                Background="#0D1628"
                                 BorderBrush="{StaticResource AppBorderBrush}"
                                 BorderThickness="1"
-                                CornerRadius="3"/>
+                                CornerRadius="6"/>
+                        <Border Height="6"
+                                Margin="3,0,3,0"
+                                VerticalAlignment="Center"
+                                Background="#16253C"
+                                CornerRadius="4"/>
                         <Track x:Name="PART_Track"
                                VerticalAlignment="Center">
                             <Track.DecreaseRepeatButton>
@@ -498,6 +542,9 @@
                         </Track>
                     </Grid>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Opacity" Value="0.98"/>
+                        </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.45"/>
                         </Trigger>

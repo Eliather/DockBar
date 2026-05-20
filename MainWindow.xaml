@@ -17,6 +17,7 @@
         Background="Transparent"
         AllowsTransparency="False"
         Loaded="Window_Loaded"
+        SizeChanged="Window_SizeChanged"
         Activated="Window_Activated"
         MouseEnter="Window_MouseEnter"
         MouseLeave="Window_MouseLeave"
@@ -132,8 +133,9 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border Padding="6" Background="Transparent">
+                        <Border Padding="4" Background="Transparent">
                             <Button Style="{StaticResource CharmItemButtonStyle}"
+                                    Padding="8,6,8,5"
                                     Click="Shortcut_Click"
                                     Tag="{Binding}">
                                 <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
@@ -152,12 +154,17 @@
                                         </Image.Effect>
                                     </Image>
                                     <TextBlock Text="{Binding Name}"
-                                               Margin="0,8,0,0"
+                                               Margin="0,3,0,0"
                                                Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
                                                TextAlignment="Center"
-                                               TextWrapping="Wrap"
-                                               FontSize="12"
-                                               Opacity="0.9"/>
+                                               TextWrapping="NoWrap"
+                                               TextTrimming="CharacterEllipsis"
+                                               MaxWidth="118"
+                                               FontSize="11"
+                                               LineHeight="12"
+                                               LineStackingStrategy="BlockLineHeight"
+                                               Opacity="0.9"
+                                               ToolTip="{Binding Name}"/>
                                 </StackPanel>
                             </Button>
                         </Border>

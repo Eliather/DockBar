@@ -24,6 +24,10 @@ namespace DockBar;
 public partial class MainWindow : Window, INotifyPropertyChanged
 {
     private const double GlassOpacity = 0.72;
+    private const int InitialRecoveryDelayMs = 600;
+    private const int RetryRecoveryDelayMs = 900;
+    private const int ResumeRecoveryPasses = 3;
+    private const int DisplayRecoveryPasses = 2;
 
     private readonly DispatcherTimer _hideTimer;
     private DockConfig _config = new();
@@ -48,6 +52,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private bool _updateCheckRunning;
     private readonly DispatcherTimer _systemRecoveryTimer;
     private bool _reloadConfigOnRecovery;
+    private int _recoveryPassesRemaining;
+    private EdgeHotspotWindow? _edgeHotspot;
 
     public ObservableCollection<ShortcutItem> Shortcuts { get; } = new();
     public ObservableCollection<ShortcutItem> VisibleShortcuts { get; } = new();
@@ -136,13 +142,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     StopHideTimer();
                     _preEditWidth = _config.DockWidth <= 0 ? Width : _config.DockWidth;
                     Width = Math.Max(350, _preEditWidth);
+                    UpdateLayout();
                     AlignDock(true);
+                    QueueDockRealign(true);
                     ShowDockAnimated();
                 }
                 else
                 {
                     Width = Math.Max(_config.DockWidth, 175);
+                    UpdateLayout();
                     AlignDock(!_isHidden);
+                    QueueDockRealign(!_isHidden);
                     StartHideTimer();
                 }
                 OnPropertyChanged();
@@ -164,7 +174,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _hideTimer.Tick += HideTimer_Tick;
         _systemRecoveryTimer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(600)
+            Interval = TimeSpan.FromMilliseconds(InitialRecoveryDelayMs)
         };
         _systemRecoveryTimer.Tick += SystemRecoveryTimer_Tick;
 
@@ -183,22 +193,47 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void LoadConfigAndShortcuts()
     {
         var loaded = ConfigService.LoadConfig(out var createdDefault, out var hadError);
-        _config = loaded;
         if (createdDefault)
         {
             var message = hadError
                 ? LocalizationService.Get("Config_ReadError")
                 : LocalizationService.Get("Config_NotFound");
             System.Windows.MessageBox.Show(message, "DockBar", MessageBoxButton.OK, MessageBoxImage.Warning);
-            ConfigService.SaveConfig(_config);
+            ConfigService.SaveConfig(loaded);
         }
-        _dockSide = _config.DockSide;
-
-        ApplyVisualConfig();
-        ReplaceShortcuts(_config.Shortcuts);
+        ApplyConfigState(loaded);
 
         HandleAutoStartPrompt();
         AutoStartService.Apply(_config.AutoStartEnabled);
+    }
+
+    private void ApplyConfigState(DockConfig config, bool forceIconRefresh = true)
+    {
+        _config = config ?? new DockConfig();
+        _config.Shortcuts ??= new();
+        _dockSide = _config.DockSide;
+        ApplyVisualConfig();
+        ReplaceShortcuts(_config.Shortcuts, forceIconRefresh);
+    }
+
+    private bool TryReloadConfigFromDisk(bool allowReplacingWithEmptyState)
+    {
+        var hadRuntimeShortcuts = Shortcuts.Count > 0 || (_config.Shortcuts?.Count ?? 0) > 0;
+        var loaded = ConfigService.LoadConfig(out var createdDefault, out var hadError);
+        var loadedShortcuts = loaded.Shortcuts ?? new();
+
+        var suspiciousLoad =
+            hadError ||
+            (createdDefault && hadRuntimeShortcuts) ||
+            (!allowReplacingWithEmptyState && hadRuntimeShortcuts && loadedShortcuts.Count == 0 && File.Exists(ConfigService.ConfigFilePath));
+
+        if (suspiciousLoad)
+        {
+            return false;
+        }
+
+        ApplyConfigState(loaded);
+        return true;
     }
 
     private void ReplaceShortcuts(System.Collections.Generic.IEnumerable<ShortcutItem>? shortcuts, bool forceIconRefresh = true)
@@ -247,6 +282,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         AlignDock(!_isHidden);
         UpdateVisibleItems();
         ApplyGlassEffect();
+        UpdateEdgeHotspotState();
     }
 
     private void UpdateHideTimerInterval()
@@ -283,6 +319,25 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         HookForegroundWatcher();
         ApplyGlassEffect();
         Dispatcher.BeginInvoke(new Action(() => _ = CheckForUpdatesAsync(false)), DispatcherPriority.Background);
+    }
+
+    private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (!IsLoaded || _isAnimating || _fullscreenActive)
+        {
+            return;
+        }
+
+        if (e.WidthChanged)
+        {
+            QueueDockRealign(!_isHidden);
+        }
+
+        if (e.HeightChanged || e.WidthChanged)
+        {
+            UpdateItemsPerPage();
+            UpdateVisibleItems();
+        }
     }
 
     private void Window_Activated(object? sender, EventArgs e)
@@ -342,7 +397,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         _reloadConfigOnRecovery |= reloadConfigIfMissing;
+        _recoveryPassesRemaining = Math.Max(
+            _recoveryPassesRemaining,
+            reloadConfigIfMissing ? ResumeRecoveryPasses : DisplayRecoveryPasses);
         _systemRecoveryTimer.Stop();
+        _systemRecoveryTimer.Interval = TimeSpan.FromMilliseconds(InitialRecoveryDelayMs);
         _systemRecoveryTimer.Start();
     }
 
@@ -350,8 +409,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         _systemRecoveryTimer.Stop();
         var reloadConfigIfMissing = _reloadConfigOnRecovery;
-        _reloadConfigOnRecovery = false;
         RecoverDockAfterResume(reloadConfigIfMissing);
+
+        _recoveryPassesRemaining = Math.Max(0, _recoveryPassesRemaining - 1);
+        if (_recoveryPassesRemaining > 0 && ShouldRetryDockRecovery())
+        {
+            _systemRecoveryTimer.Interval = TimeSpan.FromMilliseconds(RetryRecoveryDelayMs);
+            _systemRecoveryTimer.Start();
+            return;
+        }
+
+        _reloadConfigOnRecovery = false;
+        _recoveryPassesRemaining = 0;
+        _systemRecoveryTimer.Interval = TimeSpan.FromMilliseconds(InitialRecoveryDelayMs);
     }
 
     private void RecoverDockAfterResume(bool reloadConfigIfMissing)
@@ -369,24 +439,53 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             ApplyGlassEffect();
             EnsureTopmost();
 
-            if (reloadConfigIfMissing && Shortcuts.Count == 0)
+            var needsStateRebuild = reloadConfigIfMissing || Shortcuts.Count == 0 || (!IsEditMode && VisibleShortcuts.Count == 0);
+            var reloadedFromDisk = false;
+            if (needsStateRebuild)
             {
-                var loaded = ConfigService.LoadConfig(out _, out _);
-                _config.Shortcuts = loaded.Shortcuts ?? new();
-                ReplaceShortcuts(_config.Shortcuts);
+                reloadedFromDisk = TryReloadConfigFromDisk(allowReplacingWithEmptyState: false);
             }
-            else
+
+            if (!reloadedFromDisk)
             {
+                if (Shortcuts.Count == 0 && (_config.Shortcuts?.Count ?? 0) > 0)
+                {
+                    ReplaceShortcuts(_config.Shortcuts);
+                }
+
                 RefreshShortcutIcons(force: true);
                 UpdateVisibleItems();
             }
 
+            if (!IsEditMode && Shortcuts.Count > 0 && VisibleShortcuts.Count == 0)
+            {
+                _currentPage = 0;
+                UpdateVisibleItems();
+            }
+
+            UpdateEdgeHotspotState();
             ScheduleFullscreenCheck();
         }
         catch (Exception ex)
         {
             Debug.WriteLine(ex);
         }
+    }
+
+    private bool ShouldRetryDockRecovery()
+    {
+        if (IsEditMode)
+        {
+            return false;
+        }
+
+        var hasKnownShortcuts = Shortcuts.Count > 0 || (_config.Shortcuts?.Count ?? 0) > 0;
+        if (!hasKnownShortcuts)
+        {
+            return false;
+        }
+
+        return Shortcuts.Count == 0 || VisibleShortcuts.Count == 0;
     }
 
     private void RefreshShortcutIcons(bool force = false)
@@ -406,20 +505,28 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Top = area.Top;
         Height = area.Height;
         Left = showState ? GetShownLeft(area) : GetHiddenLeft(area);
+        UpdateEdgeHotspotState();
     }
 
     private double GetShownLeft(Rect area)
     {
+        var dockWidth = GetDockWidthForPositioning();
         return _dockSide == DockSide.Left
             ? area.Left
-            : area.Right - Width;
+            : area.Right - dockWidth;
     }
 
     private double GetHiddenLeft(Rect area)
     {
+        var dockWidth = GetDockWidthForPositioning();
         return _dockSide == DockSide.Left
-            ? area.Left - (Width - EdgeRevealPx)
+            ? area.Left - (dockWidth - EdgeRevealPx)
             : area.Right - EdgeRevealPx;
+    }
+
+    private double GetDockWidthForPositioning()
+    {
+        return Math.Max(Width, ActualWidth);
     }
 
     private Rect GetMonitorBounds()
@@ -431,9 +538,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             var mi = new NativeMethods.MONITORINFO { cbSize = Marshal.SizeOf(typeof(NativeMethods.MONITORINFO)) };
             if (NativeMethods.GetMonitorInfo(monitor, ref mi))
             {
-                var width = mi.rcMonitor.Right - mi.rcMonitor.Left;
-                var height = mi.rcMonitor.Bottom - mi.rcMonitor.Top;
-                return new Rect(mi.rcMonitor.Left, mi.rcMonitor.Top, width, height);
+                return ConvertMonitorRectToDip(monitor, mi.rcMonitor);
             }
         }
         catch (Exception ex)
@@ -442,6 +547,32 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         return new Rect(SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenTop, SystemParameters.VirtualScreenWidth, SystemParameters.VirtualScreenHeight);
+    }
+
+    private Rect ConvertMonitorRectToDip(IntPtr monitor, NativeMethods.RECT rect)
+    {
+        var source = PresentationSource.FromVisual(this);
+        if (source?.CompositionTarget != null)
+        {
+            var transform = source.CompositionTarget.TransformFromDevice;
+            var topLeft = transform.Transform(new System.Windows.Point(rect.Left, rect.Top));
+            var bottomRight = transform.Transform(new System.Windows.Point(rect.Right, rect.Bottom));
+            return new Rect(topLeft, bottomRight);
+        }
+
+        var scaleX = 1.0;
+        var scaleY = 1.0;
+        if (NativeMethods.TryGetMonitorDpi(monitor, out var dpiX, out var dpiY))
+        {
+            scaleX = 96.0 / dpiX;
+            scaleY = 96.0 / dpiY;
+        }
+
+        var left = rect.Left * scaleX;
+        var top = rect.Top * scaleY;
+        var width = (rect.Right - rect.Left) * scaleX;
+        var height = (rect.Bottom - rect.Top) * scaleY;
+        return new Rect(left, top, width, height);
     }
 
     private void Window_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
@@ -499,6 +630,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         _isHidden = false;
+        UpdateEdgeHotspotState();
         AnimateLeft(Left, GetShownLeft(GetMonitorBounds()));
     }
 
@@ -537,6 +669,21 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         };
 
         BeginAnimation(Window.LeftProperty, animation, HandoffBehavior.SnapshotAndReplace);
+    }
+
+    private void QueueDockRealign(bool showState)
+    {
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (_fullscreenActive)
+            {
+                return;
+            }
+
+            UpdateLayout();
+            AlignDock(showState);
+            EnsureTopmost();
+        }), DispatcherPriority.Render);
     }
 
     private void Window_Drop(object sender, System.Windows.DragEventArgs e)
@@ -978,15 +1125,63 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         BeginAnimation(Window.LeftProperty, null);
         _isAnimating = false;
+        _fullscreenActive = false;
         _isHidden = false;
         StopHideTimer();
+        Visibility = Visibility.Visible;
+        Topmost = true;
+        Show();
         AlignDock(true);
         EnsureTopmost();
+        ApplyGlassEffect();
+        UpdateEdgeHotspotState();
+    }
 
-        if (_config.AutoHideDelaySeconds > 0 && !IsEditMode)
+    private void EnsureEdgeHotspot()
+    {
+        if (_edgeHotspot != null)
         {
-            StartHideTimer();
+            return;
         }
+
+        _edgeHotspot = new EdgeHotspotWindow();
+        _edgeHotspot.HotspotTriggered += (_, _) =>
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                StopHideTimer();
+                ShowDockAnimated();
+            }));
+        };
+    }
+
+    private void UpdateEdgeHotspotState()
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        EnsureEdgeHotspot();
+        if (_edgeHotspot == null)
+        {
+            return;
+        }
+
+        var shouldShow =
+            _isHidden &&
+            !_isAnimating &&
+            !_fullscreenActive &&
+            !IsEditMode &&
+            Visibility == Visibility.Visible;
+
+        if (!shouldShow)
+        {
+            _edgeHotspot.HideHotspot();
+            return;
+        }
+
+        _edgeHotspot.ShowOnEdge(GetMonitorBounds(), _dockSide, Math.Max(EdgeRevealPx, 6));
     }
 
     public void OpenSettings()
@@ -1034,22 +1229,24 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public void ApplyAndSaveConfig(DockConfig updatedConfig)
     {
         var prevAutoStart = _config.AutoStartEnabled;
+        updatedConfig.Shortcuts ??= new();
         _config = updatedConfig;
-        _dockSide = updatedConfig.DockSide;
         _config.BackgroundOpacity = _config.UseTransparency ? GlassOpacity : 1.0;
         if (!_config.AutoStartPrompted && prevAutoStart != _config.AutoStartEnabled)
         {
             _config.AutoStartPrompted = true;
         }
-        ApplyVisualConfig();
+        ApplyConfigState(_config);
         SaveConfig();
         AutoStartService.Apply(_config.AutoStartEnabled);
     }
 
     public void ReloadConfigAndApply()
     {
-        var cfg = ConfigService.LoadConfig(out _, out _);
-        ApplyAndSaveConfig(cfg);
+        if (TryReloadConfigFromDisk(allowReplacingWithEmptyState: true))
+        {
+            SaveConfig();
+        }
     }
 
     public async Task CheckForUpdatesAsync(bool userInitiated)
@@ -1205,6 +1402,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     protected override void OnClosed(EventArgs e)
     {
+        _edgeHotspot?.Close();
+        _edgeHotspot = null;
         _systemRecoveryTimer.Stop();
         UnregisterSystemEventHandlers();
         UnhookForegroundWatcher();
@@ -1312,6 +1511,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             Visibility = Visibility.Collapsed;
             Topmost = false;
+            UpdateEdgeHotspotState();
         }
         else
         {
@@ -1320,6 +1520,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             AlignDock(!_isHidden);
             EnsureTopmost();
             ApplyGlassEffect();
+            UpdateEdgeHotspotState();
         }
     }
 
@@ -1394,10 +1595,22 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void UpdateItemsPerPage()
     {
+        const double chromeWithoutPagination = 72;
+        const double chromeWithPagination = 112;
+        const double itemVerticalChrome = 40;
+
         var bounds = GetMonitorBounds();
         var monitorHeight = bounds.Height > 0 ? bounds.Height : SystemParameters.PrimaryScreenHeight;
-        var perItem = IconSize + 84;
-        var count = (int)Math.Floor(monitorHeight / perItem);
+        var perItem = Math.Max(IconSize + itemVerticalChrome, 1);
+        var usableHeight = Math.Max(1, monitorHeight - chromeWithoutPagination);
+        var count = Math.Max(1, (int)Math.Floor(usableHeight / perItem));
+
+        if (Shortcuts.Count > count)
+        {
+            usableHeight = Math.Max(1, monitorHeight - chromeWithPagination);
+            count = Math.Max(1, (int)Math.Floor(usableHeight / perItem));
+        }
+
         _itemsPerPage = Math.Max(1, count);
         OnPropertyChanged(nameof(HasMultiplePages));
         OnPropertyChanged(nameof(PaginationVisibility));
@@ -1548,6 +1761,7 @@ internal static class NativeMethods
     public const uint EVENT_OBJECT_LOCATIONCHANGE = 0x800B;
     public const uint WINEVENT_OUTOFCONTEXT = 0;
     public const uint MONITOR_DEFAULTTONEAREST = 2;
+    public const int MDT_EFFECTIVE_DPI = 0;
     public const int DWM_BB_ENABLE = 0x1;
     public const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
     public const int OBJID_WINDOW = 0;
@@ -1587,6 +1801,9 @@ internal static class NativeMethods
 
     [DllImport("user32.dll", SetLastError = true)]
     public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
+    [DllImport("shcore.dll")]
+    private static extern int GetDpiForMonitor(IntPtr hmonitor, int dpiType, out uint dpiX, out uint dpiY);
 
     [DllImport("dwmapi.dll", PreserveSig = true)]
     public static extern int DwmEnableBlurBehindWindow(IntPtr hWnd, ref DWM_BLURBEHIND pBlurBehind);
@@ -1631,6 +1848,28 @@ internal static class NativeMethods
         catch
         {
             return null;
+        }
+    }
+
+    public static bool TryGetMonitorDpi(IntPtr monitor, out uint dpiX, out uint dpiY)
+    {
+        dpiX = 96;
+        dpiY = 96;
+
+        if (monitor == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        try
+        {
+            return GetDpiForMonitor(monitor, MDT_EFFECTIVE_DPI, out dpiX, out dpiY) == 0;
+        }
+        catch
+        {
+            dpiX = 96;
+            dpiY = 96;
+            return false;
         }
     }
 

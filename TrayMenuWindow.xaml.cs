@@ -1,6 +1,9 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media;
 using DockBar.Services;
 using WinForms = System.Windows.Forms;
 
@@ -10,7 +13,7 @@ public partial class TrayMenuWindow : Window
 {
     private const double ScreenMargin = 8;
     private const double PopupGap = 6;
-    private System.Drawing.Point _anchorPoint;
+    private System.Drawing.Rectangle _anchorBounds;
     private bool _closeRequested;
     private Action? _afterCloseAction;
 
@@ -31,9 +34,9 @@ public partial class TrayMenuWindow : Window
         Loaded += TrayMenuWindow_Loaded;
     }
 
-    public void ShowAt(System.Drawing.Point anchorPoint)
+    public void ShowAt(System.Drawing.Rectangle anchorBounds)
     {
-        _anchorPoint = anchorPoint;
+        _anchorBounds = anchorBounds;
         Show();
         Activate();
     }
@@ -60,44 +63,67 @@ public partial class TrayMenuWindow : Window
     {
         UpdateLayout();
 
-        var screen = WinForms.Screen.FromPoint(_anchorPoint);
+        var screen = WinForms.Screen.FromRectangle(_anchorBounds);
         var area = screen.WorkingArea;
-        var anchor = PointFromScreen(new System.Windows.Point(_anchorPoint.X, _anchorPoint.Y));
-        var areaTopLeft = PointFromScreen(new System.Windows.Point(area.Left, area.Top));
-        var areaBottomRight = PointFromScreen(new System.Windows.Point(area.Right, area.Bottom));
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var scaleX = dpi.DpiScaleX <= 0 ? 1.0 : dpi.DpiScaleX;
+        var scaleY = dpi.DpiScaleY <= 0 ? 1.0 : dpi.DpiScaleY;
+        var widthPx = Math.Max(1, (int)Math.Ceiling(ActualWidth * scaleX));
+        var heightPx = Math.Max(1, (int)Math.Ceiling(ActualHeight * scaleY));
 
-        var workLeft = Math.Min(areaTopLeft.X, areaBottomRight.X);
-        var workTop = Math.Min(areaTopLeft.Y, areaBottomRight.Y);
-        var workRight = Math.Max(areaTopLeft.X, areaBottomRight.X);
-        var workBottom = Math.Max(areaTopLeft.Y, areaBottomRight.Y);
+        var anchorLeft = _anchorBounds.Left;
+        var anchorTop = _anchorBounds.Top;
+        var anchorRight = _anchorBounds.Right;
+        var anchorBottom = _anchorBounds.Bottom;
+        var anchorCenterX = anchorLeft + (_anchorBounds.Width / 2.0);
+        var anchorCenterY = anchorTop + (_anchorBounds.Height / 2.0);
 
-        var minLeft = workLeft + ScreenMargin;
-        var maxLeft = workRight - ActualWidth - ScreenMargin;
-        var minTop = workTop + ScreenMargin;
-        var maxTop = workBottom - ActualHeight - ScreenMargin;
+        var workLeft = area.Left;
+        var workTop = area.Top;
+        var workRight = area.Right;
+        var workBottom = area.Bottom;
 
-        var preferLeft = (workRight - anchor.X) < (anchor.X - workLeft);
-        var preferUp = (workBottom - anchor.Y) < (anchor.Y - workTop);
+        var minLeft = workLeft + (int)Math.Round(ScreenMargin * scaleX);
+        var maxLeft = workRight - widthPx - (int)Math.Round(ScreenMargin * scaleX);
+        var minTop = workTop + (int)Math.Round(ScreenMargin * scaleY);
+        var maxTop = workBottom - heightPx - (int)Math.Round(ScreenMargin * scaleY);
+        var gapX = (int)Math.Round(PopupGap * scaleX);
+        var gapY = (int)Math.Round(PopupGap * scaleY);
+
+        var preferLeft = (workRight - anchorCenterX) < (anchorCenterX - workLeft);
+        var preferUp = (workBottom - anchorCenterY) < (anchorCenterY - workTop);
 
         var leftCandidate = preferLeft
-            ? anchor.X - ActualWidth - PopupGap
-            : anchor.X + PopupGap;
+            ? anchorRight - widthPx
+            : anchorLeft;
         var rightCandidate = preferLeft
-            ? anchor.X + PopupGap
-            : anchor.X - ActualWidth - PopupGap;
+            ? anchorLeft
+            : anchorRight - widthPx;
 
         var topCandidate = preferUp
-            ? anchor.Y - ActualHeight - PopupGap
-            : anchor.Y + PopupGap;
+            ? anchorTop - heightPx - gapY
+            : anchorBottom + gapY;
         var bottomCandidate = preferUp
-            ? anchor.Y + PopupGap
-            : anchor.Y - ActualHeight - PopupGap;
+            ? anchorBottom + gapY
+            : anchorTop - heightPx - gapY;
 
-        Left = SelectAxisPosition(leftCandidate, rightCandidate, minLeft, maxLeft);
-        Top = SelectAxisPosition(topCandidate, bottomCandidate, minTop, maxTop);
+        var leftPx = SelectAxisPosition(leftCandidate, rightCandidate, minLeft, maxLeft);
+        var topPx = SelectAxisPosition(topCandidate, bottomCandidate, minTop, maxTop);
+        ApplyPixelPosition(leftPx, topPx);
     }
 
-    private static double SelectAxisPosition(double primary, double secondary, double min, double max)
+    private void ApplyPixelPosition(int leftPx, int topPx)
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero)
+        {
+            return;
+        }
+
+        SetWindowPos(hwnd, IntPtr.Zero, leftPx, topPx, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+    }
+
+    private static int SelectAxisPosition(int primary, int secondary, int min, int max)
     {
         if (max < min)
         {
@@ -177,4 +203,18 @@ public partial class TrayMenuWindow : Window
             Dispatcher.BeginInvoke(action);
         }
     }
+
+    private const uint SWP_NOSIZE = 0x0001;
+    private const uint SWP_NOZORDER = 0x0004;
+    private const uint SWP_NOACTIVATE = 0x0010;
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool SetWindowPos(
+        IntPtr hWnd,
+        IntPtr hWndInsertAfter,
+        int x,
+        int y,
+        int cx,
+        int cy,
+        uint uFlags);
 }

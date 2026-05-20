@@ -13,7 +13,7 @@ public static class ConfigService
     public static string ConfigDirectory =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DockBar");
 
-    private static string ConfigFilePath => Path.Combine(ConfigDirectory, FileName);
+    public static string ConfigFilePath => Path.Combine(ConfigDirectory, FileName);
 
     public static DockConfig LoadConfig(out bool createdDefault, out bool hadError)
     {

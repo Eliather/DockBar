@@ -1,5 +1,5 @@
 # DockBar
-DockBar is a dock-style sidebar for Windows built with WPF. Version `1.5.5.3` fixes the remaining tray and side-switching regressions so the custom tray menu behaves predictably and `Cambiar lado` works in both directions.
+DockBar is a dock-style sidebar for Windows built with WPF. Version `1.5.5.4` focuses on stabilizing the custom tray menu, hardening suspend/resume recovery, and finishing the right-side dock layout so editing and pagination behave correctly on-screen.
 
 <img width="256" height="256" alt="Dock" src="https://github.com/user-attachments/assets/eb6fd915-77f7-4298-b41b-90a7d14f41d1" />
 
@@ -19,9 +19,9 @@ This version is built around three priorities:
 - A cleaner interface direction for settings and dialogs, avoiding the old utility or "Windows 98 tool window" look.
 
 ## Release Summary
-DockBar `1.5.5.3` is a follow-up hotfix for the tray and dock-side toggle flows. The focus here is on two remaining behavior bugs: right-clicking the tray repeatedly could still keep nudging the popup, and switching the dock to the right side could appear broken because the bar stayed hidden instead of revealing itself on the new edge.
+DockBar `1.5.5.4` closes the larger round of regressions introduced while replacing the tray popup and refining side switching. The main work in this release is around four areas: keeping the custom tray menu stable, rebuilding dock state correctly after sleep or lid-close resume, making the right-side dock and edit mode anchor inside the screen, and tightening the dock item layout so more shortcuts fit in 1080p.
 
-The tray popup now ignores extra right-click toggles while already open, and the dock now reveals itself immediately after changing sides so moving from left to right is visible and reliable.
+The tray popup now anchors more reliably, the dock uses stronger recovery after resume, right-side positioning respects the rendered window width, and the settings sliders match the rest of the current visual language.
 
 ## What It Does
 - Left or right borderless dock with topmost behavior.
@@ -34,10 +34,13 @@ The tray popup now ignores extra right-click toggles while already open, and the
 - Hidden from Alt+Tab and Win+Tab.
 - Persistent config stored in `%AppData%\DockBar\shortcuts.json`.
 
-## What Changed In 1.5.5.3
-- Fixed the remaining tray right-click drift so extra clicks are ignored while the popup is already open.
-- Fixed `Cambiar lado` so switching the dock to the right side reveals the bar correctly instead of leaving it apparently missing.
-- The tray popup keeps the close/deactivate crash fix and the compact on-screen placement behavior from the previous hotfixes.
+## What Changed In 1.5.5.4
+- Hardened recovery after suspend, hibernation, unlock, and display reconfiguration so the dock can rebuild shortcuts from config instead of coming back empty.
+- Reworked tray popup anchoring and debounce so repeated right-clicks do not spawn drifting menus and the custom popup stays attached to the tray icon.
+- Fixed `Cambiar lado` and right-side edit-mode anchoring so the dock expands inward on the right edge instead of rendering outside the screen.
+- Improved edge detection by introducing a dedicated transparent hotspot window that follows the active side while the dock is hidden.
+- Tightened the shortcut item layout and adjusted visible-item pagination so more icons fit cleanly in common 1080p setups.
+- Refreshed the shared slider styling in settings so controls opened from edit mode keep the same polished DockBar look.
 
 ## Performance Improvements
 - Icon caching in `IconService` to avoid reloading the same files repeatedly.

@@ -1,6 +1,8 @@
 using System;
 using System.Drawing;
 using System.IO;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Windows;
 using DockBar.Services;
 using WinForms = System.Windows.Forms;
@@ -9,7 +11,9 @@ namespace DockBar;
 
 public partial class App : System.Windows.Application
 {
-    private static readonly TimeSpan TrayMenuReopenGuard = TimeSpan.FromMilliseconds(150);
+    private static readonly TimeSpan TrayMenuReopenGuard = TimeSpan.FromMilliseconds(400);
+    private static readonly FieldInfo? NotifyIconIdField = typeof(WinForms.NotifyIcon).GetField("id", BindingFlags.Instance | BindingFlags.NonPublic);
+    private static readonly FieldInfo? NotifyIconWindowField = typeof(WinForms.NotifyIcon).GetField("window", BindingFlags.Instance | BindingFlags.NonPublic);
     private WinForms.NotifyIcon? _notifyIcon;
     private MainWindow? _window;
     private TrayMenuWindow? _trayMenu;
@@ -52,12 +56,12 @@ public partial class App : System.Windows.Application
         }
 
         _trayMenuToggleQueued = true;
-        var anchorPoint = WinForms.Control.MousePosition;
+        var anchorBounds = GetTrayAnchorBounds() ?? CreateFallbackAnchorBounds(WinForms.Control.MousePosition);
         Dispatcher.BeginInvoke(new Action(() =>
         {
             try
             {
-                ToggleTrayMenu(anchorPoint);
+                ToggleTrayMenu(anchorBounds);
             }
             finally
             {
@@ -66,7 +70,7 @@ public partial class App : System.Windows.Application
         }));
     }
 
-    private void ToggleTrayMenu(System.Drawing.Point anchorPoint)
+    private void ToggleTrayMenu(System.Drawing.Rectangle anchorBounds)
     {
         if (_trayMenu != null)
         {
@@ -103,7 +107,52 @@ public partial class App : System.Windows.Application
         };
 
         _trayMenu = menu;
-        menu.ShowAt(anchorPoint);
+        menu.ShowAt(anchorBounds);
+    }
+
+    private System.Drawing.Rectangle? GetTrayAnchorBounds()
+    {
+        if (_notifyIcon == null || NotifyIconIdField == null || NotifyIconWindowField == null)
+        {
+            return null;
+        }
+
+        try
+        {
+            var id = (int)(NotifyIconIdField.GetValue(_notifyIcon) ?? 0);
+            var nativeWindow = NotifyIconWindowField.GetValue(_notifyIcon) as WinForms.NativeWindow;
+            var handle = nativeWindow?.Handle ?? IntPtr.Zero;
+            if (id <= 0 || handle == IntPtr.Zero)
+            {
+                return null;
+            }
+
+            var identifier = new NOTIFYICONIDENTIFIER
+            {
+                cbSize = (uint)Marshal.SizeOf<NOTIFYICONIDENTIFIER>(),
+                hWnd = handle,
+                uID = (uint)id
+            };
+
+            if (Shell_NotifyIconGetRect(ref identifier, out var rect) != 0)
+            {
+                return null;
+            }
+
+            return System.Drawing.Rectangle.FromLTRB(rect.Left, rect.Top, rect.Right, rect.Bottom);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(ex);
+            return null;
+        }
+    }
+
+    private static System.Drawing.Rectangle CreateFallbackAnchorBounds(System.Drawing.Point point)
+    {
+        const int size = 16;
+        var half = size / 2;
+        return new System.Drawing.Rectangle(point.X - half, point.Y - half, size, size);
     }
 
     private static Icon LoadTrayIcon()
@@ -182,5 +231,26 @@ public partial class App : System.Windows.Application
         _trayMenu?.RequestClose();
         _notifyIcon?.Dispose();
         base.OnExit(e);
+    }
+
+    [DllImport("shell32.dll")]
+    private static extern int Shell_NotifyIconGetRect(ref NOTIFYICONIDENTIFIER identifier, out RECT iconLocation);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NOTIFYICONIDENTIFIER
+    {
+        public uint cbSize;
+        public IntPtr hWnd;
+        public uint uID;
+        public Guid guidItem;
     }
 }
