@@ -9,6 +9,7 @@ namespace DockBar;
 public partial class TrayMenuWindow : Window
 {
     private const double ScreenMargin = 8;
+    private const double PopupGap = 6;
     private System.Drawing.Point _anchorPoint;
 
     public string VersionTag { get; }
@@ -47,12 +48,59 @@ public partial class TrayMenuWindow : Window
 
         var screen = WinForms.Screen.FromPoint(_anchorPoint);
         var area = screen.WorkingArea;
+        var anchor = PointFromScreen(new System.Windows.Point(_anchorPoint.X, _anchorPoint.Y));
+        var areaTopLeft = PointFromScreen(new System.Windows.Point(area.Left, area.Top));
+        var areaBottomRight = PointFromScreen(new System.Windows.Point(area.Right, area.Bottom));
 
-        var desiredLeft = _anchorPoint.X - ActualWidth + 6;
-        var desiredTop = _anchorPoint.Y - ActualHeight - 6;
+        var workLeft = Math.Min(areaTopLeft.X, areaBottomRight.X);
+        var workTop = Math.Min(areaTopLeft.Y, areaBottomRight.Y);
+        var workRight = Math.Max(areaTopLeft.X, areaBottomRight.X);
+        var workBottom = Math.Max(areaTopLeft.Y, areaBottomRight.Y);
 
-        Left = Math.Max(area.Left + ScreenMargin, Math.Min(desiredLeft, area.Right - ActualWidth - ScreenMargin));
-        Top = Math.Max(area.Top + ScreenMargin, Math.Min(desiredTop, area.Bottom - ActualHeight - ScreenMargin));
+        var minLeft = workLeft + ScreenMargin;
+        var maxLeft = workRight - ActualWidth - ScreenMargin;
+        var minTop = workTop + ScreenMargin;
+        var maxTop = workBottom - ActualHeight - ScreenMargin;
+
+        var preferLeft = (workRight - anchor.X) < (anchor.X - workLeft);
+        var preferUp = (workBottom - anchor.Y) < (anchor.Y - workTop);
+
+        var leftCandidate = preferLeft
+            ? anchor.X - ActualWidth - PopupGap
+            : anchor.X + PopupGap;
+        var rightCandidate = preferLeft
+            ? anchor.X + PopupGap
+            : anchor.X - ActualWidth - PopupGap;
+
+        var topCandidate = preferUp
+            ? anchor.Y - ActualHeight - PopupGap
+            : anchor.Y + PopupGap;
+        var bottomCandidate = preferUp
+            ? anchor.Y + PopupGap
+            : anchor.Y - ActualHeight - PopupGap;
+
+        Left = SelectAxisPosition(leftCandidate, rightCandidate, minLeft, maxLeft);
+        Top = SelectAxisPosition(topCandidate, bottomCandidate, minTop, maxTop);
+    }
+
+    private static double SelectAxisPosition(double primary, double secondary, double min, double max)
+    {
+        if (max < min)
+        {
+            return min;
+        }
+
+        if (primary >= min && primary <= max)
+        {
+            return primary;
+        }
+
+        if (secondary >= min && secondary <= max)
+        {
+            return secondary;
+        }
+
+        return Math.Max(min, Math.Min(primary, max));
     }
 
     private void Window_Deactivated(object sender, EventArgs e)
