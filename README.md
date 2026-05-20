@@ -1,5 +1,5 @@
 # DockBar
-DockBar is a dock-style sidebar for Windows built with WPF. Version `1.5.5.1` refines the tray experience with a more compact custom quick-actions menu and fixes popup placement so it stays on-screen near the Windows tray area.
+DockBar is a dock-style sidebar for Windows built with WPF. Version `1.5.5.2` stabilizes the custom tray menu by preventing duplicate popup spam and fixing crashes when any quick action is clicked.
 
 <img width="256" height="256" alt="Dock" src="https://github.com/user-attachments/assets/eb6fd915-77f7-4298-b41b-90a7d14f41d1" />
 
@@ -19,9 +19,9 @@ This version is built around three priorities:
 - A cleaner interface direction for settings and dialogs, avoiding the old utility or "Windows 98 tool window" look.
 
 ## Release Summary
-DockBar `1.5.5.1` is a tray popup follow-up release. The focus here is tightening the flyout further and fixing the positioning logic so the menu no longer renders partly off-screen on different monitor layouts or DPI scaling setups.
+DockBar `1.5.5.2` is a tray stability hotfix. The focus here is on fixing two regressions in the new custom tray popup: repeated right clicks could spawn or drift the menu, and selecting any tray action could crash the app during close/deactivate re-entry.
 
-The tray menu still uses the custom WPF surface introduced recently, but it now chooses a safer side of the pointer and clamps itself inside the current monitor work area after converting from screen pixels to WPF coordinates correctly.
+The popup logic now serializes tray toggles, closes in a controlled single path, and defers command execution until after the flyout has fully closed. The compact positioning and on-screen clamping from `1.5.5.1` remain in place.
 
 ## What It Does
 - Left or right borderless dock with topmost behavior.
@@ -34,12 +34,11 @@ The tray menu still uses the custom WPF surface introduced recently, but it now 
 - Hidden from Alt+Tab and Win+Tab.
 - Persistent config stored in `%AppData%\DockBar\shortcuts.json`.
 
-## What Changed In 1.5.5.1
-- Replaced the tray icon's default `ContextMenuStrip` with a custom WPF popup menu.
-- Fixed tray popup placement so it stays inside the active monitor work area instead of drifting off-screen with some tray/taskbar/DPI combinations.
-- Made the tray popup more compact with a narrower width, tighter spacing, smaller icon rhythm, and lighter shadow treatment.
-- The tray menu still matches DockBar's dark theme, rounded surfaces, spacing, and hover states.
-- Kept the same quick actions as before: open dock, switch side, settings, update check, config folder, and exit.
+## What Changed In 1.5.5.2
+- Fixed repeated right-click spam so the tray popup no longer stacks, reopens immediately, or appears to drift away from the tray area.
+- Fixed crashes triggered by clicking tray menu actions while the popup was closing or deactivating.
+- Tray commands now execute after the flyout has fully closed, avoiding close/deactivate re-entry issues.
+- The tray popup keeps the compact sizing and safe monitor clamping introduced in `1.5.5.1`.
 
 ## Performance Improvements
 - Icon caching in `IconService` to avoid reloading the same files repeatedly.

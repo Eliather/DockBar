@@ -11,6 +11,8 @@ public partial class TrayMenuWindow : Window
     private const double ScreenMargin = 8;
     private const double PopupGap = 6;
     private System.Drawing.Point _anchorPoint;
+    private bool _closeRequested;
+    private Action? _afterCloseAction;
 
     public string VersionTag { get; }
 
@@ -34,6 +36,18 @@ public partial class TrayMenuWindow : Window
         _anchorPoint = anchorPoint;
         Show();
         Activate();
+    }
+
+    public void RequestClose(Action? afterClose = null)
+    {
+        if (_closeRequested)
+        {
+            return;
+        }
+
+        _closeRequested = true;
+        _afterCloseAction = afterClose;
+        Close();
     }
 
     private void TrayMenuWindow_Loaded(object sender, RoutedEventArgs e)
@@ -105,14 +119,14 @@ public partial class TrayMenuWindow : Window
 
     private void Window_Deactivated(object sender, EventArgs e)
     {
-        Close();
+        RequestClose();
     }
 
     private void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
         if (e.Key == Key.Escape)
         {
-            Close();
+            RequestClose();
         }
     }
 
@@ -148,7 +162,19 @@ public partial class TrayMenuWindow : Window
 
     private void CloseAndRaise(EventHandler? handler)
     {
-        Close();
-        handler?.Invoke(this, EventArgs.Empty);
+        RequestClose(handler == null ? null : () => handler.Invoke(this, EventArgs.Empty));
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        base.OnClosed(e);
+
+        var action = _afterCloseAction;
+        _afterCloseAction = null;
+
+        if (action != null)
+        {
+            Dispatcher.BeginInvoke(action);
+        }
     }
 }

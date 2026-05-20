@@ -9,9 +9,12 @@ namespace DockBar;
 
 public partial class App : System.Windows.Application
 {
+    private static readonly TimeSpan TrayMenuReopenGuard = TimeSpan.FromMilliseconds(150);
     private WinForms.NotifyIcon? _notifyIcon;
     private MainWindow? _window;
     private TrayMenuWindow? _trayMenu;
+    private bool _trayMenuToggleQueued;
+    private DateTime _lastTrayMenuClosedUtc;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -43,12 +46,38 @@ public partial class App : System.Windows.Application
             return;
         }
 
-        Dispatcher.BeginInvoke(new Action(() => ShowTrayMenu(WinForms.Control.MousePosition)));
+        if (_trayMenuToggleQueued)
+        {
+            return;
+        }
+
+        _trayMenuToggleQueued = true;
+        var anchorPoint = WinForms.Control.MousePosition;
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            try
+            {
+                ToggleTrayMenu(anchorPoint);
+            }
+            finally
+            {
+                _trayMenuToggleQueued = false;
+            }
+        }));
     }
 
-    private void ShowTrayMenu(System.Drawing.Point anchorPoint)
+    private void ToggleTrayMenu(System.Drawing.Point anchorPoint)
     {
-        _trayMenu?.Close();
+        if (_trayMenu != null)
+        {
+            _trayMenu.RequestClose();
+            return;
+        }
+
+        if (DateTime.UtcNow - _lastTrayMenuClosedUtc < TrayMenuReopenGuard)
+        {
+            return;
+        }
 
         var menu = new TrayMenuWindow();
         menu.OpenRequested += (_, _) => ShowWindow();
@@ -70,6 +99,7 @@ public partial class App : System.Windows.Application
             if (ReferenceEquals(_trayMenu, menu))
             {
                 _trayMenu = null;
+                _lastTrayMenuClosedUtc = DateTime.UtcNow;
             }
         };
 
@@ -142,7 +172,7 @@ public partial class App : System.Windows.Application
 
     private void ExitApp()
     {
-        _trayMenu?.Close();
+        _trayMenu?.RequestClose();
         _notifyIcon?.Dispose();
         _window?.Close();
         Shutdown();
@@ -150,7 +180,7 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
-        _trayMenu?.Close();
+        _trayMenu?.RequestClose();
         _notifyIcon?.Dispose();
         base.OnExit(e);
     }
