@@ -120,6 +120,7 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         Config = config;
         InitializeComponent();
         DataContext = this;
+        SourceInitialized += (_, _) => WindowSwitcherHelper.HideFromWindowSwitchers(this);
         Config.BackgroundOpacity = Config.UseTransparency ? GlassOpacity : 1.0;
         _pendingR = Config.BackgroundR;
         _pendingG = Config.BackgroundG;

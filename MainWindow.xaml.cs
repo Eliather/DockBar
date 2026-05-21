@@ -1761,19 +1761,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void HideFromWindowSwitchers()
     {
-        try
-        {
-            var hwnd = new WindowInteropHelper(this).Handle;
-            if (hwnd == IntPtr.Zero) return;
-            var exStyle = NativeMethods.GetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE);
-            exStyle |= NativeMethods.WS_EX_TOOLWINDOW;
-            exStyle &= ~NativeMethods.WS_EX_APPWINDOW;
-            NativeMethods.SetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE, exStyle);
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine(ex);
-        }
+        WindowSwitcherHelper.HideFromWindowSwitchers(this);
     }
 
     private void ApplyGlassEffect()

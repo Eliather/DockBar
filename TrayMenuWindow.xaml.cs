@@ -31,6 +31,7 @@ public partial class TrayMenuWindow : Window
         VersionTag = $"v{UpdateService.GetCurrentVersion()}";
         InitializeComponent();
         DataContext = this;
+        SourceInitialized += (_, _) => WindowSwitcherHelper.HideFromWindowSwitchers(this);
         Loaded += TrayMenuWindow_Loaded;
     }
 

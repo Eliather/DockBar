@@ -28,6 +28,7 @@ public partial class AboutWindow : Window
 
         InitializeComponent();
         DataContext = this;
+        SourceInitialized += (_, _) => WindowSwitcherHelper.HideFromWindowSwitchers(this);
     }
 
     private void Close_Click(object sender, RoutedEventArgs e)

@@ -20,6 +20,7 @@ public partial class RenameWindow : Window, INotifyPropertyChanged
         ForegroundBrush = foreground;
         InitializeComponent();
         DataContext = this;
+        SourceInitialized += (_, _) => WindowSwitcherHelper.HideFromWindowSwitchers(this);
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e)

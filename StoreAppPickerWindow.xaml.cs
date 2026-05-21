@@ -45,6 +45,7 @@ public partial class StoreAppPickerWindow : Window, INotifyPropertyChanged
         InitializeComponent();
         DataContext = this;
         AppsView = CollectionViewSource.GetDefaultView(Apps);
+        SourceInitialized += (_, _) => WindowSwitcherHelper.HideFromWindowSwitchers(this);
         Loaded += async (_, _) => await LoadAppsAsync();
     }
 

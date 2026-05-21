@@ -71,6 +71,7 @@ public partial class AddLinkWindow : Window, INotifyPropertyChanged
         ForegroundBrush = foreground;
         InitializeComponent();
         DataContext = this;
+        SourceInitialized += (_, _) => WindowSwitcherHelper.HideFromWindowSwitchers(this);
     }
 
     private void Save_Click(object sender, RoutedEventArgs e)

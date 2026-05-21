@@ -25,6 +25,7 @@ public sealed class EdgeHotspotWindow : Window
         Opacity = 0.01;
         Focusable = false;
         WindowStartupLocation = WindowStartupLocation.Manual;
+        SourceInitialized += (_, _) => WindowSwitcherHelper.HideFromWindowSwitchers(this);
 
         MouseEnter += HotspotWindow_MouseEnter;
         MouseMove += HotspotWindow_MouseMove;

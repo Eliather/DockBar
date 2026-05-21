@@ -1,5 +1,5 @@
 # DockBar
-DockBar is a dock-style sidebar for Windows built with WPF. Version `1.5.6` focuses on stabilizing right-side behavior, tightening how shortcut density is calculated on 1080p screens, and redesigning the main dialogs so settings and rename flows stay visible without broken legacy-looking controls.
+DockBar is a dock-style sidebar for Windows built with WPF. Version `1.5.7` focuses on keeping every DockBar window hidden from Alt+Tab and Win+Tab, while preserving the right-side dock fixes and the compact dialog redesign from the previous release.
 
 <img width="256" height="256" alt="Dock" src="https://github.com/user-attachments/assets/eb6fd915-77f7-4298-b41b-90a7d14f41d1" />
 
@@ -19,9 +19,9 @@ This version is built around three priorities:
 - A cleaner interface direction for settings and dialogs, avoiding the old utility or "Windows 98 tool window" look.
 
 ## Release Summary
-DockBar `1.5.6` packages the full refinement pass after the tray-menu migration. The release centers on four practical fixes: making the right-side dock behave symmetrically with the left side, recovering shortcut state more defensively after lid-close resume on laptops, making shortcut pagination and visible density saner for `1920x1080`, and redesigning the rename/settings dialogs so the UI stays visible and visually consistent.
+DockBar `1.5.7` is a focused corrective release after `1.5.6`. The main goal is to keep DockBar completely out of Windows task switching surfaces again, even after the recent addition of more auxiliary WPF windows such as the tray popup, edge hotspot, settings, rename, and picker dialogs.
 
-The dock now anchors correctly on the right edge during normal mode and edit mode, resume recovery can rebuild state from config instead of trusting an empty in-memory list, visible-item calculations are less conservative, and the settings window no longer depends on a global scroll slider just to expose the basic controls.
+This release introduces a shared helper that marks every top-level DockBar window as a tool window and refreshes the native frame style, so the app stays hidden from Alt+Tab and Win+Tab instead of leaking secondary windows into the Windows app switcher.
 
 ## What It Does
 - Left or right borderless dock with topmost behavior.
@@ -34,13 +34,11 @@ The dock now anchors correctly on the right edge during normal mode and edit mod
 - Hidden from Alt+Tab and Win+Tab.
 - Persistent config stored in `%AppData%\DockBar\shortcuts.json`.
 
-## What Changed In 1.5.6
-- Hardened recovery after suspend, hibernation, unlock, and lid-close resume so the dock can rebuild shortcuts from config instead of coming back empty on some laptops.
-- Fixed tray popup reentrancy and anchoring drift so repeated right-clicks do not spawn offset menus or crash when an action closes the popup.
-- Fixed `Cambiar lado`, right-edge reveal detection, and right-side edit-mode anchoring so the dock reveals, expands, and edits inward on the right edge instead of drifting outside the screen.
-- Tightened shortcut item density and pagination logic so common `1920x1080` layouts waste less space and stop hiding an extra icon unnecessarily.
-- Replaced the old edit-mode scroll behavior and refreshed slider styling so in-app controls keep the same DockBar visual language instead of raw default WPF chrome.
-- Redesigned the rename and settings dialogs to be more compact, keep key information visible, and remove the need for a global vertical settings scroller.
+## What Changed In 1.5.7
+- Added a shared native window-style helper so DockBar windows consistently opt into `WS_EX_TOOLWINDOW` and out of `WS_EX_APPWINDOW`, with a forced style refresh.
+- Applied that helper to the main dock, tray popup, edge hotspot window, settings, rename, add-link, about, and Store app picker dialogs.
+- Fixed the regression where DockBar or one of its helper windows could show up again in Alt+Tab or Win+Tab after the recent tray and UI work.
+- Kept the right-side dock behavior, resume recovery work, compact settings layout, and dialog refinements introduced in `1.5.6`.
 
 ## Performance Improvements
 - Icon caching in `IconService` to avoid reloading the same files repeatedly.
