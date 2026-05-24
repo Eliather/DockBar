@@ -83,7 +83,6 @@ public partial class App : System.Windows.Application
         }
 
         var menu = new TrayMenuWindow();
-        menu.OpenRequested += (_, _) => ShowWindow();
         menu.ToggleSideRequested += (_, _) => _window?.ToggleDockSide();
         menu.SettingsRequested += (_, _) => OpenSettingsWindow();
         menu.UpdateRequested += async (_, _) =>

@@ -1,5 +1,5 @@
 # DockBar
-DockBar is a dock-style sidebar for Windows built with WPF. Version `1.5.7` focuses on keeping every DockBar window hidden from Alt+Tab and Win+Tab, while preserving the right-side dock fixes and the compact dialog redesign from the previous release.
+DockBar is a dock-style sidebar for Windows built with WPF. Version `1.5.8` focuses on hardening recovery after suspend and hibernation by watching the persisted JSON config, while also polishing the tray popup by removing the redundant open action and replacing the rough line icons with clearer glyphs.
 
 <img width="256" height="256" alt="Dock" src="https://github.com/user-attachments/assets/eb6fd915-77f7-4298-b41b-90a7d14f41d1" />
 
@@ -19,9 +19,9 @@ This version is built around three priorities:
 - A cleaner interface direction for settings and dialogs, avoiding the old utility or "Windows 98 tool window" look.
 
 ## Release Summary
-DockBar `1.5.7` is a focused corrective release after `1.5.6`. The main goal is to keep DockBar completely out of Windows task switching surfaces again, even after the recent addition of more auxiliary WPF windows such as the tray popup, edge hotspot, settings, rename, and picker dialogs.
+DockBar `1.5.8` is a reliability and polish release on top of `1.5.7`. The core fix is around laptop resume behavior: the dock now watches `%AppData%\\DockBar\\shortcuts.json`, debounces config-file changes, and can rehydrate state from disk after resume instead of depending only on the first in-memory recovery pass.
 
-This release introduces a shared helper that marks every top-level DockBar window as a tool window and refreshes the native frame style, so the app stays hidden from Alt+Tab and Win+Tab instead of leaking secondary windows into the Windows app switcher.
+On the UI side, the tray popup was cleaned up so it starts directly with useful actions, and its icons were changed from thin ambiguous line drawings to clearer glyph-based action chips that read better at small sizes.
 
 ## What It Does
 - Left or right borderless dock with topmost behavior.
@@ -34,11 +34,12 @@ This release introduces a shared helper that marks every top-level DockBar windo
 - Hidden from Alt+Tab and Win+Tab.
 - Persistent config stored in `%AppData%\DockBar\shortcuts.json`.
 
-## What Changed In 1.5.7
-- Added a shared native window-style helper so DockBar windows consistently opt into `WS_EX_TOOLWINDOW` and out of `WS_EX_APPWINDOW`, with a forced style refresh.
-- Applied that helper to the main dock, tray popup, edge hotspot window, settings, rename, add-link, about, and Store app picker dialogs.
-- Fixed the regression where DockBar or one of its helper windows could show up again in Alt+Tab or Win+Tab after the recent tray and UI work.
-- Kept the right-side dock behavior, resume recovery work, compact settings layout, and dialog refinements introduced in `1.5.6`.
+## What Changed In 1.5.8
+- Added a `FileSystemWatcher` on `shortcuts.json` with debounce and watcher reset logic so DockBar can react when the config file becomes available or changes after resume.
+- Wired resume recovery to enqueue an additional config reload path from disk instead of trusting only the first in-memory state restoration attempt.
+- Suppressed self-triggered watcher loops during DockBar saves, so the app can persist config without reloading itself repeatedly.
+- Removed the redundant `Abrir` action from the tray popup and kept the menu focused on the actions that matter from the notification area.
+- Replaced the tray popup's rough line icons with clearer glyph-based icons that are more readable at the menu's compact size.
 
 ## Performance Improvements
 - Icon caching in `IconService` to avoid reloading the same files repeatedly.

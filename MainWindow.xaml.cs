@@ -28,8 +28,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private const int RetryRecoveryDelayMs = 900;
     private const int ResumeRecoveryPasses = 3;
     private const int DisplayRecoveryPasses = 2;
+    private const int ConfigWatcherDebounceMs = 450;
+    private const int ConfigWatcherSuppressMs = 1500;
 
     private readonly DispatcherTimer _hideTimer;
+    private readonly DispatcherTimer _configReloadTimer;
     private DockConfig _config = new();
     private bool _isHidden;
     private DockSide _dockSide = DockSide.Left;
@@ -56,6 +59,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private bool _itemsPerPageRefreshQueued;
     private bool _syncingEditModeScroll;
     private EdgeHotspotWindow? _edgeHotspot;
+    private FileSystemWatcher? _configWatcher;
+    private DateTime _suppressConfigWatcherUntilUtc;
 
     public ObservableCollection<ShortcutItem> Shortcuts { get; } = new();
     public ObservableCollection<ShortcutItem> VisibleShortcuts { get; } = new();
@@ -184,8 +189,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             Interval = TimeSpan.FromMilliseconds(InitialRecoveryDelayMs)
         };
         _systemRecoveryTimer.Tick += SystemRecoveryTimer_Tick;
+        _configReloadTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(ConfigWatcherDebounceMs)
+        };
+        _configReloadTimer.Tick += ConfigReloadTimer_Tick;
 
         LoadConfigAndShortcuts();
+        InitializeConfigWatcher();
         Shortcuts.CollectionChanged += Shortcuts_CollectionChanged;
         RegisterSystemEventHandlers();
         UpdateVisibleItems();
@@ -206,7 +217,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 ? LocalizationService.Get("Config_ReadError")
                 : LocalizationService.Get("Config_NotFound");
             System.Windows.MessageBox.Show(message, "DockBar", MessageBoxButton.OK, MessageBoxImage.Warning);
-            ConfigService.SaveConfig(loaded);
+            PersistConfigToDisk(loaded);
         }
         ApplyConfigState(loaded);
 
@@ -275,7 +286,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         _config.AutoStartEnabled = result == MessageBoxResult.Yes;
         _config.AutoStartPrompted = true;
-        ConfigService.SaveConfig(_config);
+        PersistConfigToDisk(_config);
     }
 
     private void ApplyVisualConfig()
@@ -450,11 +461,109 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _systemRecoveryTimer.Start();
     }
 
+    private void InitializeConfigWatcher()
+    {
+        try
+        {
+            Directory.CreateDirectory(ConfigService.ConfigDirectory);
+            ResetConfigWatcher();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+    }
+
+    private void ResetConfigWatcher()
+    {
+        DisposeConfigWatcher();
+
+        try
+        {
+            var watcher = new FileSystemWatcher(ConfigService.ConfigDirectory, Path.GetFileName(ConfigService.ConfigFilePath))
+            {
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.CreationTime | NotifyFilters.LastWrite | NotifyFilters.Size,
+                IncludeSubdirectories = false,
+                EnableRaisingEvents = false
+            };
+
+            watcher.Changed += ConfigWatcher_Changed;
+            watcher.Created += ConfigWatcher_Changed;
+            watcher.Renamed += ConfigWatcher_Renamed;
+            watcher.Error += ConfigWatcher_Error;
+            watcher.EnableRaisingEvents = true;
+            _configWatcher = watcher;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+    }
+
+    private void DisposeConfigWatcher()
+    {
+        if (_configWatcher == null)
+        {
+            return;
+        }
+
+        _configWatcher.EnableRaisingEvents = false;
+        _configWatcher.Changed -= ConfigWatcher_Changed;
+        _configWatcher.Created -= ConfigWatcher_Changed;
+        _configWatcher.Renamed -= ConfigWatcher_Renamed;
+        _configWatcher.Error -= ConfigWatcher_Error;
+        _configWatcher.Dispose();
+        _configWatcher = null;
+    }
+
+    private void ConfigWatcher_Changed(object sender, FileSystemEventArgs e)
+    {
+        QueueConfigReloadFromWatcher();
+    }
+
+    private void ConfigWatcher_Renamed(object sender, RenamedEventArgs e)
+    {
+        QueueConfigReloadFromWatcher();
+    }
+
+    private void ConfigWatcher_Error(object sender, ErrorEventArgs e)
+    {
+        Dispatcher.BeginInvoke(new Action(ResetConfigWatcher));
+    }
+
+    private void QueueConfigReloadFromWatcher()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(new Action(QueueConfigReloadFromWatcher));
+            return;
+        }
+
+        if (DateTime.UtcNow < _suppressConfigWatcherUntilUtc)
+        {
+            return;
+        }
+
+        _configReloadTimer.Stop();
+        _configReloadTimer.Start();
+    }
+
+    private void ConfigReloadTimer_Tick(object? sender, EventArgs e)
+    {
+        _configReloadTimer.Stop();
+        TryReloadConfigFromDisk(allowReplacingWithEmptyState: false);
+    }
+
     private void SystemRecoveryTimer_Tick(object? sender, EventArgs e)
     {
         _systemRecoveryTimer.Stop();
         var reloadConfigIfMissing = _reloadConfigOnRecovery;
         RecoverDockAfterResume(reloadConfigIfMissing);
+
+        if (reloadConfigIfMissing)
+        {
+            QueueConfigReloadFromWatcher();
+        }
 
         _recoveryPassesRemaining = Math.Max(0, _recoveryPassesRemaining - 1);
         if (_recoveryPassesRemaining > 0 && ShouldRetryDockRecovery())
@@ -1288,10 +1397,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     public void ReloadConfigAndApply()
     {
-        if (TryReloadConfigFromDisk(allowReplacingWithEmptyState: true))
-        {
-            SaveConfig();
-        }
+        TryReloadConfigFromDisk(allowReplacingWithEmptyState: true);
     }
 
     public async Task CheckForUpdatesAsync(bool userInitiated)
@@ -1374,8 +1480,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _config.BackgroundOpacity = _config.UseTransparency ? GlassOpacity : 1.0;
         _config.UseLightText = _config.UseLightText;
         _config.Shortcuts = Shortcuts.ToList();
-        ConfigService.SaveConfig(_config);
+        PersistConfigToDisk(_config);
         UpdateVisibleItems();
+    }
+
+    private void PersistConfigToDisk(DockConfig config)
+    {
+        _suppressConfigWatcherUntilUtc = DateTime.UtcNow.AddMilliseconds(ConfigWatcherSuppressMs);
+        ConfigService.SaveConfig(config);
     }
 
     private ImageSource? ResolveIcon(ShortcutItem item)
@@ -1450,6 +1562,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _edgeHotspot?.Close();
         _edgeHotspot = null;
         _systemRecoveryTimer.Stop();
+        _configReloadTimer.Stop();
+        DisposeConfigWatcher();
         UnregisterSystemEventHandlers();
         UnhookForegroundWatcher();
         base.OnClosed(e);

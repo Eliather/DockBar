@@ -19,7 +19,6 @@ public partial class TrayMenuWindow : Window
 
     public string VersionTag { get; }
 
-    public event EventHandler? OpenRequested;
     public event EventHandler? ToggleSideRequested;
     public event EventHandler? SettingsRequested;
     public event EventHandler? UpdateRequested;
@@ -155,11 +154,6 @@ public partial class TrayMenuWindow : Window
         {
             RequestClose();
         }
-    }
-
-    private void Open_Click(object sender, RoutedEventArgs e)
-    {
-        CloseAndRaise(OpenRequested);
     }
 
     private void ToggleSide_Click(object sender, RoutedEventArgs e)

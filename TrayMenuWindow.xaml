@@ -58,15 +58,23 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
-        <Style x:Key="TrayMenuIconStyle" TargetType="Path">
-            <Setter Property="Stroke" Value="{StaticResource AppTextMutedBrush}"/>
-            <Setter Property="StrokeThickness" Value="1.6"/>
-            <Setter Property="StrokeStartLineCap" Value="Round"/>
-            <Setter Property="StrokeEndLineCap" Value="Round"/>
-            <Setter Property="StrokeLineJoin" Value="Round"/>
-            <Setter Property="Stretch" Value="Uniform"/>
+        <Style x:Key="TrayMenuGlyphHostStyle" TargetType="Border">
+            <Setter Property="Width" Value="18"/>
+            <Setter Property="Height" Value="18"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Background" Value="{StaticResource AppPanelBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource AppBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="TrayMenuGlyphStyle" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="Foreground" Value="{StaticResource AppTextBrush}"/>
             <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextAlignment" Value="Center"/>
         </Style>
     </Window.Resources>
 
@@ -150,40 +158,20 @@
             </Border>
 
             <Button Style="{StaticResource TrayMenuButtonStyle}"
-                    Click="Open_Click">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="14"/>
-                        <ColumnDefinition Width="8"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Viewbox Grid.Column="0" Width="14" Height="14">
-                        <Grid Width="24" Height="24">
-                            <Path Style="{StaticResource TrayMenuIconStyle}" Data="M5.5,18.25H18.5V8.5H12.5L10.5,6.25H5.5Z"/>
-                            <Path Style="{StaticResource TrayMenuIconStyle}" Data="M10,14L15.25,8.75 M12.5,8.75H15.25V11.5"/>
-                        </Grid>
-                    </Viewbox>
-                    <TextBlock Grid.Column="2"
-                               Text="{local:Loc Key=Tray_Open}"
-                               Style="{StaticResource TrayMenuLabelStyle}"/>
-                </Grid>
-            </Button>
-
-            <Button Style="{StaticResource TrayMenuButtonStyle}"
                     Click="ToggleSide_Click">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="14"/>
+                        <ColumnDefinition Width="18"/>
                         <ColumnDefinition Width="8"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Viewbox Grid.Column="0" Width="14" Height="14">
-                        <Grid Width="24" Height="24">
-                            <Path Style="{StaticResource TrayMenuIconStyle}" Data="M8.5,7L4.5,12L8.5,17"/>
-                            <Path Style="{StaticResource TrayMenuIconStyle}" Data="M15.5,7L19.5,12L15.5,17"/>
-                            <Path Style="{StaticResource TrayMenuIconStyle}" Data="M5.5,12H18.5"/>
-                        </Grid>
-                    </Viewbox>
+                    <Border Grid.Column="0"
+                            Style="{StaticResource TrayMenuGlyphHostStyle}">
+                        <TextBlock Text="↔"
+                                   FontFamily="Segoe UI Symbol"
+                                   FontSize="12"
+                                   Style="{StaticResource TrayMenuGlyphStyle}"/>
+                    </Border>
                     <TextBlock Grid.Column="2"
                                Text="{local:Loc Key=Tray_ToggleSide}"
                                Style="{StaticResource TrayMenuLabelStyle}"/>
@@ -194,15 +182,15 @@
                     Click="Settings_Click">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="14"/>
+                        <ColumnDefinition Width="18"/>
                         <ColumnDefinition Width="8"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Viewbox Grid.Column="0" Width="14" Height="14">
-                        <Grid Width="24" Height="24">
-                            <Path Style="{StaticResource TrayMenuIconStyle}" Data="M6.5,8H17.5 M6.5,12H17.5 M6.5,16H17.5"/>
-                        </Grid>
-                    </Viewbox>
+                    <Border Grid.Column="0"
+                            Style="{StaticResource TrayMenuGlyphHostStyle}">
+                        <TextBlock Text="&#xE713;"
+                                   Style="{StaticResource TrayMenuGlyphStyle}"/>
+                    </Border>
                     <TextBlock Grid.Column="2"
                                Text="{local:Loc Key=Tray_Settings}"
                                Style="{StaticResource TrayMenuLabelStyle}"/>
@@ -213,17 +201,15 @@
                     Click="Update_Click">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="14"/>
+                        <ColumnDefinition Width="18"/>
                         <ColumnDefinition Width="8"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Viewbox Grid.Column="0" Width="14" Height="14">
-                        <Grid Width="24" Height="24">
-                            <Path Style="{StaticResource TrayMenuIconStyle}" Data="M12,5.5V15.5"/>
-                            <Path Style="{StaticResource TrayMenuIconStyle}" Data="M8.5,12L12,15.5L15.5,12"/>
-                            <Path Style="{StaticResource TrayMenuIconStyle}" Data="M6.5,18.5H17.5"/>
-                        </Grid>
-                    </Viewbox>
+                    <Border Grid.Column="0"
+                            Style="{StaticResource TrayMenuGlyphHostStyle}">
+                        <TextBlock Text="&#xE72C;"
+                                   Style="{StaticResource TrayMenuGlyphStyle}"/>
+                    </Border>
                     <TextBlock Grid.Column="2"
                                Text="{local:Loc Key=Update_Menu}"
                                Style="{StaticResource TrayMenuLabelStyle}"/>
@@ -238,16 +224,15 @@
                     Click="ConfigFolder_Click">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="14"/>
+                        <ColumnDefinition Width="18"/>
                         <ColumnDefinition Width="8"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Viewbox Grid.Column="0" Width="14" Height="14">
-                        <Grid Width="24" Height="24">
-                            <Path Style="{StaticResource TrayMenuIconStyle}" Data="M4.5,8.25H10L12,10.25H19.5V17.5H4.5Z"/>
-                            <Path Style="{StaticResource TrayMenuIconStyle}" Data="M4.5,8.25V6.5H10L12,8.25H19.5V10.25"/>
-                        </Grid>
-                    </Viewbox>
+                    <Border Grid.Column="0"
+                            Style="{StaticResource TrayMenuGlyphHostStyle}">
+                        <TextBlock Text="&#xE8B7;"
+                                   Style="{StaticResource TrayMenuGlyphStyle}"/>
+                    </Border>
                     <TextBlock Grid.Column="2"
                                Text="{local:Loc Key=Tray_ConfigFolder}"
                                Style="{StaticResource TrayMenuLabelStyle}"/>
@@ -259,15 +244,15 @@
                     Margin="0,0,0,0">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="14"/>
+                        <ColumnDefinition Width="18"/>
                         <ColumnDefinition Width="8"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Viewbox Grid.Column="0" Width="14" Height="14">
-                        <Grid Width="24" Height="24">
-                            <Path Style="{StaticResource TrayMenuIconStyle}" Data="M8,8L16,16 M16,8L8,16"/>
-                        </Grid>
-                    </Viewbox>
+                    <Border Grid.Column="0"
+                            Style="{StaticResource TrayMenuGlyphHostStyle}">
+                        <TextBlock Text="&#xE7E8;"
+                                   Style="{StaticResource TrayMenuGlyphStyle}"/>
+                    </Border>
                     <TextBlock Grid.Column="2"
                                Text="{local:Loc Key=Tray_Exit}"
                                Style="{StaticResource TrayMenuLabelStyle}"/>
