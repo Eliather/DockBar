@@ -1,5 +1,5 @@
 # DockBar
-DockBar is a dock-style sidebar for Windows built with WPF. Version `1.5.8` focuses on hardening recovery after suspend and hibernation by watching the persisted JSON config, while also polishing the tray popup by removing the redundant open action and replacing the rough line icons with clearer glyphs.
+DockBar is a dock-style sidebar for Windows built with WPF. Version `1.5.9` focuses on hardening recovery after suspend and hibernation by watching the persisted JSON config, while also polishing the tray popup by removing the redundant open action and replacing the rough line icons with clearer glyphs.
 
 <img width="256" height="256" alt="Dock" src="https://github.com/user-attachments/assets/eb6fd915-77f7-4298-b41b-90a7d14f41d1" />
 
@@ -19,7 +19,7 @@ This version is built around three priorities:
 - A cleaner interface direction for settings and dialogs, avoiding the old utility or "Windows 98 tool window" look.
 
 ## Release Summary
-DockBar `1.5.8` is a reliability and polish release on top of `1.5.7`. The core fix is around laptop resume behavior: the dock now watches `%AppData%\\DockBar\\shortcuts.json`, debounces config-file changes, and can rehydrate state from disk after resume instead of depending only on the first in-memory recovery pass.
+DockBar `1.5.9` is a reliability and polish release on top of `1.5.7`. The core fix is around laptop resume behavior: the dock now watches `%AppData%\\DockBar\\shortcuts.json`, debounces config-file changes, and can rehydrate state from disk after resume instead of depending only on the first in-memory recovery pass.
 
 On the UI side, the tray popup was cleaned up so it starts directly with useful actions, and its icons were changed from thin ambiguous line drawings to clearer glyph-based action chips that read better at small sizes.
 
@@ -34,7 +34,7 @@ On the UI side, the tray popup was cleaned up so it starts directly with useful 
 - Hidden from Alt+Tab and Win+Tab.
 - Persistent config stored in `%AppData%\DockBar\shortcuts.json`.
 
-## What Changed In 1.5.8
+## What Changed In 1.5.9
 - Added a `FileSystemWatcher` on `shortcuts.json` with debounce and watcher reset logic so DockBar can react when the config file becomes available or changes after resume.
 - Wired resume recovery to enqueue an additional config reload path from disk instead of trusting only the first in-memory state restoration attempt.
 - Suppressed self-triggered watcher loops during DockBar saves, so the app can persist config without reloading itself repeatedly.
@@ -49,7 +49,7 @@ On the UI side, the tray popup was cleaned up so it starts directly with useful 
 
 ## Requirements
 - Windows 10 or Windows 11
-- .NET SDK 9.0
+- .NET SDK 10.0
 - Visual Studio, VS Code, or terminal with `dotnet`
 
 ## Build And Run
