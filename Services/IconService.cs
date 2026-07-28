@@ -14,8 +14,11 @@ namespace DockBar.Services;
 
 public static class IconService
 {
+    private const int MaxCacheSize = 128;
     private static readonly object CacheLock = new();
     private static readonly Dictionary<string, ImageSource?> Cache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Queue<string> CacheKeys = new();
+    private static readonly Dictionary<string, string> ShortcutTargetCache = new(StringComparer.OrdinalIgnoreCase);
 
     public static ImageSource? GetIcon(string path, int preferredSize = 64)
     {
@@ -148,6 +151,17 @@ public static class IconService
     {
         lock (CacheLock)
         {
+            if (!Cache.ContainsKey(key))
+            {
+                if (CacheKeys.Count >= MaxCacheSize)
+                {
+                    var oldestKey = CacheKeys.Dequeue();
+                    Cache.Remove(oldestKey);
+                }
+
+                CacheKeys.Enqueue(key);
+            }
+
             Cache[key] = image;
         }
     }
@@ -171,25 +185,37 @@ public static class IconService
                 return path;
             }
 
+            lock (CacheLock)
+            {
+                if (ShortcutTargetCache.TryGetValue(path, out var cachedTarget))
+                {
+                    return cachedTarget;
+                }
+            }
+
+            var resolved = path;
             var shellType = Type.GetTypeFromProgID("WScript.Shell");
-            if (shellType == null)
+            if (shellType != null)
             {
-                return path;
+                var shellObj = Activator.CreateInstance(shellType);
+                if (shellObj != null)
+                {
+                    dynamic shell = shellObj;
+                    dynamic? shortcut = shell.CreateShortcut(path);
+                    string? target = shortcut?.TargetPath as string;
+                    if (!string.IsNullOrWhiteSpace(target))
+                    {
+                        resolved = target;
+                    }
+                }
             }
 
-            var shellObj = Activator.CreateInstance(shellType);
-            if (shellObj == null)
+            lock (CacheLock)
             {
-                return path;
+                ShortcutTargetCache[path] = resolved;
             }
 
-            dynamic shell = shellObj;
-            dynamic? shortcut = shell.CreateShortcut(path);
-            string? target = shortcut?.TargetPath as string;
-            if (!string.IsNullOrWhiteSpace(target))
-            {
-                return target;
-            }
+            return resolved;
         }
         catch (Exception ex)
         {
@@ -216,9 +242,8 @@ public static class IconService
                 return null;
             }
 
-            using var icon = Icon.FromHandle(handle);
             var source = Imaging.CreateBitmapSourceFromHIcon(
-                icon.Handle,
+                handle,
                 Int32Rect.Empty,
                 BitmapSizeOptions.FromWidthAndHeight(size, size));
             DestroyIcon(handle);
@@ -274,9 +299,8 @@ public static class IconService
                 return null;
             }
 
-            using var icon = Icon.FromHandle(hicon);
             var source = Imaging.CreateBitmapSourceFromHIcon(
-                icon.Handle,
+                hicon,
                 Int32Rect.Empty,
                 BitmapSizeOptions.FromWidthAndHeight(256, 256));
             DestroyIcon(hicon);
@@ -289,13 +313,13 @@ public static class IconService
         }
     }
 
-    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode, EntryPoint = "SHGetFileInfoW")]
     private static extern IntPtr SHGetFileInfo(string pszPath, uint dwFileAttributes, ref SHFILEINFO psfi, uint cbFileInfo, SHGFI uFlags);
 
     [DllImport("shell32.dll")]
     private static extern int SHGetImageList(int iImageList, ref Guid riid, out IImageList ppv);
 
-    [StructLayout(LayoutKind.Sequential)]
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct SHFILEINFO
     {
         public IntPtr hIcon;

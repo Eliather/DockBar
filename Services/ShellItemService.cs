@@ -11,9 +11,12 @@ namespace DockBar.Services;
 
 public static class ShellItemService
 {
+    private const int MaxCacheSize = 64;
     private static readonly object CacheLock = new();
     private static readonly Dictionary<string, string?> NameCache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly Dictionary<string, ImageSource?> IconCache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Queue<string> IconCacheKeys = new();
+    private static readonly Queue<string> NameCacheKeys = new();
 
     public static (string? displayName, ImageSource? icon) GetShellItemInfo(string shellPath, int size = 256)
     {
@@ -117,6 +120,15 @@ public static class ShellItemService
     {
         lock (CacheLock)
         {
+            if (!NameCache.ContainsKey(shellPath))
+            {
+                if (NameCacheKeys.Count >= MaxCacheSize * 2)
+                {
+                    var oldest = NameCacheKeys.Dequeue();
+                    NameCache.Remove(oldest);
+                }
+                NameCacheKeys.Enqueue(shellPath);
+            }
             NameCache[shellPath] = displayName;
         }
     }
@@ -125,6 +137,15 @@ public static class ShellItemService
     {
         lock (CacheLock)
         {
+            if (!IconCache.ContainsKey(cacheKey))
+            {
+                if (IconCacheKeys.Count >= MaxCacheSize)
+                {
+                    var oldest = IconCacheKeys.Dequeue();
+                    IconCache.Remove(oldest);
+                }
+                IconCacheKeys.Enqueue(cacheKey);
+            }
             IconCache[cacheKey] = icon;
         }
     }

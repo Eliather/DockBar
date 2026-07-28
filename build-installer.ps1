@@ -40,4 +40,29 @@ $makensis = Get-MakeNsisPath
 Write-Host "Usando NSIS en: $makensis"
 
 & $makensis "DockBar.nsi"
-exit $LASTEXITCODE
+$nsisExit = $LASTEXITCODE
+
+# ---------------------------------------------------------
+# Firma de codigo (Code Signing)
+# ---------------------------------------------------------
+$cert = Get-ChildItem -Path cert:\CurrentUser\My | Where-Object { $_.Subject -match "CN=Eliather$" } | Select-Object -First 1
+
+if ($cert) {
+    Write-Host "Certificado encontrado: $($cert.Thumbprint). Firmando ejecutables..."
+    
+    # Firmar el ejecutable principal
+    if (Test-Path "publish\DockBar.exe") {
+        Set-AuthenticodeSignature -Certificate $cert -FilePath "publish\DockBar.exe" -TimestampServer "http://timestamp.digicert.com" | Out-Null
+        Write-Host "publish\DockBar.exe firmado."
+    }
+
+    # Firmar el instalador
+    if (Test-Path "DockBarSetup.exe") {
+        Set-AuthenticodeSignature -Certificate $cert -FilePath "DockBarSetup.exe" -TimestampServer "http://timestamp.digicert.com" | Out-Null
+        Write-Host "DockBarSetup.exe firmado."
+    }
+} else {
+    Write-Host "No se encontro un certificado para 'Eliather'. Omitiendo la firma de codigo."
+}
+
+exit $nsisExit

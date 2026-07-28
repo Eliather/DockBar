@@ -10,6 +10,8 @@ public static class ConfigService
 {
     private const string FileName = "shortcuts.json";
     private const double GlassOpacity = 0.72;
+    private static readonly JsonSerializerOptions IndentedJsonOptions = new() { WriteIndented = true };
+
     public static string ConfigDirectory =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DockBar");
 
@@ -61,8 +63,7 @@ public static class ConfigService
         {
             config.BackgroundOpacity = config.UseTransparency ? GlassOpacity : 1.0;
             Directory.CreateDirectory(ConfigDirectory);
-            var options = new JsonSerializerOptions { WriteIndented = true };
-            var json = JsonSerializer.Serialize(config, options);
+            var json = JsonSerializer.Serialize(config, IndentedJsonOptions);
             File.WriteAllText(ConfigFilePath, json);
         }
         catch (Exception ex)
@@ -85,8 +86,6 @@ public static class ConfigService
         {
             // keep black; leave else as-is
         }
-        // default text color: light
-        // no further action needed; property already defaults to true.
         return config;
     }
 }

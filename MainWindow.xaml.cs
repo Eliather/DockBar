@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -1119,27 +1119,34 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void ChangeIcon_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not System.Windows.Controls.Button button || button.Tag is not ShortcutItem item)
+        try
         {
-            return;
-        }
-
-        var dialog = new Win32.OpenFileDialog
-        {
-            Title = LocalizationService.Get("Dialog_SelectIconTitle"),
-            Filter = LocalizationService.Get("Dialog_SelectIconFilter"),
-            Multiselect = false
-        };
-
-        if (dialog.ShowDialog() == true)
-        {
-            var target = dialog.FileName;
-            if (item != null)
+            if (sender is not System.Windows.Controls.Button button || button.Tag is not ShortcutItem item)
             {
-                item.IconPath = target;
-                item.Icon = IconService.GetIconFromPath(target, (int)Math.Max(_config.IconSize * 4, 256)) ?? item.Icon;
-                SaveConfig();
+                return;
             }
+
+            var dialog = new Win32.OpenFileDialog
+            {
+                Title = LocalizationService.Get("Dialog_SelectIconTitle"),
+                Filter = LocalizationService.Get("Dialog_ImageFilter"),
+                Multiselect = false
+            };
+
+            if (dialog.ShowDialog(this) == true)
+            {
+                var target = dialog.FileName;
+                if (item != null)
+                {
+                    item.IconPath = target;
+                    item.Icon = IconService.GetIconFromPath(target, (int)Math.Max(_config.IconSize * 4, 256)) ?? item.Icon;
+                    SaveConfig();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
         }
     }
 
@@ -1181,25 +1188,32 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void AddFileShortcut()
     {
-        var dialog = new Win32.OpenFileDialog
+        try
         {
-            Title = LocalizationService.Get("Dialog_SelectShortcutTitle"),
-            Filter = LocalizationService.Get("Dialog_SelectShortcutFilter"),
-            Multiselect = true
-        };
+            var dialog = new Win32.OpenFileDialog
+            {
+                Title = LocalizationService.Get("Dialog_SelectShortcutTitle"),
+                Filter = LocalizationService.Get("Dialog_ExecutableFilter"),
+                Multiselect = true
+            };
 
-        if (dialog.ShowDialog() == true)
+            if (dialog.ShowDialog(this) == true)
+            {
+                var changed = false;
+                foreach (var file in dialog.FileNames)
+                {
+                    changed |= AddShortcut(file, persist: false);
+                }
+
+                if (changed)
+                {
+                    SaveConfig();
+                }
+            }
+        }
+        catch (Exception ex)
         {
-            var changed = false;
-            foreach (var file in dialog.FileNames)
-            {
-                changed |= AddShortcut(file, persist: false);
-            }
-
-            if (changed)
-            {
-                SaveConfig();
-            }
+            Debug.WriteLine(ex);
         }
     }
 
@@ -1275,7 +1289,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         RevealDockOnCurrentSide();
     }
 
-    private void RevealDockOnCurrentSide()
+    public void RevealDockOnCurrentSide()
     {
         BeginAnimation(Window.LeftProperty, null);
         _isAnimating = false;
@@ -1603,18 +1617,25 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }), DispatcherPriority.Background);
     }
 
+
+
+
     private void UpdateFullscreenState()
     {
         try
         {
             var foreground = NativeMethods.GetForegroundWindow();
-            if (foreground == IntPtr.Zero)
+            if (foreground == IntPtr.Zero || IsIgnoredForeground(foreground))
             {
                 SetFullscreen(false);
                 return;
             }
 
-            if (IsIgnoredForeground(foreground))
+            // Check if window style is a normal maximized window (has title bar/caption).
+            var style = NativeMethods.GetWindowLong(foreground, -16); // GWL_STYLE
+            const int WS_CAPTION = 0x00C00000;
+            const int WS_MAXIMIZE = 0x01000000;
+            if ((style & WS_MAXIMIZE) != 0 && (style & WS_CAPTION) == WS_CAPTION)
             {
                 SetFullscreen(false);
                 return;
@@ -1646,6 +1667,33 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             Debug.WriteLine(ex);
         }
+    }
+
+    private bool IsIgnoredForeground(IntPtr hwnd)
+    {
+        var myHwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == myHwnd)
+        {
+            return true;
+        }
+
+        if (_edgeHotspot != null && new WindowInteropHelper(_edgeHotspot).Handle == hwnd)
+        {
+            return true;
+        }
+
+        var processName = NativeMethods.GetProcessName(hwnd)?.ToLowerInvariant() ?? string.Empty;
+        if (processName is "dockbar" or "shellexperiencehost" or "startmenuexperiencehost" or "searchui" or "searchapp")
+        {
+            return true;
+        }
+        var className = NativeMethods.GetWindowClassName(hwnd)?.ToLowerInvariant() ?? string.Empty;
+        // Desktop / wallpaper / shell surfaces should not force hiding the dock.
+        if (className is "progman" or "workerw" or "shell_traywnd" or "shell_secondarytraywnd")
+        {
+            return true;
+        }
+        return false;
     }
 
     private static bool TryGetWindowBounds(IntPtr hwnd, out NativeMethods.RECT rect)
@@ -1681,22 +1729,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             ApplyGlassEffect();
             UpdateEdgeHotspotState();
         }
-    }
-
-    private bool IsIgnoredForeground(IntPtr hwnd)
-    {
-        var processName = NativeMethods.GetProcessName(hwnd)?.ToLowerInvariant() ?? string.Empty;
-        if (processName is "shellexperiencehost" or "startmenuexperiencehost" or "searchui" or "searchapp")
-        {
-            return true;
-        }
-        var className = NativeMethods.GetWindowClassName(hwnd)?.ToLowerInvariant() ?? string.Empty;
-        // Desktop / wallpaper surfaces should not force hiding the dock.
-        if (className is "progman" or "workerw")
-        {
-            return true;
-        }
-        return false;
     }
 
     private void Shortcuts_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -2046,7 +2078,7 @@ internal static class NativeMethods
         {
             GetWindowThreadProcessId(hwnd, out var pid);
             if (pid == 0) return null;
-            var proc = Process.GetProcessById((int)pid);
+            using var proc = Process.GetProcessById((int)pid);
             return proc.ProcessName;
         }
         catch

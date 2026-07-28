@@ -28,6 +28,7 @@ public sealed class UpdateInfo
 
 public static class UpdateService
 {
+    // ponytail: Zero-dependency async GitHub release checking with stream deserialization & strict 8s timeout
     private const string LatestReleaseUrl = "https://api.github.com/repos/Eliather/DockBar/releases/latest";
     private static readonly HttpClient Client = CreateClient();
 
@@ -45,54 +46,68 @@ public static class UpdateService
 
     public static async Task<UpdateInfo?> GetLatestReleaseAsync(CancellationToken cancellationToken)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, LatestReleaseUrl);
-        using var response = await Client.SendAsync(request, cancellationToken);
-        if (!response.IsSuccessStatusCode)
+        try
         {
-            return null;
-        }
+            using var request = new HttpRequestMessage(HttpMethod.Get, LatestReleaseUrl);
+            using var response = await Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
 
-        var json = await response.Content.ReadAsStringAsync(cancellationToken);
-        var release = JsonSerializer.Deserialize<GitHubRelease>(json, JsonOptions);
-        if (release == null || release.Draft || release.PreRelease)
-        {
-            return null;
-        }
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            var release = await JsonSerializer.DeserializeAsync<GitHubRelease>(stream, JsonOptions, cancellationToken);
+            if (release == null || release.Draft || release.PreRelease)
+            {
+                return null;
+            }
 
-        if (!TryParseVersion(release.TagName, out var latestVersion))
-        {
-            return null;
-        }
+            if (!TryParseVersion(release.TagName, out var latestVersion))
+            {
+                return null;
+            }
 
-        var installerUrl = release.Assets
-            ?.FirstOrDefault(a => string.Equals(a.Name, "DockBarSetup.exe", StringComparison.OrdinalIgnoreCase))
-            ?.DownloadUrl;
-        if (string.IsNullOrWhiteSpace(installerUrl))
-        {
-            installerUrl = release.Assets
-                ?.FirstOrDefault(a => a.Name?.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) == true)
+            var installerUrl = release.Assets
+                ?.FirstOrDefault(a => string.Equals(a.Name, "DockBarSetup.exe", StringComparison.OrdinalIgnoreCase))
                 ?.DownloadUrl;
+            if (string.IsNullOrWhiteSpace(installerUrl))
+            {
+                installerUrl = release.Assets
+                    ?.FirstOrDefault(a => a.Name?.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) == true)
+                    ?.DownloadUrl;
+            }
+
+            var zipUrl = release.Assets
+                ?.FirstOrDefault(a => a.Name?.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) == true)
+                ?.DownloadUrl;
+
+            return new UpdateInfo(latestVersion, release.TagName ?? string.Empty, installerUrl, zipUrl);
         }
-
-        var zipUrl = release.Assets
-            ?.FirstOrDefault(a => a.Name?.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) == true)
-            ?.DownloadUrl;
-
-        return new UpdateInfo(latestVersion, release.TagName ?? string.Empty, installerUrl, zipUrl);
+        catch
+        {
+            return null;
+        }
     }
 
     public static async Task<bool> DownloadFileAsync(string url, string destinationPath, CancellationToken cancellationToken)
     {
-        using var response = await Client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-        if (!response.IsSuccessStatusCode)
+        try
+        {
+            using var response = await Client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                return false;
+            }
+
+            await using var source = await response.Content.ReadAsStreamAsync(cancellationToken);
+            await using var target = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None);
+            await source.CopyToAsync(target, cancellationToken);
+            return true;
+        }
+        catch
         {
             return false;
         }
-
-        await using var source = await response.Content.ReadAsStreamAsync(cancellationToken);
-        await using var target = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None);
-        await source.CopyToAsync(target, cancellationToken);
-        return true;
     }
 
     private static bool TryParseVersion(string? value, out Version version)
@@ -126,7 +141,10 @@ public static class UpdateService
 
     private static HttpClient CreateClient()
     {
-        var client = new HttpClient();
+        var client = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(8)
+        };
         client.DefaultRequestHeaders.UserAgent.ParseAdd("DockBar");
         client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
         return client;

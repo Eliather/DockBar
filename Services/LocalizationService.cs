@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Globalization;
 
 namespace DockBar.Services;
 
 public static class LocalizationService
 {
-    private static readonly Dictionary<string, Dictionary<string, string>> Strings = new()
+    private static readonly Dictionary<string, Dictionary<string, string>> RawStrings = new()
     {
         ["es"] = new Dictionary<string, string>
         {
@@ -98,23 +99,24 @@ public static class LocalizationService
             ["Dock_TooltipRemove"] = "Eliminar acceso",
 
             ["Dialog_SelectShortcutTitle"] = "Selecciona acceso directo o ejecutable",
-            ["Dialog_SelectShortcutFilter"] = "Accesos directos y apps|*.lnk;*.exe|Todos los archivos|*.*",
-            ["Dialog_SelectIconTitle"] = "Selecciona ícono (ico/png/exe/lnk)",
-            ["Dialog_SelectIconFilter"] = "Íconos (*.ico)|*.ico|Imágenes (*.png;*.jpg)|*.png;*.jpg|Ejecutables/Atajos (*.exe;*.lnk)|*.exe;*.lnk|Todos los archivos|*.*",
+            ["Dialog_ExecutableFilter"] = "Ejecutables y accesos (*.exe;*.lnk;*.url)|*.exe;*.lnk;*.url|Todos los archivos (*.*)|*.*",
+            ["Dialog_SelectIconTitle"] = "Selecciona ícono o imagen",
+            ["Dialog_ImageFilter"] = "Imágenes e íconos (*.png;*.ico;*.jpg;*.jpeg;*.bmp)|*.png;*.ico;*.jpg;*.jpeg;*.bmp|Todos los archivos (*.*)|*.*",
 
-            ["Config_NotFound"] = "No existe una configuración previa. Se creará un archivo predeterminado.",
-            ["Config_ReadError"] = "No se pudo leer el archivo de configuración (está dañado o inaccesible). Se creará uno predeterminado.",
-            ["AutoStart_Prompt"] = "¿Deseas iniciar DockBar con Windows?",
+            ["Config_NotFound"] = "No se encontró configuración previa. Se creó una nueva en AppData.",
+            ["Config_ReadError"] = "El archivo de configuración estaba dañado o no se pudo leer. Se restauraron los valores por defecto.",
 
-            ["Update_Title"] = "Actualización",
-            ["Update_Available"] = "Hay una nueva versión disponible: {0}. ¿Deseas descargarla e instalarla ahora?",
-            ["Update_NoInstaller"] = "No se encontró el instalador en la publicación.",
-            ["Update_DownloadFailed"] = "No se pudo descargar el instalador.",
-            ["Update_UpToDate"] = "Ya tienes la versión más reciente.",
-            ["Update_CheckFailed"] = "No se pudieron comprobar actualizaciones.",
+            ["Update_Checking"] = "Buscando actualizaciones...",
+            ["Update_LatestTitle"] = "DockBar actualizado",
+            ["Update_LatestBody"] = "Ya estás usando la versión más reciente ({0}).",
+            ["Update_AvailableTitle"] = "Nueva versión disponible",
+            ["Update_AvailableBody"] = "Versión actual: {0}\nNueva versión: {1}\n\n¿Deseas actualizar ahora?",
+            ["Update_Downloading"] = "Descargando actualización...",
+            ["Update_DownloadFailed"] = "No se pudo descargar la actualización.",
+            ["Update_ErrorTitle"] = "Error al buscar actualizaciones",
+            ["Update_ErrorBody"] = "Ocurrió un error al verificar actualizaciones.",
 
             ["About_Title"] = "Acerca de DockBar",
-            ["About_Subtitle"] = "Versión, autor y configuración de esta instalación.",
             ["About_Version"] = "Versión",
             ["About_UnknownVersion"] = "desconocida",
             ["About_DeveloperCaption"] = "Desarrollado por",
@@ -135,72 +137,72 @@ public static class LocalizationService
             ["Common_Page"] = "Page",
 
             ["Settings_Title"] = "Settings",
-            ["Settings_Subtitle"] = "Tune the dock's size, behavior, and visual style with a live preview.",
+            ["Settings_Subtitle"] = "Make the dock yours: adjust size, response, and visual finish with live preview.",
             ["Settings_Size"] = "Size",
-            ["Settings_SizeHint"] = "Define how much space the bar occupies and how much presence each shortcut should have.",
+            ["Settings_SizeHint"] = "Set dock width and shortcut prominence.",
             ["Settings_DockWidth"] = "Dock width (px)",
             ["Settings_IconSize"] = "Icon size (px)",
-            ["Settings_AutoHide"] = "Auto-hide and animation",
-            ["Settings_BehaviorHint"] = "Control how quickly the dock appears and disappears so it feels responsive instead of clunky.",
+            ["Settings_AutoHide"] = "Auto-hide & animation",
+            ["Settings_BehaviorHint"] = "Tune reveal and hide speed for a smooth interaction.",
             ["Settings_HideDelay"] = "Hide delay (seconds, 0 = immediate Win8 style)",
             ["Settings_AnimDuration"] = "Hide/show animation duration (ms)",
             ["Settings_AutoStart"] = "Start with Windows",
-            ["Settings_ColorTransparency"] = "Color and Glass effect",
-            ["Settings_AppearanceHint"] = "Adjust the base color and decide whether the dock uses a Glass finish or a solid background.",
+            ["Settings_ColorTransparency"] = "Color & Glass effect",
+            ["Settings_AppearanceHint"] = "Adjust base color and toggle solid or Glass background.",
             ["Settings_UseTransparency"] = "Enable Glass effect",
             ["Settings_Opacity"] = "Opacity",
             ["Settings_GlassEffect"] = "Glass effect",
-            ["Settings_GlassOn"] = "Enabled",
-            ["Settings_GlassOff"] = "Disabled",
-            ["Settings_ColorPicker"] = "Background color (HEX + picker)",
-            ["Settings_ColorHint"] = "Choose a base color with the HSV canvas or type the HEX value manually.",
+            ["Settings_GlassOn"] = "Active",
+            ["Settings_GlassOff"] = "Inactive",
+            ["Settings_ColorPicker"] = "Background color (HEX & picker)",
+            ["Settings_ColorHint"] = "Pick a hue using HSV or enter a HEX value.",
             ["Settings_Preview"] = "Preview",
-            ["Settings_PreviewHint"] = "This is how the dock background, text, and density will look.",
+            ["Settings_PreviewHint"] = "Quick reference for background, text, and visual balance.",
             ["Settings_PreviewSummary"] = "Current summary",
             ["Settings_HexLabel"] = "HEX color",
             ["Settings_ColorPalette"] = "Quick palette",
-            ["Settings_ColorPaletteHint"] = "Balanced colors to get started without hunting for a tone from scratch.",
+            ["Settings_ColorPaletteHint"] = "Balanced presets so you don't start from scratch.",
             ["Settings_TextColor"] = "Text color:",
             ["Settings_TextLight"] = "Light (white)",
             ["Settings_TextDark"] = "Dark (black)",
             ["Settings_DefaultConfig"] = "Restore defaults",
-            ["Settings_FooterHint"] = "The preview updates instantly before you save.",
+            ["Settings_FooterHint"] = "Preview reflects changes instantly before saving.",
 
             ["AddLink_Title"] = "Add app or shortcut",
-            ["AddLink_Subtitle"] = "Paste a path, executable, folder, or command and give it a cleaner label for the dock.",
+            ["AddLink_Subtitle"] = "Paste a path, executable, folder, or command and give it a clean name.",
             ["AddLink_Target"] = "Path, executable, or command",
-            ["AddLink_TargetHint"] = "You can use an .exe, folder, URI, or any Windows-compatible command.",
-            ["AddLink_NameOptional"] = "Visible name (optional)",
-            ["AddLink_NameHint"] = "If left empty, DockBar will try to derive a usable name automatically.",
+            ["AddLink_TargetHint"] = "Use a .exe, folder, URI, or supported Windows command.",
+            ["AddLink_NameOptional"] = "Display name (optional)",
+            ["AddLink_NameHint"] = "If left empty, DockBar will auto-detect a name.",
             ["AddLink_ExamplesTitle"] = "Useful examples",
-            ["AddLink_ExamplesBody"] = "Use this flow when you want to add an external app, a frequent folder, or a command-based shortcut.",
-            ["AddLink_ExamplesFooter"] = "For detected system apps, use the “Installed apps...” picker.",
+            ["AddLink_ExamplesBody"] = "Use this to add an external app, frequent folder, or command shortcut.",
+            ["AddLink_ExamplesFooter"] = "For installed system apps, use 'Installed apps...' picker.",
             ["AddLink_ValidationEmpty"] = "Enter a path, URI, or command before saving.",
-            ["AddLink_ValidationInvalid"] = "That path or command does not look valid. Use an existing file, folder, URI, or a Windows-executable command.",
+            ["AddLink_ValidationInvalid"] = "The path or command appears invalid. Use an existing file, folder, URI, or Windows command.",
 
             ["Rename_Title"] = "Rename shortcut",
-            ["Rename_Subtitle"] = "Change the visible shortcut name without modifying its target.",
+            ["Rename_Subtitle"] = "Change the visible shortcut name without changing its target.",
             ["Rename_NewName"] = "New name",
 
             ["Store_Title"] = "Installed apps",
-            ["Store_Subtitle"] = "Browse Windows-detected applications and add them to the dock with their system icon.",
+            ["Store_Subtitle"] = "Browse detected Windows apps and add them with system icons.",
             ["Store_Search"] = "Search app",
-            ["Store_SearchHint"] = "Search by visible name, internal identifier, or package fragment.",
+            ["Store_SearchHint"] = "Search by display name, internal ID, or package string.",
             ["Store_Loading"] = "Loading installed apps...",
-            ["Store_Empty"] = "No installed apps were found.",
+            ["Store_Empty"] = "No installed apps found.",
             ["Store_PanelTitle"] = "Quick selection",
-            ["Store_PanelBody"] = "This panel is meant for adding installed apps without manually hunting for their file paths.",
-            ["Store_PanelTipOneTitle"] = "What you will find",
-            ["Store_PanelTipOneBody"] = "UWP apps, Windows-detected entries, and launchable items that expose an app identifier.",
-            ["Store_PanelTipTwoTitle"] = "How to choose better",
-            ["Store_PanelTipTwoBody"] = "If two entries look similar, compare the identifier line below the app name to pick the right one.",
+            ["Store_PanelBody"] = "Designed to add system apps easily without manual paths.",
+            ["Store_PanelTipOneTitle"] = "What you'll find",
+            ["Store_PanelTipOneBody"] = "UWP apps, system shortcuts, and executable app entries.",
+            ["Store_PanelTipTwoTitle"] = "Choosing the right app",
+            ["Store_PanelTipTwoBody"] = "If names look similar, check the ID below the item.",
             ["Store_PanelFooter"] = "Double-click also adds the selected app.",
 
             ["Tray_Open"] = "Open",
-            ["Tray_ToggleSide"] = "Switch side",
+            ["Tray_ToggleSide"] = "Toggle side",
             ["Tray_Settings"] = "Settings...",
             ["Tray_ConfigFolder"] = "Configuration",
-            ["Update_Menu"] = "Check updates...",
+            ["Update_Menu"] = "Check for updates...",
             ["Tray_Exit"] = "Exit",
 
             ["AddMenu_File"] = "File / executable...",
@@ -215,23 +217,24 @@ public static class LocalizationService
             ["Dock_TooltipRemove"] = "Remove shortcut",
 
             ["Dialog_SelectShortcutTitle"] = "Select shortcut or executable",
-            ["Dialog_SelectShortcutFilter"] = "Shortcuts and apps|*.lnk;*.exe|All files|*.*",
-            ["Dialog_SelectIconTitle"] = "Select icon (ico/png/exe/lnk)",
-            ["Dialog_SelectIconFilter"] = "Icons (*.ico)|*.ico|Images (*.png;*.jpg)|*.png;*.jpg|Executables/Shortcuts (*.exe;*.lnk)|*.exe;*.lnk|All files|*.*",
+            ["Dialog_ExecutableFilter"] = "Executables and shortcuts (*.exe;*.lnk;*.url)|*.exe;*.lnk;*.url|All files (*.*)|*.*",
+            ["Dialog_SelectIconTitle"] = "Select icon or image",
+            ["Dialog_ImageFilter"] = "Images and icons (*.png;*.ico;*.jpg;*.jpeg;*.bmp)|*.png;*.ico;*.jpg;*.jpeg;*.bmp|All files (*.*)|*.*",
 
-            ["Config_NotFound"] = "No configuration found. A default one will be created.",
-            ["Config_ReadError"] = "Could not read the configuration file (corrupt or inaccessible). A default one will be created.",
-            ["AutoStart_Prompt"] = "Do you want DockBar to start with Windows?",
+            ["Config_NotFound"] = "No previous config found. Created a default one in AppData.",
+            ["Config_ReadError"] = "Config file was corrupted or unreadable. Restored default values.",
 
-            ["Update_Title"] = "Update",
-            ["Update_Available"] = "A new version is available: {0}. Do you want to download and install it now?",
-            ["Update_NoInstaller"] = "Installer not found in the release.",
-            ["Update_DownloadFailed"] = "Could not download the installer.",
-            ["Update_UpToDate"] = "You already have the latest version.",
-            ["Update_CheckFailed"] = "Could not check for updates.",
+            ["Update_Checking"] = "Checking for updates...",
+            ["Update_LatestTitle"] = "DockBar up to date",
+            ["Update_LatestBody"] = "You are running the latest version ({0}).",
+            ["Update_AvailableTitle"] = "New version available",
+            ["Update_AvailableBody"] = "Current version: {0}\nNew version: {1}\n\nDo you want to update now?",
+            ["Update_Downloading"] = "Downloading update...",
+            ["Update_DownloadFailed"] = "Failed to download update.",
+            ["Update_ErrorTitle"] = "Update check error",
+            ["Update_ErrorBody"] = "An error occurred while checking for updates.",
 
             ["About_Title"] = "About DockBar",
-            ["About_Subtitle"] = "Version, author, and configuration details for this installation.",
             ["About_Version"] = "Version",
             ["About_UnknownVersion"] = "unknown",
             ["About_DeveloperCaption"] = "Developed by",
@@ -243,6 +246,20 @@ public static class LocalizationService
             ["About_ConfigPath"] = "Configuration: %AppData%\\DockBar\\shortcuts.json"
         }
     };
+
+    private static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> Strings = BuildReadOnlyStrings();
+
+    private static IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> BuildReadOnlyStrings()
+    {
+        var dict = new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var langKvp in RawStrings)
+        {
+            dict[langKvp.Key] = new ReadOnlyDictionary<string, string>(
+                new Dictionary<string, string>(langKvp.Value, StringComparer.OrdinalIgnoreCase));
+        }
+
+        return new ReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>(dict);
+    }
 
     private static string _language = GetDefaultLanguage();
 

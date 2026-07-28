@@ -21,8 +21,10 @@ public sealed class EdgeHotspotWindow : Window
         ShowActivated = false;
         Topmost = true;
         AllowsTransparency = true;
-        Background = System.Windows.Media.Brushes.Transparent;
-        Opacity = 0.01;
+        var brush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(15, 0, 0, 0));
+        brush.Freeze();
+        Background = brush;
+        Opacity = 1.0;
         Focusable = false;
         WindowStartupLocation = WindowStartupLocation.Manual;
         SourceInitialized += (_, _) => WindowSwitcherHelper.HideFromWindowSwitchers(this);
@@ -34,7 +36,7 @@ public sealed class EdgeHotspotWindow : Window
 
     public void ShowOnEdge(Rect bounds, DockSide side, double thickness)
     {
-        var hotspotWidth = Math.Max(2, thickness);
+        var hotspotWidth = Math.Max(8, thickness);
         Width = hotspotWidth;
         Height = Math.Max(1, bounds.Height);
         Left = side == DockSide.Left

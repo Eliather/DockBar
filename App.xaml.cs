@@ -22,11 +22,19 @@ public partial class App : System.Windows.Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
-        base.OnStartup(e);
+        try
+        {
+            base.OnStartup(e);
 
-        _window = new MainWindow();
-        _window.Show();
-        CreateTrayIcon();
+            _window = new MainWindow();
+            _window.Show();
+            CreateTrayIcon();
+        }
+        catch (Exception ex)
+        {
+            File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash.log"), ex.ToString());
+            System.Windows.MessageBox.Show(ex.ToString(), "DockBar Startup Error");
+        }
     }
 
     private void CreateTrayIcon()
@@ -45,6 +53,12 @@ public partial class App : System.Windows.Application
 
     private void NotifyIcon_MouseUp(object? sender, WinForms.MouseEventArgs e)
     {
+        if (e.Button == WinForms.MouseButtons.Left)
+        {
+            ShowWindow();
+            return;
+        }
+
         if (e.Button != WinForms.MouseButtons.Right)
         {
             return;
@@ -162,7 +176,13 @@ public partial class App : System.Windows.Application
             var iconPath = Path.Combine(baseDir, "Dock.ico");
             if (File.Exists(iconPath))
             {
-                return new Icon(iconPath);
+                const uint IMAGE_ICON = 1;
+                const uint LR_LOADFROMFILE = 0x00000010;
+                var hIcon = LoadImage(IntPtr.Zero, iconPath, IMAGE_ICON, 16, 16, LR_LOADFROMFILE);
+                if (hIcon != IntPtr.Zero)
+                {
+                    return Icon.FromHandle(hIcon);
+                }
             }
         }
         catch (Exception ex)
@@ -185,8 +205,9 @@ public partial class App : System.Windows.Application
             _window.WindowState = WindowState.Normal;
         }
 
-        _window.Show();
+        _window.RevealDockOnCurrentSide();
         _window.Activate();
+        _window.Focus();
     }
 
     private void OpenSettingsWindow()
@@ -231,6 +252,9 @@ public partial class App : System.Windows.Application
         _notifyIcon?.Dispose();
         base.OnExit(e);
     }
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern IntPtr LoadImage(IntPtr hinst, string lpszName, uint uType, int cxDesired, int cyDesired, uint fuLoad);
 
     [DllImport("shell32.dll")]
     private static extern int Shell_NotifyIconGetRect(ref NOTIFYICONIDENTIFIER identifier, out RECT iconLocation);
