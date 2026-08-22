@@ -1,9 +1,13 @@
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using DockBar.Models;
 
 namespace DockBar.Services;
@@ -13,13 +17,21 @@ public static class StoreAppService
     private static readonly object CacheLock = new();
     private static List<StoreAppInfo>? _cachedApps;
 
-    public static List<StoreAppInfo> GetInstalledApps()
+    public static void InvalidateCache()
+    {
+        lock (CacheLock)
+        {
+            _cachedApps = null;
+        }
+    }
+
+    public static List<StoreAppInfo> GetInstalledApps(bool forceRefresh = false)
     {
         try
         {
             lock (CacheLock)
             {
-                if (_cachedApps != null)
+                if (!forceRefresh && _cachedApps != null)
                 {
                     return CloneApps(_cachedApps);
                 }
@@ -89,8 +101,64 @@ public static class StoreAppService
 
                         if (!string.IsNullOrWhiteSpace(appId) && !string.IsNullOrWhiteSpace(name))
                         {
-                            var shellPath = $"shell:AppsFolder\\{appId}";
-                            var icon = ShellItemService.GetIcon(shellPath, 256);
+                            ImageSource? icon = null;
+
+                            // 1. Steam game detection (e.g. steam://rungameid/<id>)
+                            var steamAppId = SteamService.ExtractSteamAppId(appId);
+                            if (!string.IsNullOrWhiteSpace(steamAppId))
+                            {
+                                var (gameTitle, steamIconPath, _) = SteamService.GetGameInfoByAppId(steamAppId);
+                                if (!string.IsNullOrWhiteSpace(steamIconPath))
+                                {
+                                    icon = IconService.GetIconFromPath(steamIconPath, 48);
+                                }
+                                if (!string.IsNullOrWhiteSpace(gameTitle))
+                                {
+                                    name = gameTitle;
+                                }
+                            }
+
+                            // 2. Physical path resolution
+                            if (icon == null)
+                            {
+                                var physicalPath = ShellItemService.ResolveAppIdPath(appId);
+                                if (File.Exists(physicalPath) || Directory.Exists(physicalPath))
+                                {
+                                    icon = IconService.GetIcon(physicalPath, 48);
+                                }
+                            }
+
+                            // 3. Shell Item Image Factory (for UWP apps)
+                            if (icon == null && childItem is IShellItemImageFactory factory)
+                            {
+                                var hresult = factory.GetImage(new SIZE { cx = 48, cy = 48 }, SIIGBF.RESIZETOFIT, out var hbitmap);
+                                if (hresult == 0 && hbitmap != IntPtr.Zero)
+                                {
+                                    var source = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+                                        hbitmap,
+                                        IntPtr.Zero,
+                                        System.Windows.Int32Rect.Empty,
+                                        BitmapSizeOptions.FromWidthAndHeight(48, 48));
+                                    DeleteObject(hbitmap);
+                                    icon = ShellItemService.AutoCropIfNeeded(source);
+                                }
+                            }
+
+                            // 4. ShellItemService fallback
+                            if (icon == null)
+                            {
+                                var shellPath = $"shell:AppsFolder\\{appId}";
+                                icon = ShellItemService.GetIcon(shellPath, 48);
+                            }
+
+                            if (icon != null)
+                            {
+                                icon = ShellItemService.AutoCropIfNeeded(icon);
+                                if (icon is Freezable freezable && freezable.CanFreeze && !freezable.IsFrozen)
+                                {
+                                    freezable.Freeze();
+                                }
+                            }
 
                             apps.Add(new StoreAppInfo
                             {
@@ -192,7 +260,7 @@ public static class StoreAppService
             foreach (var app in apps)
             {
                 var path = $"shell:AppsFolder\\{app.AppId}";
-                var (friendly, icon) = ShellItemService.GetShellItemInfo(path, 256);
+                var (friendly, icon) = ShellItemService.GetShellItemInfo(path, 48);
                 if (!string.IsNullOrWhiteSpace(friendly))
                 {
                     app.FriendlyName = friendly;
@@ -231,6 +299,9 @@ public static class StoreAppService
         ref Guid riid,
         out IntPtr ppv);
 
+    [DllImport("gdi32.dll")]
+    private static extern bool DeleteObject(IntPtr hObject);
+
     [ComImport]
     [Guid("43826d1e-e718-42ee-bc55-a1e261c37bfe")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
@@ -246,6 +317,15 @@ public static class StoreAppService
     }
 
     [ComImport]
+    [Guid("bcc18b79-ba16-442f-80c4-8a59c30c463b")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface IShellItemImageFactory
+    {
+        [PreserveSig]
+        int GetImage(SIZE size, SIIGBF flags, out IntPtr phbm);
+    }
+
+    [ComImport]
     [Guid("7e9fac06-8f08-4ded-a230-928ead39d05c")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     private interface IEnumShellItems
@@ -255,6 +335,24 @@ public static class StoreAppService
         void Skip(uint celt);
         void Reset();
         void Clone(out IEnumShellItems ppenum);
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct SIZE
+    {
+        public int cx;
+        public int cy;
+    }
+
+    [Flags]
+    private enum SIIGBF
+    {
+        RESIZETOFIT = 0x00,
+        BIGGERSIZEOK = 0x01,
+        MEMORYONLY = 0x02,
+        ICONONLY = 0x04,
+        THUMBNAILONLY = 0x08,
+        INCACHEONLY = 0x10,
     }
 
     private enum SIGDN : uint

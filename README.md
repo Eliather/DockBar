@@ -1,5 +1,5 @@
 # DockBar
-DockBar is a dock-style sidebar for Windows built with WPF. Version `1.6.0` focuses on high-performance native Win32/Shell integration, zero-subprocess Microsoft Store app enumeration, P/Invoke memory safety fixes, and responsive auto-hide edge reveal across all DPI scaling levels.
+DockBar is a dock-style sidebar for Windows built with WPF. Version `1.6.1` introduces full Steam game and URL shortcut integration, intelligent icon auto-cropping, instant sub-100ms Store app scanning with on-demand refresh, and a redesigned Glass/Dark update experience with live download progress.
 
 <img width="256" height="256" alt="Dock" src="https://github.com/user-attachments/assets/eb6fd915-77f7-4298-b41b-90a7d14f41d1" />
 
@@ -20,13 +20,15 @@ This version is built around four priorities:
 - **Zero third-party dependencies**: Lightweight C# 13 + .NET 10.0 codebase relying solely on native Windows APIs and stdlib.
 
 ## Release Summary
-DockBar `1.6.0` is a major stability, performance, and platform-hardening release over `1.5.9`. It resolves interop memory alignment issues when selecting executables, eliminates PowerShell overhead when browsing installed Windows Apps, and fixes native file dialog filter resolution.
+DockBar `1.6.1` is a major feature, stability, and UX release over `1.6.0`. It adds full support for Steam `.url` shortcuts and `steam://` protocol links, auto-crops padded icons to eliminate tiny/diminutive graphics, introduces a refresh button in the installed app search, and brings a redesigned update dialog with live download progress.
 
-## What Changed In 1.6.0
+## What Changed In 1.6.1
+- **Steam Integration & `.url` / `steam://` Protocol Compatibility (`Services/SteamService.cs`)**: Full automatic support for Steam game shortcuts and protocols. Resolves multi-disk Steam libraries via `libraryfolders.vdf`, parses `.url` internet shortcuts, handles `steam://rungameid/<id>` and `steam://run/<id>` protocol links, discovers game metadata from `appmanifest_<id>.acf`, and extracts high-resolution icons directly from game executables and Steam icon caches.
+- **Intelligent Icon Auto-Cropping & Known Folder Resolution (`Services/ShellItemService.cs` & `Services/IconService.cs`)**: Resolved Windows Shell known folder GUIDs (e.g. `{7C5A40EF-A0FB-4BFC-874A-C0F2E0B9FA8E}`) to physical filesystem paths. Added `AutoCropIfNeeded` bounding-box trimming to remove excessive transparent padding and Start Menu tile borders from Win32 and Store app icons, ensuring all dock icons render crisp and at full button size.
+- **Instant Store App Scanning & On-Demand Refresh (`Services/StoreAppService.cs` & `StoreAppPickerWindow.xaml`)**: Replaced slow PowerShell sub-process queries with native Win32 Shell COM enumeration (`IShellItem` / `IShellItemImageFactory` at 48x48), dropping scan times to **< 100ms**. Added a dedicated "Actualizar / Refresh" button to re-scan newly installed programs without restarting DockBar.
+- **Redesigned Glass/Dark Update Dialog & Full Localization (`UpdateWindow.xaml` & `Services/LocalizationService.cs`)**: Replaced standard OS message boxes with a custom modern update dialog featuring version comparison badges, release changelog viewer, real-time download progress bar, and 100% Spanish/English localization coverage.
 - **Fixed Executable Shortcut Crash (`Services/IconService.cs`)**: Added explicit `CharSet = CharSet.Unicode` to `[StructLayout]` on `SHFILEINFO` and `SHGetFileInfoW` P/Invoke declarations, fixing 64-bit stack corruption (`0xC0000005`) when picking executables or `.lnk` shortcuts.
 - **Fixed File Dialog Picker Bug (`MainWindow.xaml.cs`)**: Corrected localization filter keys (`Dialog_ExecutableFilter` and `Dialog_ImageFilter`) for `Win32.OpenFileDialog`, enabling standard Windows Explorer file picker windows when clicking "Archivo / ejecutable...".
-- **Native Store App Enumeration (`Services/StoreAppService.cs`)**: Replaced slow PowerShell sub-process execution (`powershell Get-StartApps...`) with native Win32 Shell COM enumeration (`IShellItem` & `IEnumShellItems` on `shell:AppsFolder`), reducing load times from ~1-2 seconds down to **< 5ms** with zero CPU/process overhead.
-- **Optimized Auto-Update Service (`Services/UpdateService.cs`)**: Streamlined GitHub release checking using direct Stream JSON deserialization (`JsonSerializer.DeserializeAsync`) and a strict 8-second network timeout to ensure smooth offline behavior.
 - **DPI-Resilient Auto-Hide Hotspot (`EdgeHotspotWindow.cs` & `MainWindow.xaml.cs`)**: Updated edge hotspot window brush to non-zero Alpha 15 with guaranteed 8px minimum thickness to ensure reliable DWM mouse hit-testing across all DPI scaling settings (100%-200%).
 - **Native Tray Icon Decoding (`App.xaml.cs`)**: Switched tray icon decoder to native Win32 `LoadImage`, enabling crisp 16x16 icon decoding for PNG-compressed 256px ICO frames.
 
@@ -100,12 +102,13 @@ Notes:
 - `MainWindow.xaml(.cs)`: dock UI, auto-hide, drag/drop, pagination, fullscreen behavior, and visual application of config.
 - `SettingsWindow.xaml(.cs)`: compact settings UI, live preview, color picker, and Glass toggle.
 - `AddLinkWindow.xaml(.cs)`: add executables, folders, URIs, or commands with validation.
-- `RenameWindow.xaml(.cs)`: rename shortcut dialog.
-- `StoreAppPickerWindow.xaml(.cs)`: installed-app picker with async loading state.
+- `UpdateWindow.xaml(.cs)`: modern update window with release notes and live progress bar.
+- `StoreAppPickerWindow.xaml(.cs)`: installed-app picker with instant COM enumeration and on-demand refresh.
 - `Models/`: configuration and shortcut models.
 - `Services/ConfigService.cs`: load and save config with backward-compatible defaults.
 - `Services/IconService.cs`: icon resolution, P/Invoke jumbo extraction, and cache.
-- `Services/ShellItemService.cs`: shell item names, icons, and cache.
+- `Services/ShellItemService.cs`: shell item names, icons, known folder resolution, and auto-crop.
+- `Services/SteamService.cs`: Steam library discovery, app manifest parsing, .url parsing, and game icon resolution.
 - `Services/StoreAppService.cs`: native Win32 Shell COM enumeration for Store apps.
 - `Services/UpdateService.cs`: background update checking with Stream deserialization & strict timeout.
 - `Resources/Theme.xaml`: shared colors, spacing, buttons, sliders, and scroll styling.

@@ -71,22 +71,56 @@
                 Style="{StaticResource DialogCardStyle}"
                 Margin="0,0,0,12"
                 Padding="12">
-            <StackPanel>
-                <TextBlock Text="{local:Loc Key=Store_Search}"
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0"
+                           Text="{local:Loc Key=Store_Search}"
                            Style="{StaticResource DialogLabelStyle}"
                            FontSize="12"
                            Margin="0,0,0,4"/>
-                <TextBox x:Name="SearchBox"
+
+                <TextBox Grid.Row="1" Grid.Column="0"
+                         x:Name="SearchBox"
                          Style="{StaticResource DialogTextBoxStyle}"
                          FontSize="12.5"
                          Padding="11,7"
                          IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}"
                          TextChanged="SearchBox_TextChanged"/>
-                <TextBlock Text="{local:Loc Key=Store_SearchHint}"
+
+                <Button Grid.Row="1" Grid.Column="1"
+                        Style="{StaticResource DialogSmallButtonStyle}"
+                        Margin="8,0,0,0"
+                        Padding="12,6"
+                        Height="33"
+                        ToolTip="{local:Loc Key=Store_RefreshTooltip}"
+                        IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}"
+                        Click="Refresh_Click">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Viewbox Width="13" Height="13" Margin="0,0,6,0">
+                            <Path Data="M17.65,6.35C16.2,4.9 14.21,4 12,4c-4.42,0 -7.99,3.58 -7.99,8s3.57,8 7.99,8c3.73,0 6.84,-2.55 7.73,-6h-2.08c-0.82,2.33 -3.04,4 -5.65,4 -3.31,0 -6,-2.69 -6,-6s2.69,-6 6,-6c1.66,0 3.14,0.69 4.22,1.78L13,11h7V4l-2.35,2.35z"
+                                  Fill="{DynamicResource AppTextBrush}"/>
+                        </Viewbox>
+                        <TextBlock Text="{local:Loc Key=Store_Refresh}"
+                                   VerticalAlignment="Center"
+                                   FontSize="11.5"/>
+                    </StackPanel>
+                </Button>
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                           Text="{local:Loc Key=Store_SearchHint}"
                            Style="{StaticResource DialogMutedTextStyle}"
                            FontSize="11"
                            Margin="0,6,0,0"/>
-            </StackPanel>
+            </Grid>
         </Border>
 
         <Border Grid.Row="2"
@@ -107,17 +141,19 @@
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 
-                                <Border Width="40"
-                                        Height="40"
-                                        Background="#0F1A2B"
+                                <Border Width="42"
+                                        Height="42"
+                                        Background="{DynamicResource AppSurfaceRaisedBrush}"
                                         BorderBrush="{DynamicResource AppBorderBrush}"
                                         BorderThickness="1"
                                         CornerRadius="12"
                                         VerticalAlignment="Center">
                                     <Image Source="{Binding Icon}"
-                                           Width="24"
-                                           Height="24"
+                                           Width="28"
+                                           Height="28"
                                            Stretch="Uniform"
+                                           RenderOptions.BitmapScalingMode="HighQuality"
+                                           SnapsToDevicePixels="True"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center"/>
                                 </Border>

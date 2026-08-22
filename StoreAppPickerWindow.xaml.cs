@@ -49,12 +49,12 @@ public partial class StoreAppPickerWindow : Window, INotifyPropertyChanged
         Loaded += async (_, _) => await LoadAppsAsync();
     }
 
-    private async Task LoadAppsAsync()
+    private async Task LoadAppsAsync(bool forceRefresh = false)
     {
         IsLoading = true;
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
 
-        var apps = await Task.Run(StoreAppService.GetInstalledApps);
+        var apps = await Task.Run(() => StoreAppService.GetInstalledApps(forceRefresh));
         Apps.Clear();
         foreach (var app in apps)
         {
@@ -62,6 +62,11 @@ public partial class StoreAppPickerWindow : Window, INotifyPropertyChanged
         }
         AppsView.Refresh();
         IsLoading = false;
+    }
+
+    private async void Refresh_Click(object sender, RoutedEventArgs e)
+    {
+        await LoadAppsAsync(forceRefresh: true);
     }
 
     private void SearchBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)

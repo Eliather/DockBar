@@ -158,6 +158,25 @@
             </Border>
 
             <Button Style="{StaticResource TrayMenuButtonStyle}"
+                    Click="Pause_Click">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="18"/>
+                        <ColumnDefinition Width="8"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0"
+                            Style="{StaticResource TrayMenuGlyphHostStyle}">
+                        <TextBlock Text="&#xE769;"
+                                   Style="{StaticResource TrayMenuGlyphStyle}"/>
+                    </Border>
+                    <TextBlock Grid.Column="2"
+                               Text="Pausar / Game Mode"
+                               Style="{StaticResource TrayMenuLabelStyle}"/>
+                </Grid>
+            </Button>
+
+            <Button Style="{StaticResource TrayMenuButtonStyle}"
                     Click="ToggleSide_Click">
                 <Grid>
                     <Grid.ColumnDefinitions>

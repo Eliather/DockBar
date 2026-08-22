@@ -51,7 +51,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private IntPtr _winEventHookForeground = IntPtr.Zero;
     private IntPtr _winEventHookLocation = IntPtr.Zero;
     private WinEventDelegate? _winEventDelegate;
-    private bool _fullscreenCheckPending;
+    private readonly DispatcherTimer _fullscreenDebounceTimer;
+    private bool _isPaused = false;
     private bool _updateCheckRunning;
     private readonly DispatcherTimer _systemRecoveryTimer;
     private bool _reloadConfigOnRecovery;
@@ -184,6 +185,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         _hideTimer = new DispatcherTimer();
         _hideTimer.Tick += HideTimer_Tick;
+
+        _fullscreenDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+        _fullscreenDebounceTimer.Tick += (_, _) =>
+        {
+            _fullscreenDebounceTimer.Stop();
+            UpdateFullscreenState();
+        };
+
         _systemRecoveryTimer = new DispatcherTimer
         {
             Interval = TimeSpan.FromMilliseconds(InitialRecoveryDelayMs)
@@ -280,7 +289,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         var result = System.Windows.MessageBox.Show(
             LocalizationService.Get("AutoStart_Prompt"),
-            "DockBar",
+            LocalizationService.Get("AutoStart_Title"),
             MessageBoxButton.YesNo,
             MessageBoxImage.Question);
 
@@ -1013,6 +1022,48 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         string? friendly = null;
         ImageSource? shellIcon = null;
+        string? resolvedIconPath = null;
+
+        if (path.EndsWith(".url", StringComparison.OrdinalIgnoreCase) && File.Exists(path))
+        {
+            var (targetUrl, iconFile, _, urlTitle) = SteamService.ParseUrlFile(path);
+            if (!string.IsNullOrWhiteSpace(iconFile) && File.Exists(iconFile))
+            {
+                resolvedIconPath = iconFile;
+            }
+            if (!string.IsNullOrWhiteSpace(targetUrl))
+            {
+                var steamAppId = SteamService.ExtractSteamAppId(targetUrl);
+                if (!string.IsNullOrWhiteSpace(steamAppId))
+                {
+                    var (gameName, steamIconPath, _) = SteamService.GetGameInfoByAppId(steamAppId);
+                    if (!string.IsNullOrWhiteSpace(gameName) && string.IsNullOrWhiteSpace(displayName))
+                    {
+                        displayName = gameName;
+                    }
+                    if (resolvedIconPath == null && !string.IsNullOrWhiteSpace(steamIconPath))
+                    {
+                        resolvedIconPath = steamIconPath;
+                    }
+                }
+            }
+        }
+        else if (path.StartsWith("steam://", StringComparison.OrdinalIgnoreCase))
+        {
+            var steamAppId = SteamService.ExtractSteamAppId(path);
+            if (!string.IsNullOrWhiteSpace(steamAppId))
+            {
+                var (gameName, steamIconPath, _) = SteamService.GetGameInfoByAppId(steamAppId);
+                if (!string.IsNullOrWhiteSpace(gameName) && string.IsNullOrWhiteSpace(displayName))
+                {
+                    displayName = gameName;
+                }
+                if (!string.IsNullOrWhiteSpace(steamIconPath))
+                {
+                    resolvedIconPath = steamIconPath;
+                }
+            }
+        }
 
         if (!isFileOrDir && path.StartsWith("shell:AppsFolder", StringComparison.OrdinalIgnoreCase))
         {
@@ -1027,14 +1078,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 ? friendly
                 : isFileOrDir
                     ? (Directory.Exists(path) ? new DirectoryInfo(path).Name : Path.GetFileNameWithoutExtension(path))
-                    : (path.StartsWith("shell:", StringComparison.OrdinalIgnoreCase) ? path : new Uri(path).Host);
+                    : (path.StartsWith("shell:", StringComparison.OrdinalIgnoreCase) ? path : (Uri.TryCreate(path, UriKind.Absolute, out var parsedUri) ? parsedUri.Host : path));
 
         var item = new ShortcutItem
         {
             Name = string.IsNullOrEmpty(name) ? path : name,
             Path = path,
             Arguments = arguments,
+            IconPath = resolvedIconPath,
             Icon = iconOverride
+                   ?? (resolvedIconPath != null ? ShellItemService.AutoCropIfNeeded(IconService.GetIconFromPath(resolvedIconPath, (int)Math.Max(_config.IconSize * 4, 256))) : null)
                    ?? shellIcon
                    ?? (isFileOrDir ? IconService.GetIcon(path, (int)Math.Max(_config.IconSize * 4, 256)) : null)
         };
@@ -1255,21 +1308,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void AddStoreApp_Click(object sender, RoutedEventArgs e)
     {
-        var picker = new StoreAppPickerWindow(DockBackgroundBrush, DockTextBrush)
-        {
-            Owner = this
-        };
-
-        if (picker.ShowDialog() == true && picker.SelectedApp != null)
-        {
-            var app = picker.SelectedApp;
-            var path = $"shell:AppsFolder\\{app.PackageFamilyName}!App";
-            var (friendlyName, icon) = ShellItemService.GetShellItemInfo(path, 256);
-            var name = !string.IsNullOrWhiteSpace(friendlyName)
-                ? friendlyName
-                : (string.IsNullOrWhiteSpace(app.Name) ? app.PackageFamilyName : app.Name);
-            AddShortcut(path, name, icon);
-        }
+        AddStoreAppFlow();
     }
 
     private void ToggleEdit_Click(object sender, RoutedEventArgs e)
@@ -1287,6 +1326,24 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _dockSide = _dockSide == DockSide.Left ? DockSide.Right : DockSide.Left;
         SaveConfig();
         RevealDockOnCurrentSide();
+    }
+
+    public void TogglePause()
+    {
+        _isPaused = !_isPaused;
+        if (_isPaused)
+        {
+            Visibility = Visibility.Collapsed;
+            Topmost = false;
+            _edgeHotspot?.HideHotspot();
+        }
+        else
+        {
+            Visibility = Visibility.Visible;
+            Topmost = true;
+            EnsureTopmost();
+            UpdateEdgeHotspotState();
+        }
     }
 
     public void RevealDockOnCurrentSide()
@@ -1325,6 +1382,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void UpdateEdgeHotspotState()
     {
+        if (_isPaused)
+        {
+            _edgeHotspot?.HideHotspot();
+            return;
+        }
+
         if (!IsLoaded)
         {
             return;
@@ -1429,7 +1492,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             {
                 if (userInitiated)
                 {
-                    System.Windows.MessageBox.Show(this, LocalizationService.Get("Update_CheckFailed"), "DockBar", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    ShowUpdateMessage(
+                        LocalizationService.Get("Update_CheckFailed"),
+                        LocalizationService.Get("Update_Title"),
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
                 }
                 return;
             }
@@ -1439,50 +1506,56 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             {
                 if (userInitiated)
                 {
-                    System.Windows.MessageBox.Show(this, LocalizationService.Get("Update_UpToDate"), LocalizationService.Get("Update_Title"), MessageBoxButton.OK, MessageBoxImage.Information);
+                    var msg = string.Format(LocalizationService.Get("Update_UpToDate"), $"v{current}");
+                    ShowUpdateMessage(
+                        msg,
+                        LocalizationService.Get("Update_Title"),
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
                 }
                 return;
             }
 
-            var prompt = string.Format(LocalizationService.Get("Update_Available"), latest.Version);
-            var result = System.Windows.MessageBox.Show(this, prompt, LocalizationService.Get("Update_Title"), MessageBoxButton.YesNo, MessageBoxImage.Question);
-            if (result != MessageBoxResult.Yes)
+            var updateWindow = new UpdateWindow(latest, current);
+            if (IsVisible && WindowState != WindowState.Minimized)
             {
-                return;
+                updateWindow.Owner = this;
+                updateWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            }
+            else
+            {
+                updateWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
             }
 
-            if (string.IsNullOrWhiteSpace(latest.InstallerUrl))
-            {
-                System.Windows.MessageBox.Show(this, LocalizationService.Get("Update_NoInstaller"), LocalizationService.Get("Update_Title"), MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            var tempPath = Path.Combine(Path.GetTempPath(), $"DockBarSetup-{latest.Version}.exe");
-            var downloaded = await UpdateService.DownloadFileAsync(latest.InstallerUrl, tempPath, CancellationToken.None);
-            if (!downloaded)
-            {
-                System.Windows.MessageBox.Show(this, LocalizationService.Get("Update_DownloadFailed"), LocalizationService.Get("Update_Title"), MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
-
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = tempPath,
-                UseShellExecute = true
-            });
-            System.Windows.Application.Current.Shutdown();
+            updateWindow.ShowDialog();
         }
         catch (Exception ex)
         {
             Debug.WriteLine(ex);
             if (userInitiated)
             {
-                System.Windows.MessageBox.Show(this, LocalizationService.Get("Update_CheckFailed"), LocalizationService.Get("Update_Title"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                ShowUpdateMessage(
+                    LocalizationService.Get("Update_CheckFailed"),
+                    LocalizationService.Get("Update_Title"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
             }
         }
         finally
         {
             _updateCheckRunning = false;
+        }
+    }
+
+    private void ShowUpdateMessage(string message, string title, MessageBoxButton button, MessageBoxImage image)
+    {
+        if (IsVisible && WindowState != WindowState.Minimized)
+        {
+            System.Windows.MessageBox.Show(this, message, title, button, image);
+        }
+        else
+        {
+            System.Windows.MessageBox.Show(message, title, button, image);
         }
     }
 
@@ -1521,16 +1594,43 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         var path = item.Path;
-        if (path.StartsWith("shell:AppsFolder", StringComparison.OrdinalIgnoreCase))
+
+        // 1. Steam URL protocols
+        if (path.StartsWith("steam://", StringComparison.OrdinalIgnoreCase))
         {
-            var (_, icon) = ShellItemService.GetShellItemInfo(path, 256);
-            if (icon != null) return icon;
+            var appId = SteamService.ExtractSteamAppId(path);
+            if (!string.IsNullOrWhiteSpace(appId))
+            {
+                var (_, iconPath, _) = SteamService.GetGameInfoByAppId(appId);
+                if (!string.IsNullOrWhiteSpace(iconPath))
+                {
+                    var steamIcon = IconService.GetIconFromPath(iconPath, (int)Math.Max(_config.IconSize * 4, 256));
+                    if (steamIcon != null) return ShellItemService.AutoCropIfNeeded(steamIcon);
+                }
+            }
         }
 
-        var isFileOrDir = File.Exists(path) || Directory.Exists(path);
-        if (isFileOrDir)
+        // 2. .url files
+        if (path.EndsWith(".url", StringComparison.OrdinalIgnoreCase) && File.Exists(path))
         {
-            return IconService.GetIcon(path, (int)Math.Max(_config.IconSize * 4, 256));
+            var urlIcon = IconService.GetIcon(path, (int)Math.Max(_config.IconSize * 4, 256));
+            if (urlIcon != null) return ShellItemService.AutoCropIfNeeded(urlIcon);
+        }
+
+        var physicalPath = ShellItemService.ResolveAppIdPath(path);
+        if (File.Exists(physicalPath) || Directory.Exists(physicalPath))
+        {
+            var icon = IconService.GetIcon(physicalPath, (int)Math.Max(_config.IconSize * 4, 256));
+            if (icon != null)
+            {
+                return ShellItemService.AutoCropIfNeeded(icon);
+            }
+        }
+
+        if (path.StartsWith("shell:AppsFolder", StringComparison.OrdinalIgnoreCase))
+        {
+            var icon = ShellItemService.GetIcon(path, (int)Math.Max(_config.IconSize * 4, 256));
+            if (icon != null) return icon;
         }
 
         return null;
@@ -1604,17 +1704,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void ScheduleFullscreenCheck()
     {
-        if (_fullscreenCheckPending)
-        {
-            return;
-        }
-
-        _fullscreenCheckPending = true;
-        Dispatcher.BeginInvoke(new Action(() =>
-        {
-            _fullscreenCheckPending = false;
-            UpdateFullscreenState();
-        }), DispatcherPriority.Background);
+        if (_isPaused) return;
+        _fullscreenDebounceTimer.Stop();
+        _fullscreenDebounceTimer.Start();
     }
 
 
@@ -1622,12 +1714,20 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void UpdateFullscreenState()
     {
+        if (_isPaused) return;
+
         try
         {
             var foreground = NativeMethods.GetForegroundWindow();
             if (foreground == IntPtr.Zero || IsIgnoredForeground(foreground))
             {
                 SetFullscreen(false);
+                return;
+            }
+
+            if (IsOverlayForeground(foreground))
+            {
+                // Ignore overlays taking focus
                 return;
             }
 
@@ -1667,6 +1767,25 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             Debug.WriteLine(ex);
         }
+    }
+
+    private bool IsOverlayForeground(IntPtr hwnd)
+    {
+        var processName = NativeMethods.GetProcessName(hwnd)?.ToLowerInvariant() ?? string.Empty;
+        if (processName is "igo64" or "eadesktop" or "origin" or "originwebhelper" 
+            or "gamebar" or "gamebarftserver" or "discord" or "nvsphelper64" 
+            or "eabackgroundservice" or "overlay" or "steamwebhelper")
+        {
+            return true;
+        }
+
+        var className = NativeMethods.GetWindowClassName(hwnd)?.ToLowerInvariant() ?? string.Empty;
+        if (className is "cef-osr-ipc-msg-wnd" or "tooltips_class32")
+        {
+            return true;
+        }
+
+        return false;
     }
 
     private bool IsIgnoredForeground(IntPtr hwnd)
@@ -1892,6 +2011,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void EnsureTopmost()
     {
+        if (_isPaused) return;
+
         try
         {
             var hwnd = new WindowInteropHelper(this).Handle;

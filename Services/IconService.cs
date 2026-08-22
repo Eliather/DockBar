@@ -24,6 +24,48 @@ public static class IconService
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(path)) return null;
+
+            // 1. Handle Steam URL protocols (steam://rungameid/<id> or steam://run/<id>)
+            if (path.StartsWith("steam://", StringComparison.OrdinalIgnoreCase))
+            {
+                var appId = SteamService.ExtractSteamAppId(path);
+                if (!string.IsNullOrWhiteSpace(appId))
+                {
+                    var (_, iconPath, _) = SteamService.GetGameInfoByAppId(appId);
+                    if (!string.IsNullOrWhiteSpace(iconPath))
+                    {
+                        var steamIcon = GetIconFromPath(iconPath, preferredSize);
+                        if (steamIcon != null) return steamIcon;
+                    }
+                }
+            }
+
+            // 2. Handle .url files
+            if (path.EndsWith(".url", StringComparison.OrdinalIgnoreCase) && File.Exists(path))
+            {
+                var (url, iconFile, _, _) = SteamService.ParseUrlFile(path);
+                if (!string.IsNullOrWhiteSpace(iconFile) && File.Exists(iconFile))
+                {
+                    var urlIcon = GetIconFromPath(iconFile, preferredSize);
+                    if (urlIcon != null) return urlIcon;
+                }
+
+                if (!string.IsNullOrWhiteSpace(url) && url.StartsWith("steam://", StringComparison.OrdinalIgnoreCase))
+                {
+                    var appId = SteamService.ExtractSteamAppId(url);
+                    if (!string.IsNullOrWhiteSpace(appId))
+                    {
+                        var (_, iconPath, _) = SteamService.GetGameInfoByAppId(appId);
+                        if (!string.IsNullOrWhiteSpace(iconPath))
+                        {
+                            var steamIcon = GetIconFromPath(iconPath, preferredSize);
+                            if (steamIcon != null) return steamIcon;
+                        }
+                    }
+                }
+            }
+
             var resolvedPath = ResolveShortcutTarget(path);
             var cacheKey = BuildCacheKey("path", resolvedPath, preferredSize);
             if (TryGetCached(cacheKey, out var cached))
