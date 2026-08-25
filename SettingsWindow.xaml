@@ -273,36 +273,29 @@
                                Style="{StaticResource SettingsSectionBodyStyle}"/>
 
                     <Grid Grid.Row="2"
-                          Margin="0,2,0,0">
+                          Margin="0,4,0,0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="140"/>
-                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="170"/>
+                            <ColumnDefinition Width="12"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
                         <Border Grid.Column="0"
-                                Style="{StaticResource SettingsInsetCardStyle}">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="*"/>
-                                </Grid.RowDefinitions>
+                                Style="{StaticResource SettingsInsetCardStyle}"
+                                Padding="12">
+                            <StackPanel>
+                                <TextBlock Text="{local:Loc Key=Settings_Preview}"
+                                           Style="{StaticResource SettingsLabelStyle}"
+                                           Margin="0,0,0,6"/>
 
-                                <TextBlock Grid.Row="0"
-                                           Text="{local:Loc Key=Settings_Preview}"
-                                           Style="{StaticResource SettingsLabelStyle}"/>
-
-                                <Border Grid.Row="1"
-                                        Width="72"
-                                        Height="156"
-                                        Margin="0,6,0,10"
-                                        CornerRadius="22"
+                                <Border Width="64"
+                                        Height="110"
+                                        Margin="0,0,0,8"
+                                        CornerRadius="14"
                                         Background="{Binding PreviewBrush}"
                                         BorderBrush="#44FFFFFF"
                                         BorderThickness="1"
-                                        Padding="9"
+                                        Padding="6"
                                         HorizontalAlignment="Center">
                                     <Grid>
                                         <Grid.RowDefinitions>
@@ -311,88 +304,65 @@
                                             <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
 
-                                        <Border Width="32"
-                                                Height="32"
-                                                CornerRadius="10"
+                                        <Border Width="24"
+                                                Height="24"
+                                                CornerRadius="6"
                                                 Background="#22FFFFFF"
                                                 HorizontalAlignment="Center">
-                                            <Viewbox Width="16"
-                                                     Height="16"
-                                                     VerticalAlignment="Center"
-                                                     HorizontalAlignment="Center">
+                                            <Viewbox Width="12" Height="12" VerticalAlignment="Center" HorizontalAlignment="Center">
                                                 <Grid Width="24" Height="24">
-                                                    <Border Width="6"
-                                                            Height="18"
-                                                            Background="{Binding TextBrush}"
-                                                            CornerRadius="3"
-                                                            HorizontalAlignment="Left"
-                                                            VerticalAlignment="Center"
-                                                            Margin="3,0,0,0"/>
-                                                    <Ellipse Width="4"
-                                                             Height="4"
-                                                             Fill="{Binding TextBrush}"
-                                                             HorizontalAlignment="Right"
-                                                             VerticalAlignment="Top"
-                                                             Margin="0,4,4,0"/>
-                                                    <Ellipse Width="4"
-                                                             Height="4"
-                                                             Fill="{Binding TextBrush}"
-                                                             HorizontalAlignment="Right"
-                                                             VerticalAlignment="Center"
-                                                             Margin="0,0,4,0"/>
-                                                    <Ellipse Width="4"
-                                                             Height="4"
-                                                             Fill="{Binding TextBrush}"
-                                                             HorizontalAlignment="Right"
-                                                             VerticalAlignment="Bottom"
-                                                             Margin="0,0,4,4"/>
+                                                    <Border Width="6" Height="18" Background="{Binding TextBrush}" CornerRadius="3" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0"/>
+                                                    <Ellipse Width="4" Height="4" Fill="{Binding TextBrush}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,4,0"/>
+                                                    <Ellipse Width="4" Height="4" Fill="{Binding TextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                    <Ellipse Width="4" Height="4" Fill="{Binding TextBrush}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,4,4"/>
                                                 </Grid>
                                             </Viewbox>
                                         </Border>
 
-                                        <StackPanel Grid.Row="1"
-                                                    VerticalAlignment="Center"
-                                                    Margin="0,8,0,8">
-                                            <Border Width="30"
-                                                    Height="30"
-                                                    CornerRadius="10"
-                                                    Background="#20FFFFFF"
-                                                    BorderBrush="#2AFFFFFF"
-                                                    BorderThickness="1"
-                                                    HorizontalAlignment="Center"/>
-                                            <Border Width="30"
-                                                    Height="30"
-                                                    CornerRadius="10"
-                                                    Background="#16FFFFFF"
-                                                    BorderBrush="#24FFFFFF"
-                                                    BorderThickness="1"
-                                                    HorizontalAlignment="Center"
-                                                    Margin="0,7,0,0"/>
-                                            <Border Width="30"
-                                                    Height="30"
-                                                    CornerRadius="10"
-                                                    Background="#16FFFFFF"
-                                                    BorderBrush="#24FFFFFF"
-                                                    BorderThickness="1"
-                                                    HorizontalAlignment="Center"
-                                                    Margin="0,7,0,0"/>
+                                        <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,4,0,4">
+                                            <Border Width="22" Height="22" CornerRadius="6" Background="#20FFFFFF" BorderBrush="#2AFFFFFF" BorderThickness="1" HorizontalAlignment="Center"/>
+                                            <Border Width="22" Height="22" CornerRadius="6" Background="#16FFFFFF" BorderBrush="#24FFFFFF" BorderThickness="1" HorizontalAlignment="Center" Margin="0,4,0,0"/>
                                         </StackPanel>
 
-                                        <TextBlock Grid.Row="2"
-                                                   Text="DockBar"
-                                                   Foreground="{Binding TextBrush}"
-                                                   FontWeight="SemiBold"
-                                                   FontSize="9.5"
-                                                   TextAlignment="Center"/>
+                                        <TextBlock Grid.Row="2" Text="DockBar" Foreground="{Binding TextBrush}" FontWeight="SemiBold" FontSize="8.5" TextAlignment="Center"/>
                                     </Grid>
                                 </Border>
 
-                                <TextBlock Grid.Row="2"
-                                           Text="{local:Loc Key=Settings_PreviewSummary}"
+                                <TextBlock Text="{local:Loc Key=Settings_HexLabel}"
                                            Style="{StaticResource SettingsLabelStyle}"
-                                           Margin="0,0,0,6"/>
+                                           Margin="0,2,0,4"/>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="32"/>
+                                        <ColumnDefinition Width="6"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
 
-                                <Grid Grid.Row="3">
+                                    <Border Grid.Column="0"
+                                            Width="32"
+                                            Height="32"
+                                            Background="{Binding PreviewBrush}"
+                                            BorderBrush="{DynamicResource AppBorderStrongBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="8"/>
+                                    <TextBox x:Name="HexBox"
+                                             Grid.Column="2"
+                                             Style="{StaticResource SettingsTextBoxStyle}"
+                                             Text="{Binding HexInput, UpdateSourceTrigger=PropertyChanged}"
+                                             MaxLength="7"
+                                             LostFocus="HexBox_LostFocus"
+                                             KeyDown="HexBox_KeyDown"
+                                             Height="32"
+                                             VerticalContentAlignment="Center"
+                                             HorizontalContentAlignment="Center"
+                                             FontWeight="SemiBold"
+                                             FontSize="11"/>
+                                </Grid>
+
+                                <TextBlock Text="{local:Loc Key=Settings_PreviewSummary}"
+                                           Style="{StaticResource SettingsLabelStyle}"
+                                           Margin="0,2,0,4"/>
+                                <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
@@ -403,51 +373,31 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
-                                    <TextBlock Grid.Row="0"
-                                               Text="{local:Loc Key=Settings_DockWidth}"
-                                               Style="{StaticResource SettingsMutedStyle}"/>
-                                    <TextBlock Grid.Row="0"
-                                               Grid.Column="1"
-                                               Text="{Binding Config.DockWidth, StringFormat={}{0:F0}px}"
-                                               Style="{StaticResource SettingsLabelStyle}"
-                                               Margin="8,0,0,0"/>
+                                    <TextBlock Grid.Row="0" Text="{local:Loc Key=Settings_DockWidth}" Style="{StaticResource SettingsMutedStyle}" FontSize="10.5"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Config.DockWidth, StringFormat={}{0:F0}px}" Style="{StaticResource SettingsLabelStyle}" FontSize="10.5" Margin="4,0,0,0"/>
 
-                                    <TextBlock Grid.Row="1"
-                                               Text="{local:Loc Key=Settings_IconSize}"
-                                               Style="{StaticResource SettingsMutedStyle}"
-                                               Margin="0,4,0,0"/>
-                                    <TextBlock Grid.Row="1"
-                                               Grid.Column="1"
-                                               Text="{Binding Config.IconSize, StringFormat={}{0:F0}px}"
-                                               Style="{StaticResource SettingsLabelStyle}"
-                                               Margin="8,4,0,0"/>
+                                    <TextBlock Grid.Row="1" Text="{local:Loc Key=Settings_IconSize}" Style="{StaticResource SettingsMutedStyle}" FontSize="10.5" Margin="0,2,0,0"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Config.IconSize, StringFormat={}{0:F0}px}" Style="{StaticResource SettingsLabelStyle}" FontSize="10.5" Margin="4,2,0,0"/>
 
-                                    <TextBlock Grid.Row="2"
-                                               Text="{local:Loc Key=Settings_GlassEffect}"
-                                               Style="{StaticResource SettingsMutedStyle}"
-                                               Margin="0,4,0,0"/>
-                                    <TextBlock Grid.Row="2"
-                                               Grid.Column="1"
-                                               Text="{Binding GlassStatusText}"
-                                               Style="{StaticResource SettingsLabelStyle}"
-                                               Margin="8,4,0,0"/>
+                                    <TextBlock Grid.Row="2" Text="{local:Loc Key=Settings_GlassEffect}" Style="{StaticResource SettingsMutedStyle}" FontSize="10.5" Margin="0,2,0,0"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding GlassStatusText}" Style="{StaticResource SettingsLabelStyle}" FontSize="10.5" Margin="4,2,0,0"/>
                                 </Grid>
-                            </Grid>
+                            </StackPanel>
                         </Border>
 
                         <Grid Grid.Column="2">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="12"/>
+                                <RowDefinition Height="8"/>
                                 <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="12"/>
+                                <RowDefinition Height="8"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
                             <StackPanel Grid.Row="0">
                                 <TextBlock Text="{local:Loc Key=Settings_ColorPicker}"
                                            Style="{StaticResource SettingsLabelStyle}"/>
-                                <Grid Margin="0,4,0,0">
+                                <Grid Margin="0,3,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="10"/>
@@ -456,15 +406,15 @@
 
                                     <Border x:Name="SatValBorder"
                                             Grid.Column="0"
-                                            Height="128"
+                                            Height="95"
                                             Background="{Binding HueBrush}"
                                             BorderBrush="{DynamicResource AppBorderBrush}"
                                             BorderThickness="1"
-                                            CornerRadius="14"
+                                            CornerRadius="12"
                                             Loaded="SatValBorder_Loaded"
                                             SizeChanged="SatValBorder_SizeChanged">
                                         <Grid>
-                                            <Rectangle RadiusX="14" RadiusY="14">
+                                            <Rectangle RadiusX="12" RadiusY="12">
                                                 <Rectangle.Fill>
                                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                                                         <GradientStop Color="White" Offset="0"/>
@@ -472,7 +422,7 @@
                                                     </LinearGradientBrush>
                                                 </Rectangle.Fill>
                                             </Rectangle>
-                                            <Rectangle RadiusX="14" RadiusY="14">
+                                            <Rectangle RadiusX="12" RadiusY="12">
                                                 <Rectangle.Fill>
                                                     <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                                         <GradientStop Color="#00FFFFFF" Offset="0"/>
@@ -500,7 +450,7 @@
                                             Orientation="Vertical"
                                             Minimum="0"
                                             Maximum="360"
-                                            Height="128"
+                                            Height="95"
                                             Value="{Binding Hue, Mode=TwoWay}"
                                             ValueChanged="HueSlider_ValueChanged">
                                         <Slider.Background>
@@ -518,108 +468,107 @@
                                 </Grid>
                             </StackPanel>
 
-                            <Grid Grid.Row="2">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="148"/>
-                                    <ColumnDefinition Width="10"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
+                            <Border Grid.Row="2"
+                                    Style="{StaticResource SettingsInsetCardStyle}"
+                                    Padding="14,10">
+                                <StackPanel>
+                                    <!-- 1. Activar efecto Glass Checkbox -->
+                                    <CheckBox Content="{local:Loc Key=Settings_UseTransparency}"
+                                              Style="{StaticResource DialogCheckBoxStyle}"
+                                              IsChecked="{Binding Config.UseTransparency, Mode=TwoWay}"
+                                              Checked="TransparencyToggled"
+                                              Unchecked="TransparencyToggled"
+                                              Margin="0,0,0,8"/>
 
-                                <Border Grid.Column="0"
-                                        Style="{StaticResource SettingsInsetCardStyle}">
-                                    <StackPanel>
-                                        <TextBlock Text="{local:Loc Key=Settings_HexLabel}"
-                                                   Style="{StaticResource SettingsLabelStyle}"/>
-                                        <Grid Margin="0,2,0,0">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="44"/>
-                                                <ColumnDefinition Width="8"/>
-                                                <ColumnDefinition Width="*"/>
-                                            </Grid.ColumnDefinitions>
-
-                                            <Border Grid.Column="0"
-                                                    Width="44"
-                                                    Height="44"
-                                                    Background="{Binding PreviewBrush}"
-                                                    BorderBrush="{DynamicResource AppBorderStrongBrush}"
-                                                    BorderThickness="1"
-                                                    CornerRadius="12"/>
-                                            <TextBox x:Name="HexBox"
-                                                     Grid.Column="2"
-                                                     Style="{StaticResource SettingsTextBoxStyle}"
-                                                     Text="{Binding HexInput, UpdateSourceTrigger=PropertyChanged}"
-                                                     MaxLength="7"
-                                                     LostFocus="HexBox_LostFocus"
-                                                     KeyDown="HexBox_KeyDown"/>
-                                        </Grid>
-                                        <TextBlock Text="{Binding HexColor}"
+                                    <!-- 2. Opacity Slider on its own full-width row below Glass checkbox -->
+                                    <Grid Margin="0,0,0,10"
+                                          IsEnabled="{Binding Config.UseTransparency}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="42"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0"
+                                                   Text="{local:Loc Key=Settings_Opacity}"
+                                                   Style="{StaticResource SettingsLabelStyle}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,10,0"/>
+                                        <Slider Grid.Column="1"
+                                                Style="{StaticResource DialogSliderStyle}"
+                                                Minimum="0.0"
+                                                Maximum="1.0"
+                                                SmallChange="0.01"
+                                                LargeChange="0.05"
+                                                Value="{Binding Config.BackgroundOpacity, Mode=TwoWay}"
+                                                ValueChanged="OpacitySlider_ValueChanged"
+                                                VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="2"
+                                                   Text="{Binding OpacityPercentText}"
                                                    Style="{StaticResource SettingsMutedStyle}"
-                                                   Margin="0,6,0,0"/>
-                                    </StackPanel>
-                                </Border>
+                                                   FontWeight="SemiBold"
+                                                   VerticalAlignment="Center"
+                                                   HorizontalAlignment="Right"
+                                                   Margin="8,0,0,0"/>
+                                    </Grid>
 
-                                <Border Grid.Column="2"
-                                        Style="{StaticResource SettingsInsetCardStyle}">
-                                    <StackPanel>
-                                        <CheckBox Content="{local:Loc Key=Settings_UseTransparency}"
-                                                  Style="{StaticResource DialogCheckBoxStyle}"
-                                                  Margin="0,0,0,10"
-                                                  IsChecked="{Binding Config.UseTransparency, Mode=TwoWay}"
-                                                  Checked="TransparencyToggled"
-                                                  Unchecked="TransparencyToggled"/>
+                                    <!-- Separator line -->
+                                    <Rectangle Height="1" Fill="#15FFFFFF" Margin="0,0,0,8"/>
 
+                                    <!-- 3. Text Color Switch on its own clean row -->
+                                    <StackPanel Orientation="Horizontal"
+                                                VerticalAlignment="Center"
+                                                Margin="0,0,0,8">
                                         <TextBlock Text="{local:Loc Key=Settings_TextColor}"
-                                                   Style="{StaticResource SettingsLabelStyle}"/>
-                                        <Grid Margin="0,2,0,0">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
+                                                   Style="{StaticResource SettingsLabelStyle}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,10,0"/>
 
-                                            <TextBlock Grid.Column="0"
-                                                       Text="{local:Loc Key=Settings_TextDark}"
-                                                       Margin="0,0,10,0">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource DialogMutedTextStyle}">
-                                                        <Setter Property="VerticalAlignment" Value="Center"/>
-                                                        <Setter Property="FontWeight" Value="SemiBold"/>
-                                                        <Setter Property="FontSize" Value="11"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding Config.UseLightText}" Value="False">
-                                                                <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
+                                        <TextBlock Text="{local:Loc Key=Settings_TextDark}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,8,0">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource DialogMutedTextStyle}">
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                    <Setter Property="FontSize" Value="11"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Config.UseLightText}" Value="False">
+                                                            <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
 
-                                            <CheckBox Grid.Column="1"
-                                                      Style="{StaticResource DialogSwitchCheckBoxStyle}"
-                                                      IsChecked="{Binding Config.UseLightText, Mode=TwoWay}"
-                                                      Checked="TextColorChanged"
-                                                      Unchecked="TextColorChanged"/>
+                                        <CheckBox Style="{StaticResource DialogSwitchCheckBoxStyle}"
+                                                  IsChecked="{Binding Config.UseLightText, Mode=TwoWay}"
+                                                  Checked="TextColorChanged"
+                                                  Unchecked="TextColorChanged"
+                                                  VerticalAlignment="Center"/>
 
-                                            <TextBlock Grid.Column="2"
-                                                       Text="{local:Loc Key=Settings_TextLight}"
-                                                       Margin="10,0,0,0">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource DialogMutedTextStyle}">
-                                                        <Setter Property="VerticalAlignment" Value="Center"/>
-                                                        <Setter Property="FontWeight" Value="SemiBold"/>
-                                                        <Setter Property="FontSize" Value="11"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding Config.UseLightText}" Value="True">
-                                                                <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                        </Grid>
+                                        <TextBlock Text="{local:Loc Key=Settings_TextLight}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="8,0,0,0">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource DialogMutedTextStyle}">
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                    <Setter Property="FontSize" Value="11"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Config.UseLightText}" Value="True">
+                                                            <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
                                     </StackPanel>
-                                </Border>
-                            </Grid>
+
+                                    <!-- 4. Text Shadow CheckBox on its own full-width row below Text Color -->
+                                    <CheckBox Content="{local:Loc Key=Settings_TextShadowOption}"
+                                              Style="{StaticResource DialogCheckBoxStyle}"
+                                              IsChecked="{Binding Config.EnableTextShadow, Mode=TwoWay}"
+                                              VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
 
                             <StackPanel Grid.Row="4">
                                 <TextBlock Text="{local:Loc Key=Settings_ColorPalette}"

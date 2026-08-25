@@ -88,7 +88,7 @@ public partial class UpdateWindow : Window, INotifyPropertyChanged
 
     public bool HasProgressOrStatus => IsDownloading || !string.IsNullOrWhiteSpace(StatusText);
 
-    public bool CanInstall => !IsDownloading && !string.IsNullOrWhiteSpace(_updateInfo.InstallerUrl);
+    public bool CanInstall => !IsDownloading && !string.IsNullOrWhiteSpace(_updateInfo.InstallerUrl) && !PackageHelper.IsPackaged;
 
     public string InstallButtonText => IsDownloading
         ? LocalizationService.Get("Update_StatusDownloading")
@@ -104,7 +104,9 @@ public partial class UpdateWindow : Window, INotifyPropertyChanged
         DataContext = this;
         SourceInitialized += (_, _) => WindowSwitcherHelper.HideFromWindowSwitchers(this);
 
-        StatusText = LocalizationService.Get("Update_StatusReady");
+        StatusText = PackageHelper.IsPackaged
+            ? LocalizationService.Get("Update_PackagedManaged")
+            : LocalizationService.Get("Update_StatusReady");
     }
 
     private async void Install_Click(object sender, RoutedEventArgs e)

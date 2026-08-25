@@ -12,7 +12,7 @@ namespace DockBar;
 
 public partial class SettingsWindow : Window, INotifyPropertyChanged
 {
-    private const double GlassOpacity = 0.72;
+    private const double GlassOpacity = 0.45;
 
     public DockConfig Config { get; }
 
@@ -82,7 +82,20 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
 
     public string HexColor => $"#{_pendingR:X2}{_pendingG:X2}{_pendingB:X2}";
 
-    public string GlassStatusText => LocalizationService.Get(Config.UseTransparency ? "Settings_GlassOn" : "Settings_GlassOff");
+    public string OpacityPercentText
+    {
+        get
+        {
+            var op = Config.UseTransparency
+                ? Math.Clamp(Config.BackgroundOpacity, 0.0, 1.0)
+                : 1.0;
+            return $"{Math.Round(op * 100):F0}%";
+        }
+    }
+
+    public string GlassStatusText =>
+        LocalizationService.Get(Config.UseTransparency ? "Settings_GlassOn" : "Settings_GlassOff") +
+        (Config.UseTransparency ? $" ({OpacityPercentText})" : "");
 
     public string HexInput
     {
@@ -121,7 +134,10 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         InitializeComponent();
         DataContext = this;
         SourceInitialized += (_, _) => WindowSwitcherHelper.HideFromWindowSwitchers(this);
-        Config.BackgroundOpacity = Config.UseTransparency ? GlassOpacity : 1.0;
+        if (Config.BackgroundOpacity < 0 || Config.BackgroundOpacity > 1.0)
+        {
+            Config.BackgroundOpacity = GlassOpacity;
+        }
         _pendingR = Config.BackgroundR;
         _pendingG = Config.BackgroundG;
         _pendingB = Config.BackgroundB;
@@ -133,13 +149,17 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
     private void UpdatePreviewBrush()
     {
         var baseColor = System.Windows.Media.Color.FromRgb(_pendingR, _pendingG, _pendingB);
+        var opacity = Config.UseTransparency
+            ? Math.Clamp(Config.BackgroundOpacity, 0.0, 1.0)
+            : 1.0;
         var brush = new SolidColorBrush(baseColor)
         {
-            Opacity = Config.UseTransparency ? GlassOpacity : 1.0
+            Opacity = opacity
         };
         brush.Freeze();
         PreviewBrush = brush;
         OnPropertyChanged(nameof(HexColor));
+        OnPropertyChanged(nameof(OpacityPercentText));
         OnPropertyChanged(nameof(GlassStatusText));
         var hex = $"#{_pendingR:X2}{_pendingG:X2}{_pendingB:X2}";
         if (!string.Equals(HexInput, hex, StringComparison.OrdinalIgnoreCase))
@@ -158,7 +178,19 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
 
     private void TransparencyToggled(object sender, RoutedEventArgs e)
     {
-        Config.BackgroundOpacity = Config.UseTransparency ? GlassOpacity : 1.0;
+        if (Config.UseTransparency && (Config.BackgroundOpacity < 0 || Config.BackgroundOpacity > 1.0))
+        {
+            Config.BackgroundOpacity = GlassOpacity;
+        }
+        OnPropertyChanged(nameof(OpacityPercentText));
+        OnPropertyChanged(nameof(GlassStatusText));
+        UpdatePreviewBrush();
+    }
+
+    private void OpacitySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        OnPropertyChanged(nameof(OpacityPercentText));
+        OnPropertyChanged(nameof(GlassStatusText));
         UpdatePreviewBrush();
     }
 
@@ -192,7 +224,7 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         Config.BackgroundG = 0;
         Config.BackgroundB = 0;
         Config.UseTransparency = false;
-        Config.BackgroundOpacity = 1.0;
+        Config.BackgroundOpacity = GlassOpacity;
         Config.DockWidth = 175;
         Config.IconSize = 40;
         Config.UseLightText = true;

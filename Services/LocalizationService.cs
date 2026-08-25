@@ -47,6 +47,8 @@ public static class LocalizationService
             ["Settings_TextColor"] = "Color de texto:",
             ["Settings_TextLight"] = "Claro (blanco)",
             ["Settings_TextDark"] = "Oscuro (negro)",
+            ["Settings_TextShadow"] = "Sombra de texto:",
+            ["Settings_TextShadowOption"] = "Sombra dinámica a letras",
             ["Settings_DefaultConfig"] = "Restaurar base",
             ["Settings_FooterHint"] = "La vista previa refleja los cambios al instante antes de guardarlos.",
 
@@ -135,6 +137,7 @@ public static class LocalizationService
             ["Update_DownloadFailed"] = "No se pudo descargar la actualización.",
             ["Update_ErrorTitle"] = "Error al buscar actualizaciones",
             ["Update_ErrorBody"] = "Ocurrió un error al verificar actualizaciones.",
+            ["Update_PackagedManaged"] = "DockBar está instalada como paquete MSIX. Las actualizaciones se gestionan automáticamente a través de la Microsoft Store / Windows.",
             ["Update_OpenReleasePage"] = "Ver en GitHub",
 
             ["About_Title"] = "Acerca de DockBar",
@@ -187,6 +190,8 @@ public static class LocalizationService
             ["Settings_TextColor"] = "Text color:",
             ["Settings_TextLight"] = "Light (white)",
             ["Settings_TextDark"] = "Dark (black)",
+            ["Settings_TextShadow"] = "Text shadow:",
+            ["Settings_TextShadowOption"] = "Dynamic letter shadow",
             ["Settings_DefaultConfig"] = "Restore defaults",
             ["Settings_FooterHint"] = "Preview reflects changes instantly before saving.",
 
@@ -275,6 +280,7 @@ public static class LocalizationService
             ["Update_DownloadFailed"] = "Failed to download update.",
             ["Update_ErrorTitle"] = "Update check error",
             ["Update_ErrorBody"] = "An error occurred while checking for updates.",
+            ["Update_PackagedManaged"] = "DockBar is running as an MSIX package. Updates are managed automatically through the Microsoft Store / Windows.",
             ["Update_OpenReleasePage"] = "View on GitHub",
 
             ["About_Title"] = "About DockBar",

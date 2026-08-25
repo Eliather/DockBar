@@ -24,6 +24,13 @@
         MouseMove="Window_MouseMove"
         AllowDrop="True"
         Drop="Window_Drop">
+    <WindowChrome.WindowChrome>
+        <WindowChrome GlassFrameThickness="-1"
+                      CornerRadius="0"
+                      CaptionHeight="0"
+                      ResizeBorderThickness="0"
+                      UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <conv:InverseBoolConverter x:Key="InverseBoolConverter"/>
@@ -32,25 +39,32 @@
 
         <Style x:Key="CharmItemButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="Padding" Value="10"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="root"
                                 Background="{TemplateBinding Background}"
-                                CornerRadius="12"
-                                Padding="{TemplateBinding Padding}">
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="root" Property="Background" Value="#22FFFFFF"/>
+                                <Setter TargetName="root" Property="Background" Value="#25FFFFFF"/>
+                                <Setter TargetName="root" Property="BorderBrush" Value="#45FFFFFF"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="root" Property="Background" Value="#33FFFFFF"/>
+                                <Setter TargetName="root" Property="Background" Value="#40FFFFFF"/>
+                                <Setter TargetName="root" Property="BorderBrush" Value="#65FFFFFF"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -62,10 +76,11 @@
             <Setter Property="Width" Value="32"/>
             <Setter Property="Height" Value="32"/>
             <Setter Property="Padding" Value="0"/>
-            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Background" Value="#12FFFFFF"/>
             <Setter Property="Foreground" Value="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
-            <Setter Property="BorderBrush" Value="#444"/>
+            <Setter Property="BorderBrush" Value="#25FFFFFF"/>
             <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="ToolTipService.InitialShowDelay" Value="150"/>
             <Setter Property="ToolTipService.ShowDuration" Value="2400"/>
             <Setter Property="ToolTipService.BetweenShowDelay" Value="80"/>
@@ -77,16 +92,18 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="10">
+                                CornerRadius="4"
+                                SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="root" Property="Background" Value="#22FFFFFF"/>
-                                <Setter TargetName="root" Property="BorderBrush" Value="#6E8BC4"/>
+                                <Setter TargetName="root" Property="Background" Value="#30FFFFFF"/>
+                                <Setter TargetName="root" Property="BorderBrush" Value="#55FFFFFF"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="root" Property="Background" Value="#33FFFFFF"/>
+                                <Setter TargetName="root" Property="Background" Value="#45FFFFFF"/>
+                                <Setter TargetName="root" Property="BorderBrush" Value="#75FFFFFF"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -113,7 +130,11 @@
         </Style>
     </Window.Resources>
 
-    <Border Background="{Binding DockBackgroundBrush, RelativeSource={RelativeSource AncestorType=Window}}" Padding="10">
+    <Border Background="{Binding DockBackgroundBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+            BorderBrush="{Binding DockBorderBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+            BorderThickness="{Binding DockBorderThickness, RelativeSource={RelativeSource AncestorType=Window}}"
+            Padding="10"
+            SnapsToDevicePixels="True">
         <Grid x:Name="DockLayoutRoot" Margin="0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
@@ -156,6 +177,7 @@
                                     <TextBlock Text="{Binding Name}"
                                                Margin="0,3,0,0"
                                                Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                               Effect="{Binding DockTextShadowEffect, RelativeSource={RelativeSource AncestorType=Window}}"
                                                TextAlignment="Center"
                                                TextWrapping="NoWrap"
                                                TextTrimming="CharacterEllipsis"
@@ -255,6 +277,7 @@
                                                 <TextBlock Text="{Binding Name}"
                                                            Margin="0,8,0,0"
                                                            Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                           Effect="{Binding DockTextShadowEffect, RelativeSource={RelativeSource AncestorType=Window}}"
                                                            TextAlignment="Center"
                                                            TextWrapping="Wrap"
                                                            FontSize="12"

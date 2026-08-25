@@ -6,4 +6,5 @@ DockBarSetup.zip
 DockBar-win-x64*.zip
 .agents/
 install-cert.ps1
-release_notes.md
+.tools/
+*.msix

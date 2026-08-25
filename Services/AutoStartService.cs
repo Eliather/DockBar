@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Microsoft.Win32;
 
 namespace DockBar.Services;
@@ -8,8 +9,97 @@ public static class AutoStartService
 {
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
     private const string ValueName = "DockBar";
+    private const string StartupTaskId = "DockBarStartupTask";
 
     public static void Apply(bool enable)
+    {
+        if (PackageHelper.IsPackaged)
+        {
+            _ = ApplyPackagedAsync(enable);
+            return;
+        }
+
+        ApplyRegistry(enable);
+    }
+
+    public static async Task ApplyAsync(bool enable)
+    {
+        if (PackageHelper.IsPackaged)
+        {
+            await ApplyPackagedAsync(enable);
+            return;
+        }
+
+        ApplyRegistry(enable);
+    }
+
+    public static bool IsEnabled()
+    {
+        if (PackageHelper.IsPackaged)
+        {
+            try
+            {
+                var task = Windows.ApplicationModel.StartupTask.GetAsync(StartupTaskId).AsTask().GetAwaiter().GetResult();
+                return task.State == Windows.ApplicationModel.StartupTaskState.Enabled ||
+                       task.State == Windows.ApplicationModel.StartupTaskState.EnabledByPolicy;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+                return false;
+            }
+        }
+
+        return IsEnabledRegistry();
+    }
+
+    public static async Task<bool> IsEnabledAsync()
+    {
+        if (PackageHelper.IsPackaged)
+        {
+            try
+            {
+                var task = await Windows.ApplicationModel.StartupTask.GetAsync(StartupTaskId);
+                return task.State == Windows.ApplicationModel.StartupTaskState.Enabled ||
+                       task.State == Windows.ApplicationModel.StartupTaskState.EnabledByPolicy;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+                return false;
+            }
+        }
+
+        return IsEnabledRegistry();
+    }
+
+    private static async Task ApplyPackagedAsync(bool enable)
+    {
+        try
+        {
+            var task = await Windows.ApplicationModel.StartupTask.GetAsync(StartupTaskId);
+            if (enable)
+            {
+                if (task.State == Windows.ApplicationModel.StartupTaskState.Disabled)
+                {
+                    await task.RequestEnableAsync();
+                }
+            }
+            else
+            {
+                if (task.State == Windows.ApplicationModel.StartupTaskState.Enabled)
+                {
+                    task.Disable();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+    }
+
+    private static void ApplyRegistry(bool enable)
     {
         try
         {
@@ -34,7 +124,7 @@ public static class AutoStartService
         }
     }
 
-    public static bool IsEnabled()
+    private static bool IsEnabledRegistry()
     {
         try
         {

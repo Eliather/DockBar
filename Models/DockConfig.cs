@@ -11,11 +11,12 @@ public class DockConfig
     public double AutoHideDelaySeconds { get; set; } = 0; // Win8-style immediate hide on leave by default
     public double HideAnimationMs { get; set; } = 200;
     public bool UseTransparency { get; set; } = true;
-    public double BackgroundOpacity { get; set; } = 0.72;
+    public double BackgroundOpacity { get; set; } = 0.45;
     public byte BackgroundR { get; set; } = 0;
     public byte BackgroundG { get; set; } = 0;
     public byte BackgroundB { get; set; } = 0;
     public bool UseLightText { get; set; } = true;
+    public bool EnableTextShadow { get; set; } = true;
     public bool AutoStartEnabled { get; set; } = false;
     public bool AutoStartPrompted { get; set; } = false;
 }

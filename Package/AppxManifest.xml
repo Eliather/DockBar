@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+  IgnorableNamespaces="uap rescap desktop">
+
+  <Identity
+    Name="Eliather.DockBar"
+    Publisher="CN=45EE2FE3-A63D-4B36-86B9-6273B6A4760E"
+    Version="1.7.0.0"
+    ProcessorArchitecture="x64" />
+
+  <Properties>
+    <DisplayName>DockBar</DisplayName>
+    <PublisherDisplayName>Eliather</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+    <Description>Sleek, customizable autohide dock for Windows.</Description>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.22621.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="es-ES" />
+    <Resource Language="en-US" />
+  </Resources>
+
+  <Applications>
+    <Application Id="DockBar" Executable="DockBar.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="DockBar"
+        Description="Sleek, customizable autohide dock for Windows"
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png">
+        <uap:DefaultTile ShortName="DockBar" Wide310x150Logo="Assets\Wide310x150Logo.png">
+          <uap:ShowNameOnTiles>
+            <uap:ShowOn Tile="square150x150Logo" />
+          </uap:ShowNameOnTiles>
+        </uap:DefaultTile>
+        <uap:SplashScreen Image="Assets\SplashScreen.png" BackgroundColor="#101010" />
+      </uap:VisualElements>
+      <Extensions>
+        <desktop:Extension Category="windows.startupTask" Executable="DockBar.exe" EntryPoint="Windows.FullTrustApplication">
+          <desktop:StartupTask TaskId="DockBarStartupTask" Enabled="true" DisplayName="DockBar" />
+        </desktop:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>

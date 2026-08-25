@@ -23,7 +23,7 @@ namespace DockBar;
 
 public partial class MainWindow : Window, INotifyPropertyChanged
 {
-    private const double GlassOpacity = 0.72;
+    private const double GlassOpacity = 0.45;
     private const int InitialRecoveryDelayMs = 600;
     private const int RetryRecoveryDelayMs = 900;
     private const int ResumeRecoveryPasses = 3;
@@ -41,6 +41,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private double _iconSize = 28;
     private SolidColorBrush _dockBackgroundBrush = new(System.Windows.Media.Color.FromRgb(16, 16, 16));
     private SolidColorBrush _dockTextBrush = new(System.Windows.Media.Color.FromRgb(242, 242, 242));
+    private System.Windows.Media.Brush _dockBorderBrush = System.Windows.Media.Brushes.Transparent;
+    private System.Windows.Media.Effects.DropShadowEffect? _dockTextShadowEffect;
+    private Thickness _dockBorderThickness = new(0, 0, 1, 0);
     private bool _isEditMode;
     private System.Windows.Point _dragStartPoint;
     private ShortcutItem? _draggingItem;
@@ -98,6 +101,32 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
     }
 
+    public System.Windows.Media.Brush DockBorderBrush
+    {
+        get => _dockBorderBrush;
+        private set
+        {
+            if (_dockBorderBrush != value)
+            {
+                _dockBorderBrush = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public Thickness DockBorderThickness
+    {
+        get => _dockBorderThickness;
+        private set
+        {
+            if (_dockBorderThickness != value)
+            {
+                _dockBorderThickness = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
     public SolidColorBrush DockTextBrush
     {
         get => _dockTextBrush;
@@ -106,6 +135,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             if (_dockTextBrush != value)
             {
                 _dockTextBrush = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public System.Windows.Media.Effects.DropShadowEffect? DockTextShadowEffect
+    {
+        get => _dockTextShadowEffect;
+        private set
+        {
+            if (!Equals(_dockTextShadowEffect, value))
+            {
+                _dockTextShadowEffect = value;
                 OnPropertyChanged();
             }
         }
@@ -323,12 +365,38 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         var color = System.Windows.Media.Color.FromRgb(_config.BackgroundR, _config.BackgroundG, _config.BackgroundB);
         var opacity = _config.UseTransparency
-            ? GlassOpacity
+            ? Math.Clamp(_config.BackgroundOpacity, 0.0, 1.0)
             : 1.0;
         var alpha = (byte)Math.Clamp((int)Math.Round(opacity * 255), 0, 255);
         var brush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(alpha, color.R, color.G, color.B));
         brush.Freeze();
         DockBackgroundBrush = brush;
+
+        // Windows 7 Aero Glass styling: Rectangular straight sidebar with 1px border on the inner dividing edge
+        if (_dockSide == DockSide.Left)
+        {
+            DockBorderThickness = new Thickness(0, 0, 1, 0);
+        }
+        else
+        {
+            DockBorderThickness = new Thickness(1, 0, 0, 0);
+        }
+
+        if (_config.UseTransparency)
+        {
+            var borderColor = _config.UseLightText
+                ? System.Windows.Media.Color.FromArgb(55, 255, 255, 255)
+                : System.Windows.Media.Color.FromArgb(45, 0, 0, 0);
+            var borderBrush = new SolidColorBrush(borderColor);
+            borderBrush.Freeze();
+            DockBorderBrush = borderBrush;
+        }
+        else
+        {
+            var borderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(50, 128, 128, 128));
+            borderBrush.Freeze();
+            DockBorderBrush = borderBrush;
+        }
     }
     private void UpdateTextBrush()
     {
@@ -338,6 +406,27 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var brush = new SolidColorBrush(color);
         brush.Freeze();
         DockTextBrush = brush;
+
+        if (_config.EnableTextShadow)
+        {
+            var shadowColor = _config.UseLightText
+                ? System.Windows.Media.Color.FromArgb(230, 0, 0, 0)
+                : System.Windows.Media.Color.FromArgb(230, 255, 255, 255);
+            var effect = new System.Windows.Media.Effects.DropShadowEffect
+            {
+                Color = shadowColor,
+                BlurRadius = 4,
+                ShadowDepth = 1.2,
+                Direction = 270,
+                Opacity = 0.85
+            };
+            effect.Freeze();
+            DockTextShadowEffect = effect;
+        }
+        else
+        {
+            DockTextShadowEffect = null;
+        }
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -416,6 +505,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void MainWindow_SourceInitialized(object? sender, EventArgs e)
     {
         HideFromWindowSwitchers();
+        ApplyGlassEffect();
     }
 
     private void RegisterSystemEventHandlers()
@@ -1445,6 +1535,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             BackgroundG = source.BackgroundG,
             BackgroundB = source.BackgroundB,
             UseLightText = source.UseLightText,
+            EnableTextShadow = source.EnableTextShadow,
             AutoStartEnabled = source.AutoStartEnabled,
             AutoStartPrompted = source.AutoStartPrompted,
             Shortcuts = shortcuts.Select(s => new ShortcutItem
@@ -1462,7 +1553,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var prevAutoStart = _config.AutoStartEnabled;
         updatedConfig.Shortcuts ??= new();
         _config = updatedConfig;
-        _config.BackgroundOpacity = _config.UseTransparency ? GlassOpacity : 1.0;
         if (!_config.AutoStartPrompted && prevAutoStart != _config.AutoStartEnabled)
         {
             _config.AutoStartPrompted = true;
@@ -1564,7 +1654,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _config.DockSide = _dockSide;
         _config.DockWidth = IsEditMode ? Math.Max(_preEditWidth, 175) : Math.Max(Width, 175);
         _config.IconSize = IconSize;
-        _config.BackgroundOpacity = _config.UseTransparency ? GlassOpacity : 1.0;
         _config.UseLightText = _config.UseLightText;
         _config.Shortcuts = Shortcuts.ToList();
         PersistConfigToDisk(_config);
@@ -2033,87 +2122,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void ApplyGlassEffect()
     {
-        try
-        {
-            if (!_config.UseTransparency)
-            {
-                DisableGlassEffect();
-                return;
-            }
-
-            var opacity = _config.UseTransparency ? GlassOpacity : 1.0;
-            // Opacity 1.0 => sin efecto blur (solo color sólido)
-            if (opacity >= 0.99)
-            {
-                DisableGlassEffect();
-                return;
-            }
-
-            var hr = NativeMethods.DwmIsCompositionEnabled(out var enabled);
-            if (hr != 0 || !enabled)
-            {
-                DisableGlassEffect();
-                return;
-            }
-
-            var hwnd = new WindowInteropHelper(this).Handle;
-            if (hwnd == IntPtr.Zero) return;
-
-            var margins = new NativeMethods.MARGINS { cxLeftWidth = -1, cxRightWidth = -1, cyTopHeight = -1, cyBottomHeight = -1 };
-            NativeMethods.DwmExtendFrameIntoClientArea(hwnd, ref margins);
-
-            var blur = new NativeMethods.DWM_BLURBEHIND
-            {
-                dwFlags = NativeMethods.DWM_BB_ENABLE,
-                fEnable = true,
-                hRgnBlur = IntPtr.Zero,
-                fTransitionOnMaximized = true
-            };
-            NativeMethods.DwmEnableBlurBehindWindow(hwnd, ref blur);
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine(ex);
-        }
+        GlassEffectHelper.Apply(this, _config.UseTransparency, _config.UseLightText);
     }
 
     private void DisableGlassEffect()
     {
-        try
-        {
-            var hwnd = new WindowInteropHelper(this).Handle;
-            if (hwnd == IntPtr.Zero) return;
-
-            var hr = NativeMethods.DwmIsCompositionEnabled(out var enabled);
-            if (hr != 0 || !enabled)
-            {
-                return;
-            }
-
-            var blur = new NativeMethods.DWM_BLURBEHIND
-            {
-                dwFlags = NativeMethods.DWM_BB_ENABLE,
-                fEnable = false,
-                hRgnBlur = IntPtr.Zero,
-                fTransitionOnMaximized = false
-            };
-            NativeMethods.DwmEnableBlurBehindWindow(hwnd, ref blur);
-
-            // Restore a normal client area when Glass is disabled so the dock
-            // returns to a fully opaque surface instead of keeping extended frame behavior.
-            var margins = new NativeMethods.MARGINS
-            {
-                cxLeftWidth = 0,
-                cxRightWidth = 0,
-                cyTopHeight = 0,
-                cyBottomHeight = 0
-            };
-            NativeMethods.DwmExtendFrameIntoClientArea(hwnd, ref margins);
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine(ex);
-        }
+        GlassEffectHelper.Apply(this, false, _config.UseLightText);
     }
 }
 

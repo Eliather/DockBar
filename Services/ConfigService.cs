@@ -9,7 +9,7 @@ namespace DockBar.Services;
 public static class ConfigService
 {
     private const string FileName = "shortcuts.json";
-    private const double GlassOpacity = 0.72;
+    private const double GlassOpacity = 0.45;
     private static readonly JsonSerializerOptions IndentedJsonOptions = new() { WriteIndented = true };
 
     public static string ConfigDirectory =>
@@ -61,7 +61,10 @@ public static class ConfigService
     {
         try
         {
-            config.BackgroundOpacity = config.UseTransparency ? GlassOpacity : 1.0;
+            if (config.BackgroundOpacity < 0 || config.BackgroundOpacity > 1.0)
+            {
+                config.BackgroundOpacity = GlassOpacity;
+            }
             Directory.CreateDirectory(ConfigDirectory);
             var json = JsonSerializer.Serialize(config, IndentedJsonOptions);
             File.WriteAllText(ConfigFilePath, json);
@@ -81,7 +84,10 @@ public static class ConfigService
         if (config.IconSize <= 0) config.IconSize = 40;
         if (config.HideAnimationMs <= 0) config.HideAnimationMs = 200;
         if (config.AutoHideDelaySeconds < 0) config.AutoHideDelaySeconds = 0;
-        config.BackgroundOpacity = config.UseTransparency ? GlassOpacity : 1.0;
+        if (config.BackgroundOpacity < 0 || config.BackgroundOpacity > 1.0)
+        {
+            config.BackgroundOpacity = GlassOpacity;
+        }
         if (config.BackgroundR == 0 && config.BackgroundG == 0 && config.BackgroundB == 0)
         {
             // keep black; leave else as-is
