@@ -19,13 +19,13 @@ Con DockBar obtendrás acceso instantáneo a tus programas sin saturar tu barra 
 - 100% privado: sin telemetría, sin rastreo y con mínimo consumo de recursos.
 ```
 
-### 2. Novedades de esta versión (What's new in this version - v1.6.1)
+### 2. Novedades de esta versión (What's new in this version - v1.7.0)
 ```text
-- Integración completa con Steam: compatibilidad nativa con accesos .url y protocolos steam:// con resolución automática de íconos de alta definición.
-- Explorador instantáneo de apps de la Store: escaneo nativo de aplicaciones instaladas en menos de 100 ms y botón de actualización en caliente.
-- Recorte inteligente de íconos: eliminación automática de bordes transparentes y márgenes de mosaico para una visualización nítida y uniforme.
-- Detección mejorada de pantalla completa: comportamiento de auto-ocultación optimizado para juegos y reproducción multimedia.
-- Mejoras de rendimiento en Windows 10 y Windows 11 con empaquetado nativo MSIX.
+- Efecto Glass y Transparencia Real: nuevo motor de composición DWM por canal alfa con marco extendido, permitiendo una transparencia limpia y cristalina al 0% y 5% de opacidad sin capas lechosas ni veladuras grises.
+- Sombra Dinámica a Letras: contraste inteligente automático (sombra negra en texto claro, sombra blanca en texto oscuro) para garantizar una legibilidad perfecta sobre cualquier fondo de pantalla.
+- Rediseño Espacioso de Ajustes: interfaz optimizada y organizada con selector de color HSV, controles dedicados de opacidad y paleta rápida de 12 muestras de color completamente visible.
+- Rango de Opacidad Completo: control preciso y estable del 0% (100% transparente) al 100% (fondo sólido).
+- Optimizaciones de estabilidad y rendimiento general en Windows 10 y Windows 11.
 ```
 
 ### 3. Características del producto (Product Features - Lista de viñetas)
@@ -59,13 +59,13 @@ Experience faster multitasking without cluttering your desktop or taskbar:
 - Completely private: zero telemetry, no background trackers, and minimal memory footprint.
 ```
 
-### 2. Novedades de esta versión (What's new in this version - v1.6.1)
+### 2. Novedades de esta versión (What's new in this version - v1.7.0)
 ```text
-- Full Steam Integration: native support for .url shortcuts and steam:// protocol links with high-resolution game icon resolution.
-- Instant Store App Scanner: lightning-fast app discovery (< 100ms) with an on-demand refresh button.
-- Intelligent Icon Auto-Cropping: automatically trims oversized transparent padding and Start Menu tile margins for crisp icon display.
-- Enhanced Fullscreen Detection: refined auto-hide behavior during gaming and video playback.
-- Performance optimizations and native MSIX packaging for Windows 10 & 11.
+- True Glass & Clean Transparency: new native DWM hardware composition engine with per-pixel alpha rendering, delivering crystal-clear transparency at 0% and 5% opacity without foggy or milky overlays.
+- Dynamic Letter Shadow: intelligent text contrast shadow (black shadow behind light text, white shadow behind dark text) for optimal readability over any wallpaper.
+- Redesigned Settings Experience: spacious, streamlined settings layout with HSV color picker, dedicated opacity controls, and full visibility for all 12 quick palette color presets.
+- Full Opacity Range: smooth, precise scaling from 0% (100% transparent) to 100% (solid background).
+- General performance and rendering optimizations across Windows 10 and Windows 11.
 ```
 
 ### 3. Características del producto (Product Features - Bullet points)
