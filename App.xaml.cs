@@ -3,6 +3,7 @@ using System.Drawing;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Windows;
 using DockBar.Services;
 using WinForms = System.Windows.Forms;
@@ -11,6 +12,13 @@ namespace DockBar;
 
 public partial class App : System.Windows.Application
 {
+    private const string SingleInstanceMutexName = "Local\\DockBar_SingleInstance_Mutex_Eliather";
+    private const string SingleInstanceEventName = "Local\\DockBar_SingleInstance_Event_Eliather";
+    private static Mutex? _singleInstanceMutex;
+    private static EventWaitHandle? _singleInstanceEvent;
+    private static Thread? _signalWatcherThread;
+    private static bool _isExiting;
+
     private static readonly TimeSpan TrayMenuReopenGuard = TimeSpan.FromMilliseconds(400);
     private static readonly FieldInfo? NotifyIconIdField = typeof(WinForms.NotifyIcon).GetField("id", BindingFlags.Instance | BindingFlags.NonPublic);
     private static readonly FieldInfo? NotifyIconWindowField = typeof(WinForms.NotifyIcon).GetField("window", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -24,6 +32,32 @@ public partial class App : System.Windows.Application
     {
         try
         {
+            _singleInstanceMutex = new Mutex(true, SingleInstanceMutexName, out bool isNewInstance);
+            if (!isNewInstance)
+            {
+                // Instancia secundaria: notificar a la primaria para que muestre el dock y cerrar inmediatamente
+                try
+                {
+                    using var existingEvent = EventWaitHandle.OpenExisting(SingleInstanceEventName);
+                    existingEvent.Set();
+                }
+                catch
+                {
+                    // No se pudo señalar la instancia previa (posiblemente iniciando/cerrando)
+                }
+
+                Shutdown();
+                return;
+            }
+
+            _singleInstanceEvent = new EventWaitHandle(false, EventResetMode.AutoReset, SingleInstanceEventName);
+            _signalWatcherThread = new Thread(WaitForShowSignal)
+            {
+                IsBackground = true,
+                Name = "DockBar_SingleInstanceWatcher"
+            };
+            _signalWatcherThread.Start();
+
             base.OnStartup(e);
 
             _window = new MainWindow();
@@ -34,6 +68,37 @@ public partial class App : System.Windows.Application
         {
             File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash.log"), ex.ToString());
             System.Windows.MessageBox.Show(ex.ToString(), "DockBar Startup Error");
+        }
+    }
+
+    private void WaitForShowSignal()
+    {
+        while (!_isExiting && _singleInstanceEvent != null)
+        {
+            try
+            {
+                if (_singleInstanceEvent.WaitOne())
+                {
+                    if (_isExiting) break;
+
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        ShowWindow();
+                    }));
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+                break;
+            }
+            catch (AbandonedMutexException)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(ex);
+            }
         }
     }
 
@@ -241,6 +306,7 @@ public partial class App : System.Windows.Application
 
     private void ExitApp()
     {
+        _isExiting = true;
         _trayMenu?.RequestClose();
         _notifyIcon?.Dispose();
         _window?.Close();
@@ -249,8 +315,28 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _isExiting = true;
         _trayMenu?.RequestClose();
         _notifyIcon?.Dispose();
+
+        try
+        {
+            _singleInstanceEvent?.Dispose();
+            _singleInstanceEvent = null;
+        }
+        catch { }
+
+        try
+        {
+            if (_singleInstanceMutex != null)
+            {
+                _singleInstanceMutex.ReleaseMutex();
+                _singleInstanceMutex.Dispose();
+                _singleInstanceMutex = null;
+            }
+        }
+        catch { }
+
         base.OnExit(e);
     }
 

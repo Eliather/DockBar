@@ -1776,13 +1776,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         if (eventType == NativeMethods.EVENT_OBJECT_LOCATIONCHANGE)
         {
-            if (idObject != NativeMethods.OBJID_WINDOW)
+            if (idObject != NativeMethods.OBJID_WINDOW || idChild != 0 || hwnd == IntPtr.Zero)
             {
                 return;
             }
 
-            var foreground = NativeMethods.GetForegroundWindow();
-            if (foreground == IntPtr.Zero || hwnd != foreground)
+            var myHwnd = new WindowInteropHelper(this).Handle;
+            if (hwnd == myHwnd)
             {
                 return;
             }
@@ -1797,9 +1797,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _fullscreenDebounceTimer.Stop();
         _fullscreenDebounceTimer.Start();
     }
-
-
-
 
     private void UpdateFullscreenState()
     {
@@ -1820,11 +1817,22 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 return;
             }
 
-            // Check if window style is a normal maximized window (has title bar/caption).
+            if (!NativeMethods.IsWindowVisible(foreground))
+            {
+                SetFullscreen(false);
+                return;
+            }
+
+            // Check if window is maximized (standard or modern Win11 custom titlebar apps)
+            if (NativeMethods.IsZoomed(foreground))
+            {
+                SetFullscreen(false);
+                return;
+            }
+
             var style = NativeMethods.GetWindowLong(foreground, -16); // GWL_STYLE
-            const int WS_CAPTION = 0x00C00000;
             const int WS_MAXIMIZE = 0x01000000;
-            if ((style & WS_MAXIMIZE) != 0 && (style & WS_CAPTION) == WS_CAPTION)
+            if ((style & WS_MAXIMIZE) != 0)
             {
                 SetFullscreen(false);
                 return;
@@ -1844,7 +1852,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 return;
             }
 
-            const int tolerance = 8;
+            const int tolerance = 4;
             var fullscreen =
                 Math.Abs(rect.Left - mi.rcMonitor.Left) <= tolerance &&
                 Math.Abs(rect.Top - mi.rcMonitor.Top) <= tolerance &&
@@ -1918,6 +1926,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         if (_fullscreenActive == active)
         {
+            if (!active && !_isPaused && IsVisible)
+            {
+                EnsureTopmost();
+            }
             return;
         }
 
@@ -2100,14 +2112,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void EnsureTopmost()
     {
-        if (_isPaused) return;
+        if (_isPaused || _fullscreenActive) return;
 
         try
         {
             var hwnd = new WindowInteropHelper(this).Handle;
             if (hwnd == IntPtr.Zero) return;
             NativeMethods.SetWindowPos(hwnd, NativeMethods.HWND_TOPMOST, 0, 0, 0, 0,
-                NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOACTIVATE);
+                NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOACTIVATE | NativeMethods.SWP_NOOWNERZORDER);
+            _edgeHotspot?.EnsureTopmost();
         }
         catch (Exception ex)
         {
@@ -2164,6 +2177,12 @@ internal static class NativeMethods
     public static extern IntPtr GetForegroundWindow();
 
     [DllImport("user32.dll")]
+    public static extern bool IsZoomed(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    public static extern bool IsWindowVisible(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
     public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
     [DllImport("user32.dll")]
@@ -2206,6 +2225,7 @@ internal static class NativeMethods
     public const uint SWP_NOSIZE = 0x0001;
     public const uint SWP_NOMOVE = 0x0002;
     public const uint SWP_NOACTIVATE = 0x0010;
+    public const uint SWP_NOOWNERZORDER = 0x0200;
 
     public static string? GetProcessName(IntPtr hwnd)
     {

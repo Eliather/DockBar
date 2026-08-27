@@ -8,36 +8,40 @@ Este archivo contiene los textos listos para copiar y pegar en los campos de la 
 
 ### 1. Descripción (Description)
 ```text
-DockBar es una elegante y moderna barra lateral de accesos directos estilo dock diseñada para optimizar tu flujo de trabajo en Windows. Organiza tus aplicaciones, juegos, carpetas y herramientas favoritas en un panel compacto y personalizable que se oculta automáticamente cuando no lo necesitas.
+DockBar es una elegante y moderna barra lateral de accesos directos estilo dock diseñada para optimizar tu flujo de trabajo en Windows. Organiza tus aplicaciones, juegos, carpetas y herramientas favoritas en un panel compacto y personalizable que se superpone suavemente y se oculta de forma inteligente cuando no lo necesitas.
 
 Con DockBar obtendrás acceso instantáneo a tus programas sin saturar tu barra de tareas ni tu escritorio:
+- Control de instancia única inteligente: sin procesos duplicados, siempre listo y al frente.
 - Arrastra y suelta ejecutables (.exe), accesos directos (.lnk) o carpetas directamente en la barra.
 - Integración completa con Steam: añade juegos con un solo clic y conserva sus íconos en alta resolución.
-- Selector nativo ultrarrápido de aplicaciones de la Microsoft Store y apps del sistema.
-- Diseño minimalista con efecto Glass / Acrílico, personalización de colores, tamaño de íconos y posición lateral (izquierda o derecha).
-- Ocultación automática inteligente que respeta tus juegos y aplicaciones en pantalla completa.
+- Selector nativo ultrarrápido de aplicaciones de la Microsoft Store y apps del sistema (< 5 ms).
+- Diseño minimalista con efecto Glass / Acrílico, personalización de colores, opacidad continua del 0% al 100%, sombra dinámica en textos y posición lateral (izquierda o derecha).
+- Ocultación automática inteligente y gestión avanzada de Z-Order que respeta tus juegos y aplicaciones en pantalla completa.
 - 100% privado: sin telemetría, sin rastreo y con mínimo consumo de recursos.
 ```
 
-### 2. Novedades de esta versión (What's new in this version - v1.7.0)
+### 2. Novedades de esta versión (What's new in this version - v1.7.1)
 ```text
-- Efecto Glass y Transparencia Real: nuevo motor de composición DWM por canal alfa con marco extendido, permitiendo una transparencia limpia y cristalina al 0% y 5% de opacidad sin capas lechosas ni veladuras grises.
-- Sombra Dinámica a Letras: contraste inteligente automático (sombra negra en texto claro, sombra blanca en texto oscuro) para garantizar una legibilidad perfecta sobre cualquier fondo de pantalla.
-- Rediseño Espacioso de Ajustes: interfaz optimizada y organizada con selector de color HSV, controles dedicados de opacidad y paleta rápida de 12 muestras de color completamente visible.
-- Rango de Opacidad Completo: control preciso y estable del 0% (100% transparente) al 100% (fondo sólido).
-- Optimizaciones de estabilidad y rendimiento general en Windows 10 y Windows 11.
+- Control de Instancia Única: protección mediante Mutex del sistema para evitar procesos duplicados; abrir la app nuevamente enfoca la instancia existente al instante.
+- Detección Inteligente de Pantalla Completa en Windows 11: compatibilidad nativa con ventanas maximizadas modernas (Chrome, Edge, Terminal, VS Code) evitando que el dock se oculte erróneamente.
+- Superposición y Z-Order Continuo: mantenimiento constante de la barra en primer plano sin degradación de capas sobre otras aplicaciones.
+- Optimización de Eventos y Rendimiento: reducción del consumo de CPU y sobrecarga en el seguimiento de eventos del sistema operativo.
+- Efecto Glass y Transparencia Real (0% - 100%): motor de composición DWM nativo por hardware con transparencia cristalina pura sin veladuras grises.
+- Sombra Dinámica en Letras: contraste inteligente automático para garantizar una legibilidad perfecta sobre cualquier fondo de pantalla.
+- Rediseño Espacioso de Ajustes: interfaz optimizada de 2 columnas con selector HSV, cuadro HEX y paleta de 12 muestras de color.
 ```
 
 ### 3. Características del producto (Product Features - Lista de viñetas)
 ```text
 - Barra lateral dock personalizable para el lateral izquierdo o derecho de la pantalla
-- Ocultación automática suave con borde sensible y detección de aplicaciones en pantalla completa
+- Control de instancia única nativo y gestión continua de superposición (TopMost)
+- Ocultación automática suave con borde sensible y detección inteligente de juegos a pantalla completa
 - Soporte para arrastrar y soltar ejecutables, accesos directos, carpetas y comandos
-- Integración nativa con juegos de Steam y librerías multidisco
-- Selector ultrarrápido de aplicaciones de la Microsoft Store
-- Efecto Glass (acrílico/transparencia) con selector de colores personalizado
+- Integración nativa con librerías y juegos de Steam
+- Selector ultrarrápido de aplicaciones de la Microsoft Store y del sistema (< 5 ms)
+- Efecto Glass / Acrílico con rango de opacidad total (0% - 100%) y sombra adaptativa de texto
 - Modo edición intuitivo para reordenar, renombrar y cambiar íconos
-- Paginación dinámica integrada cuando se añaden múltiples accesos directos
+- Paginación dinámica integrada cuando se gestionan múltiples accesos directos
 - Inicio automático opcional con Windows
 - Rendimiento ultra liviano, sin publicidad y sin recopilación de datos
 ```
@@ -48,34 +52,38 @@ Con DockBar obtendrás acceso instantáneo a tus programas sin saturar tu barra 
 
 ### 1. Descripción (Description)
 ```text
-DockBar is a sleek, modern, and lightweight shortcut dock designed to streamline your workflow on Windows. Keep your favorite apps, games, folders, and system tools organized in a compact panel that smoothly auto-hides when you don't need it.
+DockBar is a sleek, modern, and lightweight shortcut dock designed to streamline your workflow on Windows. Keep your favorite apps, games, folders, and system tools organized in a compact overlay panel that smoothly auto-hides when you don't need it.
 
 Experience faster multitasking without cluttering your desktop or taskbar:
+- Single-instance enforcement: zero duplicate background processes, always ready and accessible.
 - Drag and drop executables (.exe), shortcuts (.lnk), or folders directly onto the dock.
 - Full Steam integration: effortlessly add Steam games with automatic high-resolution icon extraction.
-- Instant Store App picker: quickly scan and add Microsoft Store and system apps.
-- Clean aesthetic with customizable Glass / Acrylic blur effects, custom color palettes, icon sizing, and left/right placement.
-- Smart auto-hide with edge detection that automatically respects fullscreen games and media playback.
+- Instant Store App picker: quickly scan and add Microsoft Store and system apps (< 5 ms).
+- Clean aesthetic with customizable Glass / Acrylic effects, full 0%-100% opacity scaling, dynamic text contrast shadow, and left/right placement.
+- Smart auto-hide and continuous Z-order management that seamlessly respects fullscreen games and media playback.
 - Completely private: zero telemetry, no background trackers, and minimal memory footprint.
 ```
 
-### 2. Novedades de esta versión (What's new in this version - v1.7.0)
+### 2. Novedades de esta versión (What's new in this version - v1.7.1)
 ```text
-- True Glass & Clean Transparency: new native DWM hardware composition engine with per-pixel alpha rendering, delivering crystal-clear transparency at 0% and 5% opacity without foggy or milky overlays.
-- Dynamic Letter Shadow: intelligent text contrast shadow (black shadow behind light text, white shadow behind dark text) for optimal readability over any wallpaper.
-- Redesigned Settings Experience: spacious, streamlined settings layout with HSV color picker, dedicated opacity controls, and full visibility for all 12 quick palette color presets.
-- Full Opacity Range: smooth, precise scaling from 0% (100% transparent) to 100% (solid background).
-- General performance and rendering optimizations across Windows 10 and Windows 11.
+- Single Instance Enforcement: system-wide Mutex protection prevents duplicate processes; launching the app again immediately reveals and focuses the existing dock.
+- Accurate Windows 11 Fullscreen Detection: native IsZoomed integration prevents modern maximized tabbed apps (Chrome, Edge, Terminal, VS Code) from falsely triggering dock auto-hide.
+- Continuous TopMost & Z-Order Management: guarantees DockBar never sinks below other regular windows when switching application focus.
+- Event System & Performance Optimization: filtered event hooks eliminate unnecessary interop and CPU usage during window movement.
+- True Glass & Hardware Alpha Composition: crystal-clear transparency at 0% and 5% opacity without foggy or milky overlays.
+- Dynamic Text Contrast Shadow: automatic drop shadows behind shortcut titles for optimal legibility across light and dark wallpapers.
+- Redesigned Settings Experience: streamlined two-column layout with HSV canvas, HEX inputs, and 12 quick color presets.
 ```
 
 ### 3. Características del producto (Product Features - Bullet points)
 ```text
 - Customizable dock placed on either the left or right side of your screen
-- Smooth auto-hide with responsive edge hotspot and fullscreen game awareness
+- Native single-instance protection and continuous TopMost overlay management
+- Smooth auto-hide with responsive edge hotspot and smart fullscreen game awareness
 - Drag-and-drop support for executables, shortcuts, folders, URIs, and commands
 - Native integration with Steam libraries and game shortcuts
-- Instant Microsoft Store and system application picker
-- Glass / Acrylic blur effect with custom background color picker
+- Instant Microsoft Store and system application picker (< 5 ms)
+- True Glass / Acrylic blur effect with 0%-100% opacity scaling and adaptive text shadows
 - Built-in edit mode to reorder, rename, remove, and change custom icons
 - Smooth dynamic pagination when managing numerous shortcuts
 - Optional auto-start with Windows

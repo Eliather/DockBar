@@ -50,6 +50,26 @@ public sealed class EdgeHotspotWindow : Window
         {
             Show();
         }
+
+        EnsureTopmost();
+    }
+
+    public void EnsureTopmost()
+    {
+        if (!IsVisible) return;
+
+        try
+        {
+            var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+            if (hwnd != IntPtr.Zero)
+            {
+                NativeMethods.SetWindowPos(hwnd, NativeMethods.HWND_TOPMOST, 0, 0, 0, 0,
+                    NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOACTIVATE | NativeMethods.SWP_NOOWNERZORDER);
+            }
+        }
+        catch
+        {
+        }
     }
 
     public void HideHotspot()
