@@ -2,11 +2,28 @@
 $ErrorActionPreference = "Stop"
 
 Write-Host "Obteniendo credenciales de Git..."
-$credInput = "protocol=https`nhost=github.com`n`n"
-$credOutput = $credInput | git credential fill
+$gcmPath = "C:\Program Files\Git\mingw64\bin\git-credential-manager.exe"
+if (-not (Test-Path $gcmPath)) {
+    $gcmCmd = Get-Command git-credential-manager -ErrorAction SilentlyContinue
+    if ($gcmCmd) { $gcmPath = $gcmCmd.Source }
+}
+
+$psi = New-Object System.Diagnostics.ProcessStartInfo
+$psi.FileName = $gcmPath
+$psi.Arguments = "get"
+$psi.UseShellExecute = $false
+$psi.RedirectStandardInput = $true
+$psi.RedirectStandardOutput = $true
+$psi.CreateNoWindow = $true
+$proc = [System.Diagnostics.Process]::Start($psi)
+$proc.StandardInput.Write("protocol=https`nhost=github.com`n`n")
+$proc.StandardInput.Flush()
+$proc.StandardInput.Close()
+$rawCreds = $proc.StandardOutput.ReadToEnd()
+$proc.WaitForExit()
 
 $token = $null
-foreach ($line in $credOutput) {
+foreach ($line in ($rawCreds -split "`r?`n")) {
     if ($line.StartsWith("password=")) {
         $token = $line.Substring(9)
         break
