@@ -54,7 +54,9 @@ if ($existingRelease -and $existingRelease.id) {
     } | ConvertTo-Json
 
     $content = New-Object System.Net.Http.StringContent($payload, [System.Text.Encoding]::UTF8, "application/json")
-    $req = New-Object System.Net.Http.HttpRequestMessage(New-Object System.Net.Http.HttpMethod("PATCH"), "https://api.github.com/repos/$owner/$repo/releases/$($existingRelease.id)")
+    $req = New-Object System.Net.Http.HttpRequestMessage
+    $req.Method = New-Object System.Net.Http.HttpMethod "PATCH"
+    $req.RequestUri = New-Object System.Uri "https://api.github.com/repos/$owner/$repo/releases/$($existingRelease.id)"
     $req.Content = $content
     $res = $client.SendAsync($req).GetAwaiter().GetResult()
     $resContent = $res.Content.ReadAsStringAsync().GetAwaiter().GetResult()
