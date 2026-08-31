@@ -1,5 +1,5 @@
 # DockBar
-DockBar es una barra lateral de accesos directos estilo dock para Windows desarrollada en C# y WPF. La versión `1.7.1` introduce un efecto Glass real con composición por canal alfa por hardware, sombra dinámica de alto contraste en el texto, control de opacidad continuo del 0% al 100%, control de instancia única y detección inteligente de pantalla completa en Windows 11.
+DockBar es una barra lateral de accesos directos estilo dock para Windows desarrollada en C# y WPF. La versión `1.7.2` perfecciona la detección inteligente de juegos en modo ventana completa / sin bordes (*Borderless Fullscreen*), optimiza los tiempos de respuesta ante transiciones de pantalla completa, mantiene el efecto Glass real por hardware y la gestión continua de superposición y Z-Order.
 
 <img width="256" height="256" alt="Dock" src="https://github.com/user-attachments/assets/eb6fd915-77f7-4298-b41b-90a7d14f41d1" />
 
@@ -17,20 +17,18 @@ El proyecto está diseñado bajo cinco prioridades esenciales:
 
 - **Instancia única garantizada**: Protección del sistema mediante `Mutex` y `EventWaitHandle` para evitar procesos duplicados; abrir un segundo ejecutable revela y enfoca instantáneamente la instancia activa.
 - **Interacción ultrarrápida**: Enumeración instantánea de aplicaciones y juegos mediante APIs nativas Win32 Shell COM (< 5 ms de tiempo de respuesta) sin subprocesos de PowerShell.
-- **Gestión inteligente de primer plano y Z-Order**: Superposición continua (TopMost) que se mantiene sobre otras ventanas sin degradarse y detección nativa (`IsZoomed`) de ventanas maximizadas en Windows 11 para respetar juegos y videos en pantalla completa real.
+- **Detección robusta de juegos y modo ventana completa**: Análisis geométrico DWM y Win32 de doble capa con tolerancia adaptativa que reconoce juegos en pantalla completa exclusiva o ventana sin bordes (*Borderless Windowed*), evitando aperturas accidentales del dock durante las partidas.
 - **Efecto Glass y transparencia real**: Composición por hardware DWM con soporte de transparencia cristalina pura (0% - 100%) y sombra dinámica adaptativa para texto claro y oscuro.
 - **Cero dependencias de terceros**: Código fuente en C# 13 y .NET 10.0 que utiliza exclusivamente APIs estándar de Windows sin librerías externas pesadas.
 
 ---
 
-## Novedades en la versión 1.7.1
-- **Control de Instancia Única (`App.xaml.cs`)**: Previene la ejecución múltiple del programa en segundo plano. Si el usuario abre DockBar nuevamente, la aplicación existente se muestra al frente y el segundo proceso se cierra de inmediato.
-- **Detección precisa de Pantalla Completa vs Ventanas Maximizadas (`MainWindow.xaml.cs`)**: Integración de la API Win32 `IsZoomed` para evitar falsos positivos en aplicaciones modernas de Windows 11 (Chrome, Edge, Windows Terminal, VS Code) que usan barras de título personalizadas.
-- **Mantenimiento continuo de TopMost y Z-Order (`MainWindow.xaml.cs` & `EdgeHotspotWindow.cs`)**: Reafirmación automática de la posición superior del dock y del detector de borde al cambiar de ventana activa.
-- **Optimización de eventos del sistema (`SetWinEventHook`)**: Filtrado inteligente de eventos de movimiento de ventanas para reducir el consumo de CPU e interop a cero durante el uso normal del sistema.
-- **Efecto Glass y transparencia por canal alfa (`GlassEffectHelper.cs`)**: Extensión de marco con `WindowChrome` y `ACCENT_ENABLE_TRANSPARENTGRADIENT`, permitiendo transparencia 100% limpia sin capas lechosas ni grisáceas.
-- **Sombra Dinámica en Texto (`MainWindow.xaml` & `MainWindow.xaml.cs`)**: Sombra de alto contraste inteligente (negra para texto blanco, blanca para texto oscuro) que garantiza legibilidad óptima sobre cualquier fondo de pantalla.
-- **Rediseño de la Ventana de Ajustes (`SettingsWindow.xaml`)**: Distribución espaciosa de dos columnas con selector de color HSV, controles dedicados de opacidad, cuadro HEX y paleta rápida de 12 muestras de color.
+## Novedades en la versión 1.7.2
+- **Detección Geométrica Robusta para Juegos en Ventana Completa (`MainWindow.xaml.cs`)**: Corrección crítica que permite a DockBar detectar y ocultarse correctamente ante videojuegos que corren en modo "Ventana Pantalla Completa" / "Sin Bordes" (*Borderless Windowed*), evitando que el dock se despliegue o intercepte clics durante el juego.
+- **Diferenciación Dinámica de Aplicaciones Maximizadas vs Juegos**: Las ventanas de productividad maximizadas (Chrome, VS Code, Explorer) siguen conviviendo con el dock normalmente, mientras que los juegos a pantalla completa suspenden el dock y su borde sensible por completo.
+- **Respuesta Ultrarrápida en Conmutación de Foco**: Reducción del temporizador de estabilización a 150 ms para una recuperación y ocultación instantáneas al alternar entre juegos y escritorio (Alt+Tab).
+- **Protección de Ventanas Minimizadas**: Detección nativa con `IsIconic` para evitar transiciones de estado erróneas cuando las aplicaciones en primer plano se minimizan.
+- **Mantenimiento Continuo de TopMost e Instancia Única**: Máxima estabilidad de superposición y prevención estricta de procesos duplicados.
 
 ---
 

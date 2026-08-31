@@ -228,7 +228,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _hideTimer = new DispatcherTimer();
         _hideTimer.Tick += HideTimer_Tick;
 
-        _fullscreenDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+        _fullscreenDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
         _fullscreenDebounceTimer.Tick += (_, _) =>
         {
             _fullscreenDebounceTimer.Stop();
@@ -1813,38 +1813,23 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
             if (IsOverlayForeground(foreground))
             {
-                // Ignore overlays taking focus
+                // Ignore overlays taking focus so we don't change state during in-game overlays
                 return;
             }
 
-            if (!NativeMethods.IsWindowVisible(foreground))
-            {
-                SetFullscreen(false);
-                return;
-            }
-
-            // Check if window is maximized (standard or modern Win11 custom titlebar apps)
-            if (NativeMethods.IsZoomed(foreground))
-            {
-                SetFullscreen(false);
-                return;
-            }
-
-            var style = NativeMethods.GetWindowLong(foreground, -16); // GWL_STYLE
-            const int WS_MAXIMIZE = 0x01000000;
-            if ((style & WS_MAXIMIZE) != 0)
-            {
-                SetFullscreen(false);
-                return;
-            }
-
-            if (!TryGetWindowBounds(foreground, out var rect))
+            if (!NativeMethods.IsWindowVisible(foreground) || NativeMethods.IsIconic(foreground))
             {
                 SetFullscreen(false);
                 return;
             }
 
             var monitor = NativeMethods.MonitorFromWindow(foreground, NativeMethods.MONITOR_DEFAULTTONEAREST);
+            if (monitor == IntPtr.Zero)
+            {
+                SetFullscreen(false);
+                return;
+            }
+
             var mi = new NativeMethods.MONITORINFO { cbSize = Marshal.SizeOf(typeof(NativeMethods.MONITORINFO)) };
             if (!NativeMethods.GetMonitorInfo(monitor, ref mi))
             {
@@ -1852,18 +1837,69 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 return;
             }
 
-            const int tolerance = 4;
-            var fullscreen =
-                Math.Abs(rect.Left - mi.rcMonitor.Left) <= tolerance &&
-                Math.Abs(rect.Top - mi.rcMonitor.Top) <= tolerance &&
-                Math.Abs(rect.Right - mi.rcMonitor.Right) <= tolerance &&
-                Math.Abs(rect.Bottom - mi.rcMonitor.Bottom) <= tolerance;
-            SetFullscreen(fullscreen);
+            // Get window bounds (both DWM extended frame and Win32 rect)
+            var hasDwmBounds = NativeMethods.DwmGetWindowAttribute(foreground, NativeMethods.DWMWA_EXTENDED_FRAME_BOUNDS, out var dwmRect, Marshal.SizeOf(typeof(NativeMethods.RECT))) == 0
+                && dwmRect.Right > dwmRect.Left && dwmRect.Bottom > dwmRect.Top;
+            var hasWinBounds = NativeMethods.GetWindowRect(foreground, out var winRect)
+                && winRect.Right > winRect.Left && winRect.Bottom > winRect.Top;
+
+            if (!hasDwmBounds && !hasWinBounds)
+            {
+                SetFullscreen(false);
+                return;
+            }
+
+            // Tolerance to accommodate invisible sizing borders (-8px) and DPI scaling differences
+            const int tolerance = 10;
+            var coversMonitor = (hasDwmBounds && IsWindowCoveringRect(dwmRect, mi.rcMonitor, tolerance)) ||
+                                (hasWinBounds && IsWindowCoveringRect(winRect, mi.rcMonitor, tolerance));
+
+            if (!coversMonitor)
+            {
+                SetFullscreen(false);
+                return;
+            }
+
+            // If the monitor's work area equals the monitor area (e.g., Windows Taskbar is set to Auto-Hide or hidden),
+            // a regular maximized window (such as Chrome or VS Code) will also cover the entire monitor.
+            // We distinguish standard desktop maximized apps from fullscreen games / F11 mode by checking window styles.
+            var isWorkAreaSameAsMonitor =
+                Math.Abs(mi.rcWork.Left - mi.rcMonitor.Left) <= tolerance &&
+                Math.Abs(mi.rcWork.Top - mi.rcMonitor.Top) <= tolerance &&
+                Math.Abs(mi.rcWork.Right - mi.rcMonitor.Right) <= tolerance &&
+                Math.Abs(mi.rcWork.Bottom - mi.rcMonitor.Bottom) <= tolerance;
+
+            if (isWorkAreaSameAsMonitor)
+            {
+                var style = NativeMethods.GetWindowLong(foreground, NativeMethods.GWL_STYLE);
+                var isMaximized = NativeMethods.IsZoomed(foreground) || ((style & NativeMethods.WS_MAXIMIZE) != 0);
+                var isPopup = ((uint)style & NativeMethods.WS_POPUP) != 0;
+                var hasThickFrame = (style & NativeMethods.WS_THICKFRAME) != 0;
+                var hasCaption = (style & NativeMethods.WS_CAPTION) == NativeMethods.WS_CAPTION;
+
+                // Standard desktop windows when maximized on auto-hide taskbar have thickframe or caption, and are not popup windows.
+                if (isMaximized && !isPopup && (hasCaption || hasThickFrame))
+                {
+                    SetFullscreen(false);
+                    return;
+                }
+            }
+
+            // Foreground window covers the monitor and is not a standard maximized desktop window -> Fullscreen / Borderless game detected!
+            SetFullscreen(true);
         }
         catch (Exception ex)
         {
             Debug.WriteLine(ex);
         }
+    }
+
+    private static bool IsWindowCoveringRect(NativeMethods.RECT windowRect, NativeMethods.RECT targetRect, int tolerance)
+    {
+        return windowRect.Left <= targetRect.Left + tolerance &&
+               windowRect.Top <= targetRect.Top + tolerance &&
+               windowRect.Right >= targetRect.Right - tolerance &&
+               windowRect.Bottom >= targetRect.Bottom - tolerance;
     }
 
     private bool IsOverlayForeground(IntPtr hwnd)
@@ -2163,9 +2199,14 @@ internal static class NativeMethods
     public const int DWM_BB_ENABLE = 0x1;
     public const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
     public const int OBJID_WINDOW = 0;
+    public const int GWL_STYLE = -16;
     public const int GWL_EXSTYLE = -20;
     public const int WS_EX_TOOLWINDOW = 0x00000080;
     public const int WS_EX_APPWINDOW = 0x00040000;
+    public const int WS_MAXIMIZE = 0x01000000;
+    public const uint WS_POPUP = 0x80000000;
+    public const int WS_CAPTION = 0x00C00000;
+    public const int WS_THICKFRAME = 0x00040000;
 
     [DllImport("user32.dll")]
     public static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc, WinEventDelegate lpfnWinEventProc, uint idProcess, uint idThread, uint dwFlags);
@@ -2178,6 +2219,9 @@ internal static class NativeMethods
 
     [DllImport("user32.dll")]
     public static extern bool IsZoomed(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    public static extern bool IsIconic(IntPtr hWnd);
 
     [DllImport("user32.dll")]
     public static extern bool IsWindowVisible(IntPtr hWnd);

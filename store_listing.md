@@ -20,15 +20,15 @@ Con DockBar obtendrás acceso instantáneo a tus programas sin saturar tu barra 
 - 100% privado: sin telemetría, sin rastreo y con mínimo consumo de recursos.
 ```
 
-### 2. Novedades de esta versión (What's new in this version - v1.7.1)
+### 2. Novedades de esta versión (What's new in this version - v1.7.2)
 ```text
-- Control de Instancia Única: protección mediante Mutex del sistema para evitar procesos duplicados; abrir la app nuevamente enfoca la instancia existente al instante.
-- Detección Inteligente de Pantalla Completa en Windows 11: compatibilidad nativa con ventanas maximizadas modernas (Chrome, Edge, Terminal, VS Code) evitando que el dock se oculte erróneamente.
+- Detección Robusta de Juegos a Pantalla Completa: corrección crítica para videojuegos en modo "Ventana Pantalla Completa" / "Ventana sin Bordes" (Borderless Windowed), garantizando que el dock permanezca completamente oculto y no interfiera durante las partidas.
+- Diferenciación Inteligente de Aplicaciones Maximizadas: compatibilidad total con apps de productividad (Chrome, Edge, Terminal, VS Code) manteniendo la barra accesible en el escritorio.
+- Conmutación de Foco Instantánea: reducción del tiempo de respuesta a 150 ms para una recuperación inmediata del dock al alternar con Alt+Tab.
+- Control de Instancia Única: protección nativa mediante Mutex del sistema para evitar procesos duplicados.
 - Superposición y Z-Order Continuo: mantenimiento constante de la barra en primer plano sin degradación de capas sobre otras aplicaciones.
-- Optimización de Eventos y Rendimiento: reducción del consumo de CPU y sobrecarga en el seguimiento de eventos del sistema operativo.
 - Efecto Glass y Transparencia Real (0% - 100%): motor de composición DWM nativo por hardware con transparencia cristalina pura sin veladuras grises.
 - Sombra Dinámica en Letras: contraste inteligente automático para garantizar una legibilidad perfecta sobre cualquier fondo de pantalla.
-- Rediseño Espacioso de Ajustes: interfaz optimizada de 2 columnas con selector HSV, cuadro HEX y paleta de 12 muestras de color.
 ```
 
 ### 3. Características del producto (Product Features - Lista de viñetas)
@@ -64,15 +64,15 @@ Experience faster multitasking without cluttering your desktop or taskbar:
 - Completely private: zero telemetry, no background trackers, and minimal memory footprint.
 ```
 
-### 2. Novedades de esta versión (What's new in this version - v1.7.1)
+### 2. Novedades de esta versión (What's new in this version - v1.7.2)
 ```text
-- Single Instance Enforcement: system-wide Mutex protection prevents duplicate processes; launching the app again immediately reveals and focuses the existing dock.
-- Accurate Windows 11 Fullscreen Detection: native IsZoomed integration prevents modern maximized tabbed apps (Chrome, Edge, Terminal, VS Code) from falsely triggering dock auto-hide.
-- Continuous TopMost & Z-Order Management: guarantees DockBar never sinks below other regular windows when switching application focus.
-- Event System & Performance Optimization: filtered event hooks eliminate unnecessary interop and CPU usage during window movement.
+- Robust Borderless Fullscreen Game Detection: critical fix for games running in "Borderless Windowed" / "Fullscreen Window" mode, guaranteeing DockBar remains fully collapsed without stealing mouse focus or opening during gameplay.
+- Smart Maximized Window Awareness: preserves seamless dock access for desktop productivity tools (Chrome, Edge, Terminal, VS Code).
+- Snappy Focus Switching: 150 ms response time for instantaneous dock reveal when Alt-Tabbing back to the desktop.
+- Single Instance Enforcement: system-wide Mutex protection prevents duplicate processes.
+- Continuous TopMost & Z-Order Management: guarantees DockBar never sinks below other regular windows.
 - True Glass & Hardware Alpha Composition: crystal-clear transparency at 0% and 5% opacity without foggy or milky overlays.
 - Dynamic Text Contrast Shadow: automatic drop shadows behind shortcut titles for optimal legibility across light and dark wallpapers.
-- Redesigned Settings Experience: streamlined two-column layout with HSV canvas, HEX inputs, and 12 quick color presets.
 ```
 
 ### 3. Características del producto (Product Features - Bullet points)

@@ -1,74 +1,58 @@
-# DockBar 1.7.1 Release Notes
+# DockBar 1.7.2 Release Notes
 
 ---
 
 ## 🇪🇸 Español (Spanish)
 
-### Novedades Principales (Corrección de Errores y Optimizaciones)
+### Novedades Principales (Corrección Crítica de Detección en Juegos y Optimizaciones)
 
-- **Control de Instancia Única (Single Instance)**:
-  - Implementación a nivel de sistema mediante `Mutex` y `EventWaitHandle` en `App.xaml.cs`.
-  - Evita la apertura de instancias duplicadas en segundo plano o múltiples íconos en la bandeja del sistema.
-  - Al ejecutar una segunda instancia, la instancia primaria se revela y adquiere el foco automáticamente mientras la secundaria se cierra de forma instantánea y limpia.
+- **Corrección Crítica en Detección de Juegos en Ventana sin Bordes (Borderless Fullscreen)**:
+  - Implementación de un motor de análisis geométrico dual (límites DWM de canal alfa + coordenadas Win32 `GetWindowRect`) con tolerancia adaptativa de 10 píxeles.
+  - Corrige el problema donde los videojuegos que se ejecutan en modo "Ventana Pantalla Completa" / "Ventana sin Bordes" marcaban el flag `WS_MAXIMIZE` o `IsZoomed` y provocaban que el dock permaneciera activo e interceptara clics o se abriera accidentalmente durante las partidas.
+  - Al detectar un juego en pantalla completa (exclusiva o en ventana), el dock y su ventana sensible de borde (`EdgeHotspotWindow`) se desactivan y ocultan por completo.
 
-- **Gestión Robusta de Primer Plano y Superposición (TopMost & Z-Order)**:
-  - Reafirmación continua del estado superior en Z-Order ante conmutaciones de foco de otras aplicaciones.
-  - Sincronización automática de Z-Order con la ventana sensible del borde (`EdgeHotspotWindow`) para asegurar activación constante.
+- **Diferenciación Inteligente entre Ventanas Maximizadas y Juegos**:
+  - Detección precisa basada en el área de trabajo del monitor (`rcWork`) vs área completa del monitor (`rcMonitor`).
+  - Las aplicaciones de productividad estándar (Chrome, Edge, VS Code, Explorador) maximizadas en el escritorio mantienen el dock totalmente operativo.
+  - En configuraciones con barra de tareas oculta automáticamente, se inspeccionan los estilos de ventana (`WS_POPUP`, `WS_CAPTION`, `WS_THICKFRAME`) para distinguir aplicaciones tradicionales de ventanas de juego.
 
-- **Detección Precisa de Pantalla Completa en Windows 11**:
-  - Integración de la API nativa Win32 `IsZoomed` para distinguir con precisión entre ventanas maximizadas modernas (Chrome, Edge, Windows Terminal, VS Code con pestañas DWM) y aplicaciones o juegos en pantalla completa real.
-  - El dock permanece visible y funcional al interactuar con aplicaciones maximizadas y solo se oculta ante juegos o contenido a pantalla completa exclusiva/sin bordes.
+- **Respuesta Instantánea en Conmutación de Foco**:
+  - Ajuste del temporizador de estabilización a 150 ms para que la recuperación del dock al hacer Alt+Tab desde un juego al escritorio sea inmediata.
 
-- **Optimización de Eventos del Sistema**:
-  - Filtrado selectivo en `SetWinEventHook` para descartar eventos internos y de controles secundarios (`idChild != 0`), reduciendo el consumo de CPU e interop durante el movimiento y arrastre de ventanas.
+- **Soporte de Ventanas Minimizadas**:
+  - Detección nativa con `IsIconic` para evitar estados de pantalla completa falsos cuando la ventana en primer plano se minimiza.
 
-- **Efecto Glass y Transparencia Real (0% - 100%)**:
-  - Motor de composición DWM nativa por hardware con canal alfa (`ACCENT_ENABLE_TRANSPARENTGRADIENT`) y marco extendido `WindowChrome`.
-  - Transparencia pura sin capas turbias ni veladuras grises al 0% y 5% de opacidad.
-  - Escalado de color continuo y suave de 0% (transparente) a 100% (sólido).
-
-- **Sombra Dinámica en Letras**:
-  - Algoritmo de contraste automático inteligente: genera una sombra negra detrás de las letras en modo texto claro (blanco) y una sombra blanca en modo texto oscuro (negro), garantizando legibilidad perfecta sobre cualquier fondo de pantalla.
-
-- **Rediseño Espacioso de la Ventana de Ajustes**:
-  - Interfaz organizada en dos columnas con panel de previsualización, selector HSV, controles de opacidad dedicados, entrada HEX y paleta rápida de 12 muestras de color.
+- **Control de Instancia Única y Superposición Continua**:
+  - Protección de proceso único mediante `Mutex` del sistema y mantenimiento ininterrumpido de Z-Order (`HWND_TOPMOST`).
 
 ---
 
 ## 🇺🇸 English
 
-### Main Highlights (Bug Fixes & Optimizations)
+### Main Highlights (Critical Game Detection Fix & Optimizations)
 
-- **Single Instance Enforcement**:
-  - System-wide enforcement using a named `Mutex` and `EventWaitHandle` in `App.xaml.cs`.
-  - Prevents duplicate processes or duplicate tray icons from running in the background.
-  - Launching a second instance automatically signals, reveals, and focuses the existing dock while cleanly terminating the new process immediately.
+- **Critical Fix for Borderless Fullscreen Games**:
+  - Implemented dual-layer geometric detection (DWM extended frame bounds + Win32 `GetWindowRect`) with 10px adaptive tolerance.
+  - Resolves the issue where borderless windowed games setting `WS_MAXIMIZE` or `IsZoomed` caused DockBar to falsely remain active, pop up over games, or capture mouse clicks.
+  - When a fullscreen or borderless game is active, DockBar and its edge hotspot window (`EdgeHotspotWindow`) completely collapse and sleep.
 
-- **Robust TopMost & Z-Order Management**:
-  - Continuous Z-order assertion upon application focus switches, preventing DockBar from sinking underneath other windows.
-  - Synchronized Z-order maintenance for the edge hotspot window (`EdgeHotspotWindow`) ensuring reliable reveal triggers.
+- **Intelligent Differentiation Between Maximized Productivity Apps and Games**:
+  - Accurate geometry checks comparing monitor work area (`rcWork`) vs full monitor area (`rcMonitor`).
+  - Standard desktop apps (Chrome, Edge, VS Code, File Explorer) remain compatible with DockBar while maximized.
+  - For auto-hidden taskbar environments, window styles (`WS_POPUP`, `WS_CAPTION`, `WS_THICKFRAME`) accurately discern traditional desktop apps from borderless game surfaces.
 
-- **Accurate Fullscreen vs Maximized Detection in Windows 11**:
-  - Integrated native Win32 `IsZoomed` API to reliably distinguish modern tabbed/custom-caption maximized windows (Chrome, Edge, Windows Terminal, VS Code) from true exclusive/borderless fullscreen games and video playback.
-  - Dock stays accessible when using maximized productivity apps and collapses only during full-screen immersion.
+- **Instant Responsiveness on Focus Switching**:
+  - Debounce timer reduced to 150 ms for seamless, instant dock restoration when Alt-Tabbing between games and desktop.
 
-- **System Event Hook Optimization**:
-  - Intelligent event filtering in `SetWinEventHook` callbacks discarding inner control notifications (`idChild != 0`), eliminating interop overhead during window resizing and movement.
+- **Minimized Window State Awareness**:
+  - Native `IsIconic` integration to prevent false detection when active windows are minimized.
 
-- **True Glass & Hardware Per-Pixel Alpha Composition (0% - 100%)**:
-  - Native DWM composition engine using `ACCENT_ENABLE_TRANSPARENTGRADIENT` and `WindowChrome` frame extension.
-  - Crystal-clear transparency at 0% and 5% opacity without muddy or milky overlays.
-  - Smooth, continuous opacity scaling from 0% (pure transparent) to 100% (solid background).
-
-- **Dynamic Text Contrast Shadow**:
-  - Intelligent automatic text contrast: applies a subtle black drop shadow behind white text and a white drop shadow behind dark text, ensuring 100% legibility on any light or dark wallpaper.
-
-- **Spacious Settings Layout Redesign**:
-  - Streamlined two-column configuration interface featuring live preview, HSV canvas, dedicated opacity sliders, HEX code input, and a fully visible 12-swatch quick palette.
+- **Single Instance Enforcement & Continuous TopMost**:
+  - System-wide mutex protection preventing duplicate processes and rock-solid continuous Z-order management (`HWND_TOPMOST`).
 
 ---
 
 ## Validación y Empaquetado / Build Artifacts
 - **Compilación / Build Target**: Release `net10.0-windows10.0.19041.0` (Architecture: `win-x64`).
-- **Instalador clásico / Classic Installer**: `DockBarSetup.exe` (v1.7.1).
-- **Paquete MSIX / MSIX Package**: `DockBar.msix` (v1.7.1.0).
+- **Instalador clásico / Classic Installer**: `DockBarSetup.exe` (v1.7.2).
+- **Paquete MSIX / MSIX Package**: `DockBar.msix` (v1.7.2.0).
