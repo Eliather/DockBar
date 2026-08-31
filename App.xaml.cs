@@ -60,6 +60,7 @@ public partial class App : System.Windows.Application
 
             base.OnStartup(e);
 
+            ThemeService.Apply(ConfigService.LoadConfig());
             _window = new MainWindow();
             _window.Show();
             CreateTrayIcon();
@@ -67,7 +68,7 @@ public partial class App : System.Windows.Application
         catch (Exception ex)
         {
             File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash.log"), ex.ToString());
-            System.Windows.MessageBox.Show(ex.ToString(), "DockBar Startup Error");
+            ThemedMessageBox.Show(ex.ToString(), "DockBar Startup Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -161,7 +162,7 @@ public partial class App : System.Windows.Application
             return;
         }
 
-        var menu = new TrayMenuWindow();
+        var menu = new TrayMenuWindow(_window?.Config);
         menu.PauseRequested += (_, _) => _window?.TogglePause();
         menu.ToggleSideRequested += (_, _) => _window?.ToggleDockSide();
         menu.SettingsRequested += (_, _) => OpenSettingsWindow();

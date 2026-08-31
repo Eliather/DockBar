@@ -45,8 +45,26 @@ public partial class StoreAppPickerWindow : Window, INotifyPropertyChanged
         InitializeComponent();
         DataContext = this;
         AppsView = CollectionViewSource.GetDefaultView(Apps);
-        SourceInitialized += (_, _) => WindowSwitcherHelper.HideFromWindowSwitchers(this);
+        SourceInitialized += (_, _) =>
+        {
+            WindowSwitcherHelper.HideFromWindowSwitchers(this);
+            ThemeService.ApplyWindowBackdrop(this);
+        };
         Loaded += async (_, _) => await LoadAppsAsync();
+    }
+
+    private void Header_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
+        {
+            DragMove();
+        }
+    }
+
+    private void Close_Click(object sender, RoutedEventArgs e)
+    {
+        DialogResult = false;
+        Close();
     }
 
     private async Task LoadAppsAsync(bool forceRefresh = false)

@@ -3,73 +3,59 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:DockBar"
         Title="{local:Loc Key=Rename_Title}"
-        Width="440"
+        Width="460"
         SizeToContent="Height"
         MinWidth="420"
         WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
-        Background="{DynamicResource AppCanvasBrush}"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        Background="Transparent"
+        AllowsTransparency="False"
         Foreground="{DynamicResource AppTextBrush}"
         Loaded="Window_Loaded">
-    <Border Margin="14"
-            Style="{StaticResource DialogSurfaceStyle}"
-            Padding="16">
+    <WindowChrome.WindowChrome>
+        <WindowChrome GlassFrameThickness="-1"
+                      CornerRadius="0"
+                      CaptionHeight="0"
+                      ResizeBorderThickness="0"
+                      UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
+
+    <Border Background="{DynamicResource AppCanvasBrush}"
+            BorderBrush="{DynamicResource AppBorderStrongBrush}"
+            BorderThickness="1"
+            CornerRadius="6"
+            Padding="18"
+            SnapsToDevicePixels="True">
         <StackPanel>
-            <Grid Margin="0,0,0,14">
+            <!-- Custom Draggable Glass Header -->
+            <Grid Margin="0,0,0,12"
+                  Background="Transparent"
+                  MouseLeftButtonDown="Header_MouseDown">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Margin="0,0,14,0"
-                            VerticalAlignment="Center">
+                <StackPanel Margin="0,0,12,0" VerticalAlignment="Center">
                     <TextBlock Text="{local:Loc Key=Rename_Title}"
-                               Style="{StaticResource DialogSectionTitleStyle}"
+                               Style="{StaticResource DialogWindowTitleStyle}"
                                FontSize="17"/>
                     <TextBlock Text="{local:Loc Key=Rename_Subtitle}"
-                               Style="{StaticResource DialogMutedTextStyle}"
-                               FontSize="11"
-                               TextWrapping="Wrap"
-                               Margin="0,4,0,0"/>
+                               Style="{StaticResource DialogWindowSubtitleStyle}"
+                               Margin="0,2,0,0"/>
                 </StackPanel>
 
-                <Border Grid.Column="1"
-                        Width="58"
-                        Height="58"
-                        Background="{Binding BackgroundBrush}"
-                        BorderBrush="{DynamicResource AppBorderStrongBrush}"
-                        BorderThickness="1"
-                        CornerRadius="16"
-                        HorizontalAlignment="Right">
-                    <Viewbox Width="26"
-                             Height="26"
-                             VerticalAlignment="Center"
-                             HorizontalAlignment="Center">
-                        <Grid Width="24" Height="24">
-                            <Path Data="M5,7.5H13.5 M5,11.5H11.5"
-                                  Stroke="{Binding ForegroundBrush}"
-                                  StrokeThickness="1.8"
-                                  StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round"
-                                  StrokeLineJoin="Round"/>
-                            <Path Data="M11.75,17.5H15.5L19.5,13.5L15.75,9.75L11.75,13.75Z"
-                                  Stroke="{Binding ForegroundBrush}"
-                                  StrokeThickness="1.8"
-                                  StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round"
-                                  StrokeLineJoin="Round"/>
-                            <Path Data="M14.75,10.75L18.5,14.5"
-                                  Stroke="{Binding ForegroundBrush}"
-                                  StrokeThickness="1.8"
-                                  StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round"
-                                  StrokeLineJoin="Round"/>
-                        </Grid>
-                    </Viewbox>
-                </Border>
+                <Button Grid.Column="1"
+                        Style="{StaticResource WindowCloseButtonStyle}"
+                        VerticalAlignment="Top"
+                        Click="Close_Click"/>
             </Grid>
 
+            <!-- Card Input -->
             <Border Style="{StaticResource DialogCardStyle}"
                     Padding="12"
                     Margin="0,0,0,14">
@@ -77,29 +63,27 @@
                     <TextBlock Text="{local:Loc Key=Rename_NewName}"
                                Style="{StaticResource DialogLabelStyle}"
                                FontSize="11.5"
-                               Margin="0,0,0,6"/>
+                               Margin="0,0,0,5"/>
                     <TextBox x:Name="NameBox"
                              Style="{StaticResource DialogTextBoxStyle}"
                              FontSize="12"
-                             Padding="11,7"
+                             Padding="10,6"
                              Text="{Binding NewName, UpdateSourceTrigger=PropertyChanged}"/>
                 </StackPanel>
             </Border>
 
+            <!-- Action Buttons -->
             <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="Right">
                 <Button Content="{local:Loc Key=Common_Cancel}"
-                        Style="{StaticResource DialogSmallButtonStyle}"
-                        Width="96"
-                        FontSize="11.5"
+                        Style="{StaticResource DialogButtonSecondaryStyle}"
+                        MinWidth="80"
                         Margin="0,0,8,0"
-                        IsCancel="True"/>
+                        IsCancel="True"
+                        Click="Close_Click"/>
                 <Button Content="{local:Loc Key=Common_Save}"
-                        Style="{StaticResource DialogSmallButtonStyle}"
-                        Background="{StaticResource AppAccentBrush}"
-                        BorderBrush="{StaticResource AppAccentStrongBrush}"
-                        Width="96"
-                        FontSize="11.5"
+                        Style="{StaticResource DialogButtonPrimaryStyle}"
+                        MinWidth="85"
                         IsDefault="True"
                         Click="Save_Click"/>
             </StackPanel>

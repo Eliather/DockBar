@@ -27,6 +27,46 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
     private double _hue;
     private double _sat = 1.0;
     private double _val = 1.0;
+    private bool _isEditingBackground = true;
+
+    public bool IsEditingBackground
+    {
+        get => _isEditingBackground;
+        set
+        {
+            if (_isEditingBackground != value)
+            {
+                _isEditingBackground = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsEditingAccent));
+                OnPropertyChanged(nameof(ColorPickerTitle));
+                OnPropertyChanged(nameof(HexLabelText));
+                OnPropertyChanged(nameof(ActiveColorBrush));
+                SyncHsvToActiveTarget();
+            }
+        }
+    }
+
+    public bool IsEditingAccent
+    {
+        get => !_isEditingBackground;
+        set => IsEditingBackground = !value;
+    }
+
+    public string ColorPickerTitle => LocalizationService.Get(_isEditingBackground ? "Settings_ColorPickerBg" : "Settings_ColorPickerAccent");
+    public string HexLabelText => LocalizationService.Get(_isEditingBackground ? "Settings_HexLabelBg" : "Settings_HexLabelAccent");
+
+    public SolidColorBrush ActiveColorBrush => _isEditingBackground ? PreviewBrush : AccentPreviewBrush;
+
+    public SolidColorBrush AccentPreviewBrush
+    {
+        get
+        {
+            var brush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(Config.AccentR, Config.AccentG, Config.AccentB));
+            brush.Freeze();
+            return brush;
+        }
+    }
 
     public SolidColorBrush PreviewBrush
     {
@@ -37,6 +77,7 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
             {
                 _previewBrush = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(ActiveColorBrush));
             }
         }
     }
@@ -133,7 +174,11 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         Config = config;
         InitializeComponent();
         DataContext = this;
-        SourceInitialized += (_, _) => WindowSwitcherHelper.HideFromWindowSwitchers(this);
+        SourceInitialized += (_, _) =>
+        {
+            WindowSwitcherHelper.HideFromWindowSwitchers(this);
+            ThemeService.ApplyWindowBackdrop(this, Config);
+        };
         if (Config.BackgroundOpacity < 0 || Config.BackgroundOpacity > 1.0)
         {
             Config.BackgroundOpacity = GlassOpacity;
@@ -141,9 +186,46 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         _pendingR = Config.BackgroundR;
         _pendingG = Config.BackgroundG;
         _pendingB = Config.BackgroundB;
-        SyncHsvFromPending();
+        SyncHsvToActiveTarget();
         UpdatePreviewBrush();
         UpdateTextBrush();
+    }
+
+    private void ColorTargetChanged(object sender, RoutedEventArgs e)
+    {
+        SyncHsvToActiveTarget();
+    }
+
+    private void SyncHsvToActiveTarget()
+    {
+        if (_isEditingBackground)
+        {
+            RgbToHsv(_pendingR, _pendingG, _pendingB, out _hue, out _sat, out _val);
+            var hex = $"#{_pendingR:X2}{_pendingG:X2}{_pendingB:X2}";
+            if (!string.Equals(HexInput, hex, StringComparison.OrdinalIgnoreCase))
+            {
+                HexInput = hex;
+            }
+        }
+        else
+        {
+            var ar = Config.AccentR != 0 || Config.AccentG != 0 || Config.AccentB != 0 ? Config.AccentR : (byte)55;
+            var ag = Config.AccentR != 0 || Config.AccentG != 0 || Config.AccentB != 0 ? Config.AccentG : (byte)115;
+            var ab = Config.AccentR != 0 || Config.AccentG != 0 || Config.AccentB != 0 ? Config.AccentB : (byte)245;
+            RgbToHsv(ar, ag, ab, out _hue, out _sat, out _val);
+            var hex = $"#{ar:X2}{ag:X2}{ab:X2}";
+            if (!string.Equals(HexInput, hex, StringComparison.OrdinalIgnoreCase))
+            {
+                HexInput = hex;
+            }
+        }
+        OnPropertyChanged(nameof(Hue));
+        OnPropertyChanged(nameof(HexLabelText));
+        OnPropertyChanged(nameof(ColorPickerTitle));
+        OnPropertyChanged(nameof(ActiveColorBrush));
+        OnPropertyChanged(nameof(AccentPreviewBrush));
+        UpdateHueBrush();
+        UpdateSatValThumb();
     }
 
     private void UpdatePreviewBrush()
@@ -161,10 +243,13 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         OnPropertyChanged(nameof(HexColor));
         OnPropertyChanged(nameof(OpacityPercentText));
         OnPropertyChanged(nameof(GlassStatusText));
-        var hex = $"#{_pendingR:X2}{_pendingG:X2}{_pendingB:X2}";
-        if (!string.Equals(HexInput, hex, StringComparison.OrdinalIgnoreCase))
+        if (_isEditingBackground)
         {
-            HexInput = hex;
+            var hex = $"#{_pendingR:X2}{_pendingG:X2}{_pendingB:X2}";
+            if (!string.Equals(HexInput, hex, StringComparison.OrdinalIgnoreCase))
+            {
+                HexInput = hex;
+            }
         }
         UpdateHueBrush();
         UpdateSatValThumb();
@@ -228,12 +313,17 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         Config.DockWidth = 175;
         Config.IconSize = 40;
         Config.UseLightText = true;
+        Config.AccentR = 55;
+        Config.AccentG = 115;
+        Config.AccentB = 245;
         _pendingR = Config.BackgroundR;
         _pendingG = Config.BackgroundG;
         _pendingB = Config.BackgroundB;
-        SyncHsvFromPending();
+        SyncHsvToActiveTarget();
         UpdatePreviewBrush();
+        ThemeService.Apply(Config);
         OnPropertyChanged(nameof(Config));
+        OnPropertyChanged(nameof(AccentPreviewBrush));
     }
 
     private bool TryApplyHex(string? text)
@@ -256,11 +346,24 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         byte g = (byte)((value >> 8) & 0xFF);
         byte b = (byte)(value & 0xFF);
 
-        _pendingR = r;
-        _pendingG = g;
-        _pendingB = b;
-        SyncHsvFromPending();
-        UpdatePreviewBrush();
+        if (_isEditingBackground)
+        {
+            _pendingR = r;
+            _pendingG = g;
+            _pendingB = b;
+            SyncHsvToActiveTarget();
+            UpdatePreviewBrush();
+        }
+        else
+        {
+            Config.AccentR = r;
+            Config.AccentG = g;
+            Config.AccentB = b;
+            SyncHsvToActiveTarget();
+            ThemeService.Apply(Config);
+            OnPropertyChanged(nameof(Config));
+            OnPropertyChanged(nameof(AccentPreviewBrush));
+        }
         return true;
     }
 
@@ -280,12 +383,27 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         }
     }
 
+    private void Header_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
+        {
+            DragMove();
+        }
+    }
+
+    private void Cancel_Click(object sender, RoutedEventArgs e)
+    {
+        DialogResult = false;
+        Close();
+    }
+
     private void Save_Click(object sender, RoutedEventArgs e)
     {
         // Commit pending color
         Config.BackgroundR = _pendingR;
         Config.BackgroundG = _pendingG;
         Config.BackgroundB = _pendingB;
+        ThemeService.Apply(Config);
         DialogResult = true;
         Close();
     }
@@ -340,19 +458,80 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
             return;
         }
 
-        if (TryApplyHex(tag))
+        if (TryParseHex(tag, out var r, out var g, out var b))
         {
+            _pendingR = r;
+            _pendingG = g;
+            _pendingB = b;
+            if (_isEditingBackground)
+            {
+                SyncHsvToActiveTarget();
+            }
             UpdatePreviewBrush();
         }
+    }
+
+    private void AccentSwatch_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button btn || btn.Tag is not string tag)
+        {
+            return;
+        }
+
+        if (TryParseHex(tag, out var r, out var g, out var b))
+        {
+            Config.AccentR = r;
+            Config.AccentG = g;
+            Config.AccentB = b;
+            if (!_isEditingBackground)
+            {
+                SyncHsvToActiveTarget();
+            }
+            ThemeService.Apply(Config);
+            OnPropertyChanged(nameof(Config));
+            OnPropertyChanged(nameof(AccentPreviewBrush));
+        }
+    }
+
+    private static bool TryParseHex(string? text, out byte r, out byte g, out byte b)
+    {
+        r = 55; g = 115; b = 245;
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        var raw = text.Trim();
+        if (raw.StartsWith("#")) raw = raw[1..];
+        if (raw.Length != 6) return false;
+        if (!int.TryParse(raw, System.Globalization.NumberStyles.HexNumber, null, out var value)) return false;
+        r = (byte)((value >> 16) & 0xFF);
+        g = (byte)((value >> 8) & 0xFF);
+        b = (byte)(value & 0xFF);
+        return true;
     }
 
     private void ApplyHsvToPending()
     {
         var (r, g, b) = HsvToRgb(_hue, _sat, _val);
-        _pendingR = r;
-        _pendingG = g;
-        _pendingB = b;
-        UpdatePreviewBrush();
+        if (_isEditingBackground)
+        {
+            _pendingR = r;
+            _pendingG = g;
+            _pendingB = b;
+            UpdatePreviewBrush();
+        }
+        else
+        {
+            Config.AccentR = r;
+            Config.AccentG = g;
+            Config.AccentB = b;
+            var hex = $"#{r:X2}{g:X2}{b:X2}";
+            if (!string.Equals(HexInput, hex, StringComparison.OrdinalIgnoreCase))
+            {
+                HexInput = hex;
+            }
+            ThemeService.Apply(Config);
+            OnPropertyChanged(nameof(Config));
+            OnPropertyChanged(nameof(AccentPreviewBrush));
+            OnPropertyChanged(nameof(ActiveColorBrush));
+        }
     }
 
     private void UpdateSatValFromPoint(System.Windows.Point pos)
@@ -377,14 +556,6 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         var y = (1 - _val) * h;
         Canvas.SetLeft(SatValThumb, x - SatValThumb.Width / 2);
         Canvas.SetTop(SatValThumb, y - SatValThumb.Height / 2);
-    }
-
-    private void SyncHsvFromPending()
-    {
-        RgbToHsv(_pendingR, _pendingG, _pendingB, out _hue, out _sat, out _val);
-        OnPropertyChanged(nameof(Hue));
-        UpdateHueBrush();
-        UpdateSatValThumb();
     }
 
     private void UpdateHueBrush()

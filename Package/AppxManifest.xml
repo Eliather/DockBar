@@ -9,7 +9,7 @@
   <Identity
     Name="Eliather.DockBar"
     Publisher="CN=45EE2FE3-A63D-4B36-86B9-6273B6A4760E"
-    Version="1.7.2.0"
+    Version="1.8.0.0"
     ProcessorArchitecture="x64" />
 
   <Properties>

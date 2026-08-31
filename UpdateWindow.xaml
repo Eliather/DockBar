@@ -9,185 +9,173 @@
         MinWidth="520"
         MaxHeight="680"
         WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
-        Background="{DynamicResource AppCanvasBrush}"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        Background="Transparent"
+        AllowsTransparency="False"
         Foreground="{DynamicResource AppTextBrush}">
+    <WindowChrome.WindowChrome>
+        <WindowChrome GlassFrameThickness="-1"
+                      CornerRadius="0"
+                      CaptionHeight="0"
+                      ResizeBorderThickness="0"
+                      UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <conv:InverseBoolConverter x:Key="InverseBoolConverter"/>
     </Window.Resources>
-    <Grid Margin="22">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <Border Grid.Row="0"
-                Style="{StaticResource DialogSurfaceStyle}"
-                Margin="0,0,0,14">
-            <Grid>
+    <Border Background="{DynamicResource AppCanvasBrush}"
+            BorderBrush="{DynamicResource AppBorderStrongBrush}"
+            BorderThickness="1"
+            CornerRadius="6"
+            Padding="18"
+            SnapsToDevicePixels="True">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Custom Draggable Glass Header -->
+            <Grid Grid.Row="0"
+                  Margin="0,0,0,12"
+                  Background="Transparent"
+                  MouseLeftButtonDown="Header_MouseDown">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Margin="0,0,14,0"
-                            VerticalAlignment="Center">
+                <StackPanel Margin="0,0,12,0" VerticalAlignment="Center">
                     <TextBlock Text="{local:Loc Key=Update_Title}"
                                Style="{StaticResource DialogWindowTitleStyle}"
-                               FontSize="21"/>
+                               FontSize="18"/>
                     <TextBlock Text="{local:Loc Key=Update_Subtitle}"
                                Style="{StaticResource DialogWindowSubtitleStyle}"
-                               MaxWidth="380"
-                               Margin="0,4,0,0"/>
+                               Margin="0,2,0,0"/>
                 </StackPanel>
 
-                <Border Grid.Column="1"
-                        Width="60"
-                        Height="60"
-                        HorizontalAlignment="Right"
-                        Background="{DynamicResource AppPanelBrush}"
-                        BorderBrush="{DynamicResource AppBorderStrongBrush}"
-                        BorderThickness="1"
-                        CornerRadius="18">
-                    <Viewbox Width="28"
-                             Height="28"
-                             VerticalAlignment="Center"
-                             HorizontalAlignment="Center">
-                        <Grid Width="24" Height="24">
-                            <!-- Cloud / Download Icon -->
-                            <Path Data="M19.35,10.04C18.67,6.59 15.64,4 12,4 9.11,4 6.6,5.64 5.35,8.04 2.34,8.36 0,10.91 0,14c0,3.31 2.69,6 6,6h13c2.76,0 5,-2.24 5,-5 0-2.64-2.05-4.78-4.65-4.96z"
-                                  Fill="{DynamicResource AppAccentSoftBrush}"/>
-                            <Path Data="M12,9 L12,17 M8.5,13.5 L12,17 L15.5,13.5"
-                                  Stroke="{DynamicResource AppAccentBrush}"
-                                  StrokeThickness="2"
-                                  StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round"
-                                  StrokeLineJoin="Round"/>
-                        </Grid>
-                    </Viewbox>
-                </Border>
+                <Button Grid.Column="1"
+                        Style="{StaticResource WindowCloseButtonStyle}"
+                        VerticalAlignment="Top"
+                        Click="Close_Click"/>
             </Grid>
-        </Border>
 
-        <!-- Version Comparison Cards -->
-        <Grid Grid.Row="1" Margin="0,0,0,14">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="12"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-
-            <Border Grid.Column="0"
-                    Style="{StaticResource DialogMetricCardStyle}">
-                <StackPanel>
-                    <TextBlock Text="{local:Loc Key=Update_CurrentVersion}"
-                               Style="{StaticResource DialogMetricCaptionStyle}"/>
-                    <TextBlock Text="{Binding CurrentVersionText}"
-                               Style="{StaticResource DialogMetricValueStyle}"
-                               Foreground="{DynamicResource AppTextMutedBrush}"
-                               Margin="0,4,0,0"/>
-                </StackPanel>
-            </Border>
-
-            <Border Grid.Column="2"
-                    Style="{StaticResource DialogMetricCardStyle}"
-                    BorderBrush="{DynamicResource AppAccentBrush}">
-                <StackPanel>
-                    <TextBlock Text="{local:Loc Key=Update_NewVersion}"
-                               Style="{StaticResource DialogMetricCaptionStyle}"
-                               Foreground="{DynamicResource AppAccentBrush}"/>
-                    <TextBlock Text="{Binding LatestVersionText}"
-                               Style="{StaticResource DialogMetricValueStyle}"
-                               Foreground="{DynamicResource AppAccentBrush}"
-                               Margin="0,4,0,0"/>
-                </StackPanel>
-            </Border>
-        </Grid>
-
-        <!-- Changelog Card -->
-        <Border Grid.Row="2"
-                Style="{StaticResource DialogCardStyle}"
-                Padding="14"
-                Margin="0,0,0,14">
-            <StackPanel>
-                <TextBlock Text="{local:Loc Key=Update_Changelog}"
-                           Style="{StaticResource DialogLabelStyle}"
-                           FontSize="12"
-                           Margin="0,0,0,8"/>
-                <ScrollViewer MaxHeight="150"
-                              VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled">
-                    <TextBlock Text="{Binding ChangelogText}"
-                               Style="{StaticResource DialogSectionBodyStyle}"
-                               FontSize="12"
-                               TextWrapping="Wrap"
-                               Opacity="0.9"/>
-                </ScrollViewer>
-            </StackPanel>
-        </Border>
-
-        <!-- Status & Progress -->
-        <Border Grid.Row="3"
-                Style="{StaticResource DialogSurfaceStyle}"
-                Padding="14,10"
-                Margin="0,0,0,14"
-                Visibility="{Binding HasProgressOrStatus, Converter={StaticResource BoolToVisibilityConverter}}">
-            <StackPanel>
-                <TextBlock Text="{Binding StatusText}"
-                           Style="{StaticResource DialogMutedTextStyle}"
-                           FontSize="11.5"
-                           Margin="0,0,0,6"/>
-                <ProgressBar Height="6"
-                             Minimum="0"
-                             Maximum="100"
-                             Value="{Binding DownloadProgress}"
-                             IsIndeterminate="{Binding IsIndeterminate}"
-                             Foreground="{DynamicResource AppAccentBrush}"
-                             Background="{DynamicResource AppSurfaceRaisedBrush}"
-                             BorderThickness="0"
-                             Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVisibilityConverter}}"/>
-            </StackPanel>
-        </Border>
-
-        <!-- Actions -->
-        <Border Grid.Row="4"
-                Style="{StaticResource DialogSurfaceStyle}"
-                Padding="14,12">
-            <Grid>
+            <!-- Version Comparison Cards -->
+            <Grid Grid.Row="1" Margin="0,0,0,10">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <Button Grid.Column="0"
-                        Content="{local:Loc Key=Update_OpenReleasePage}"
-                        Style="{StaticResource DialogSmallButtonStyle}"
-                        Visibility="{Binding HasReleaseUrl, Converter={StaticResource BoolToVisibilityConverter}}"
-                        Click="OpenGitHub_Click"/>
+                <Border Grid.Column="0"
+                        Style="{StaticResource DialogMetricCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="{local:Loc Key=Update_CurrentVersion}"
+                                   Style="{StaticResource DialogMetricCaptionStyle}"/>
+                        <TextBlock Text="{Binding CurrentVersionText}"
+                                   Style="{StaticResource DialogMetricValueStyle}"
+                                   Foreground="{DynamicResource AppTextMutedBrush}"
+                                   Margin="0,3,0,0"/>
+                    </StackPanel>
+                </Border>
 
-                <StackPanel Grid.Column="2"
-                            Orientation="Horizontal"
-                            HorizontalAlignment="Right">
-                    <Button Content="{local:Loc Key=Update_Later}"
-                            Style="{StaticResource DialogButtonSecondaryStyle}"
-                            Margin="0,0,10,0"
-                            IsEnabled="{Binding IsDownloading, Converter={StaticResource InverseBoolConverter}}"
-                            IsCancel="True"
-                            Click="Cancel_Click"/>
-                    <Button Content="{Binding InstallButtonText}"
-                            Style="{StaticResource DialogButtonPrimaryStyle}"
-                            IsEnabled="{Binding CanInstall}"
-                            IsDefault="True"
-                            Click="Install_Click"/>
-                </StackPanel>
+                <Border Grid.Column="2"
+                        Style="{StaticResource DialogMetricCardStyle}"
+                        BorderBrush="{DynamicResource AppAccentBrush}">
+                    <StackPanel>
+                        <TextBlock Text="{local:Loc Key=Update_LatestVersion}"
+                                   Style="{StaticResource DialogMetricCaptionStyle}"/>
+                        <TextBlock Text="{Binding LatestVersionText}"
+                                   Style="{StaticResource DialogMetricValueStyle}"
+                                   Foreground="{DynamicResource AppAccentBrush}"
+                                   Margin="0,3,0,0"/>
+                    </StackPanel>
+                </Border>
             </Grid>
-        </Border>
-    </Grid>
+
+            <!-- Release Notes Card -->
+            <Border Grid.Row="2"
+                    Style="{StaticResource DialogCardStyle}"
+                    Margin="0,0,0,10"
+                    Padding="12"
+                    MaxHeight="200">
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel>
+                        <TextBlock Text="{local:Loc Key=Update_ChangelogTitle}"
+                                   Style="{StaticResource DialogSectionTitleStyle}"
+                                   FontSize="12.5"
+                                   Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding ReleaseNotes}"
+                                   Style="{StaticResource DialogSectionBodyStyle}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- Download Progress Card -->
+            <Border Grid.Row="3"
+                    Style="{StaticResource DialogSurfaceStyle}"
+                    Margin="0,0,0,10"
+                    Padding="10"
+                    Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock Text="{Binding StatusText}"
+                               Style="{StaticResource DialogMutedTextStyle}"
+                               Margin="0,0,0,6"/>
+                    <ProgressBar Height="5"
+                                 Value="{Binding DownloadProgress}"
+                                 IsIndeterminate="{Binding IsIndeterminate}"
+                                 Foreground="{DynamicResource AppAccentBrush}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Action Bar Footer -->
+            <Border Grid.Row="4"
+                    Style="{StaticResource DialogSurfaceStyle}"
+                    Padding="10,8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="{Binding StatusText}"
+                               Style="{StaticResource DialogMutedTextStyle}"
+                               VerticalAlignment="Center"
+                               Margin="4,0,10,0"
+                               TextTrimming="CharacterEllipsis"
+                               Visibility="{Binding IsDownloading, Converter={StaticResource InverseBoolConverter}}"/>
+
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Right">
+                        <Button Content="{local:Loc Key=Update_RemindLater}"
+                                Style="{StaticResource DialogButtonSecondaryStyle}"
+                                Margin="0,0,8,0"
+                                MinWidth="80"
+                                IsCancel="True"
+                                Click="Close_Click"
+                                IsEnabled="{Binding IsDownloading, Converter={StaticResource InverseBoolConverter}}"/>
+                        <Button Content="{Binding InstallButtonText}"
+                                Style="{StaticResource DialogButtonPrimaryStyle}"
+                                MinWidth="85"
+                                IsDefault="True"
+                                IsEnabled="{Binding CanInstall}"
+                                Click="Install_Click"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
 </Window>

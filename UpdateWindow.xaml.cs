@@ -102,11 +102,28 @@ public partial class UpdateWindow : Window, INotifyPropertyChanged
         _currentVersion = currentVersion;
         InitializeComponent();
         DataContext = this;
-        SourceInitialized += (_, _) => WindowSwitcherHelper.HideFromWindowSwitchers(this);
+        SourceInitialized += (_, _) =>
+        {
+            WindowSwitcherHelper.HideFromWindowSwitchers(this);
+            ThemeService.ApplyWindowBackdrop(this);
+        };
 
         StatusText = PackageHelper.IsPackaged
             ? LocalizationService.Get("Update_PackagedManaged")
             : LocalizationService.Get("Update_StatusReady");
+    }
+
+    private void Header_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
+        {
+            DragMove();
+        }
+    }
+
+    private void Close_Click(object sender, RoutedEventArgs e)
+    {
+        Close();
     }
 
     private async void Install_Click(object sender, RoutedEventArgs e)

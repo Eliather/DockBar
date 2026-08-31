@@ -8,70 +8,98 @@
         MinWidth="1040"
         MinHeight="640"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="CanMinimize"
+        WindowStyle="None"
+        ResizeMode="NoResize"
         ShowInTaskbar="False"
-        Background="{DynamicResource AppCanvasBrush}"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        Background="Transparent"
+        AllowsTransparency="False"
         Foreground="{DynamicResource AppTextBrush}">
+    <WindowChrome.WindowChrome>
+        <WindowChrome GlassFrameThickness="-1"
+                      CornerRadius="0"
+                      CaptionHeight="0"
+                      ResizeBorderThickness="0"
+                      UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
     <Window.Resources>
         <Style x:Key="SettingsSurfaceStyle" TargetType="Border" BasedOn="{StaticResource DialogSurfaceStyle}">
-            <Setter Property="Padding" Value="14"/>
-            <Setter Property="CornerRadius" Value="18"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="CornerRadius" Value="6"/>
         </Style>
         <Style x:Key="SettingsCardStyle" TargetType="Border" BasedOn="{StaticResource DialogCardStyle}">
-            <Setter Property="Padding" Value="14"/>
-            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="CornerRadius" Value="6"/>
         </Style>
         <Style x:Key="SettingsInsetCardStyle" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource AppInputBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="10"/>
-            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="CornerRadius" Value="5"/>
         </Style>
         <Style x:Key="SettingsTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource DialogWindowTitleStyle}">
-            <Setter Property="FontSize" Value="22"/>
+            <Setter Property="FontSize" Value="18"/>
         </Style>
         <Style x:Key="SettingsSectionTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource DialogSectionTitleStyle}">
-            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontSize" Value="13.5"/>
         </Style>
         <Style x:Key="SettingsSectionBodyStyle" TargetType="TextBlock" BasedOn="{StaticResource DialogSectionBodyStyle}">
             <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Margin" Value="0,4,0,10"/>
+            <Setter Property="Margin" Value="0,3,0,8"/>
         </Style>
         <Style x:Key="SettingsLabelStyle" TargetType="TextBlock" BasedOn="{StaticResource DialogLabelStyle}">
             <Setter Property="FontSize" Value="11.5"/>
-            <Setter Property="Margin" Value="0,0,0,5"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
         </Style>
         <Style x:Key="SettingsMutedStyle" TargetType="TextBlock" BasedOn="{StaticResource DialogMutedTextStyle}">
             <Setter Property="FontSize" Value="11"/>
         </Style>
         <Style x:Key="SettingsTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource DialogTextBoxStyle}">
             <Setter Property="FontSize" Value="11.5"/>
-            <Setter Property="Padding" Value="9,6"/>
+            <Setter Property="Padding" Value="8,5"/>
         </Style>
         <Style x:Key="SettingsSecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource DialogButtonSecondaryStyle}">
-            <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="MinHeight" Value="34"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="MinHeight" Value="30"/>
             <Setter Property="FontSize" Value="11.5"/>
         </Style>
         <Style x:Key="SettingsPrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource DialogButtonPrimaryStyle}">
-            <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="MinHeight" Value="34"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="MinHeight" Value="30"/>
             <Setter Property="FontSize" Value="11.5"/>
         </Style>
     </Window.Resources>
 
-    <Grid Margin="14">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <Border Background="{DynamicResource AppCanvasBrush}"
+            BorderBrush="{DynamicResource AppBorderStrongBrush}"
+            BorderThickness="1"
+            CornerRadius="6"
+            Padding="14"
+            SnapsToDevicePixels="True">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0"
-                   Text="{local:Loc Key=Settings_Title}"
-                   Style="{StaticResource SettingsTitleStyle}"
-                   Margin="0,0,0,8"/>
+            <Grid Grid.Row="0"
+                  Margin="0,0,0,10"
+                  Background="Transparent"
+                  MouseLeftButtonDown="Header_MouseDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{local:Loc Key=Settings_Title}"
+                           Style="{StaticResource SettingsTitleStyle}"
+                           VerticalAlignment="Center"/>
+                <Button Grid.Column="1"
+                        Style="{StaticResource WindowCloseButtonStyle}"
+                        Click="Cancel_Click"/>
+            </Grid>
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
@@ -328,7 +356,7 @@
                                     </Grid>
                                 </Border>
 
-                                <TextBlock Text="{local:Loc Key=Settings_HexLabel}"
+                                <TextBlock Text="{Binding HexLabelText}"
                                            Style="{StaticResource SettingsLabelStyle}"
                                            Margin="0,2,0,4"/>
                                 <Grid Margin="0,0,0,8">
@@ -341,7 +369,7 @@
                                     <Border Grid.Column="0"
                                             Width="32"
                                             Height="32"
-                                            Background="{Binding PreviewBrush}"
+                                            Background="{Binding ActiveColorBrush}"
                                             BorderBrush="{DynamicResource AppBorderStrongBrush}"
                                             BorderThickness="1"
                                             CornerRadius="8"/>
@@ -392,11 +420,38 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="8"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="8"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
                             <StackPanel Grid.Row="0">
-                                <TextBlock Text="{local:Loc Key=Settings_ColorPicker}"
-                                           Style="{StaticResource SettingsLabelStyle}"/>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding ColorPickerTitle}"
+                                               Style="{StaticResource SettingsLabelStyle}"
+                                               VerticalAlignment="Center"/>
+                                    <Border Grid.Column="1"
+                                            Style="{StaticResource DialogSurfaceStyle}"
+                                            Padding="2"
+                                            CornerRadius="5">
+                                        <StackPanel Orientation="Horizontal">
+                                            <RadioButton x:Name="TargetBgRadio"
+                                                         Content="{local:Loc Key=Settings_ColorTargetBg}"
+                                                         IsChecked="{Binding IsEditingBackground, Mode=TwoWay}"
+                                                         Checked="ColorTargetChanged"
+                                                         Style="{StaticResource DialogSegmentedRadioStyle}"/>
+                                            <RadioButton x:Name="TargetAccentRadio"
+                                                         Content="{local:Loc Key=Settings_ColorTargetAccent}"
+                                                         IsChecked="{Binding IsEditingAccent, Mode=TwoWay}"
+                                                         Checked="ColorTargetChanged"
+                                                         Margin="3,0,0,0"
+                                                         Style="{StaticResource DialogSegmentedRadioStyle}"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
                                 <Grid Margin="0,3,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -590,6 +645,27 @@
                                     <Button Style="{StaticResource DialogSwatchButtonStyle}" Background="#9B5DE5" Tag="#9B5DE5" Click="Swatch_Click"/>
                                 </UniformGrid>
                             </StackPanel>
+
+                            <StackPanel Grid.Row="6">
+                                <TextBlock Text="{local:Loc Key=Settings_AccentPalette}"
+                                           Style="{StaticResource SettingsLabelStyle}"/>
+                                <UniformGrid Margin="0,4,0,0"
+                                             Rows="2"
+                                             Columns="6">
+                                    <Button Style="{StaticResource DialogSwatchButtonStyle}" Background="#3773F5" Tag="#3773F5" Click="AccentSwatch_Click"/>
+                                    <Button Style="{StaticResource DialogSwatchButtonStyle}" Background="#6366F1" Tag="#6366F1" Click="AccentSwatch_Click"/>
+                                    <Button Style="{StaticResource DialogSwatchButtonStyle}" Background="#8B5CF6" Tag="#8B5CF6" Click="AccentSwatch_Click"/>
+                                    <Button Style="{StaticResource DialogSwatchButtonStyle}" Background="#A855F7" Tag="#A855F7" Click="AccentSwatch_Click"/>
+                                    <Button Style="{StaticResource DialogSwatchButtonStyle}" Background="#D946EF" Tag="#D946EF" Click="AccentSwatch_Click"/>
+                                    <Button Style="{StaticResource DialogSwatchButtonStyle}" Background="#EC4899" Tag="#EC4899" Click="AccentSwatch_Click"/>
+                                    <Button Style="{StaticResource DialogSwatchButtonStyle}" Background="#EF4444" Tag="#EF4444" Click="AccentSwatch_Click"/>
+                                    <Button Style="{StaticResource DialogSwatchButtonStyle}" Background="#F97316" Tag="#F97316" Click="AccentSwatch_Click"/>
+                                    <Button Style="{StaticResource DialogSwatchButtonStyle}" Background="#F59E0B" Tag="#F59E0B" Click="AccentSwatch_Click"/>
+                                    <Button Style="{StaticResource DialogSwatchButtonStyle}" Background="#10B981" Tag="#10B981" Click="AccentSwatch_Click"/>
+                                    <Button Style="{StaticResource DialogSwatchButtonStyle}" Background="#06B6D4" Tag="#06B6D4" Click="AccentSwatch_Click"/>
+                                    <Button Style="{StaticResource DialogSwatchButtonStyle}" Background="#64748B" Tag="#64748B" Click="AccentSwatch_Click"/>
+                                </UniformGrid>
+                            </StackPanel>
                         </Grid>
                     </Grid>
                 </Grid>
@@ -638,4 +714,5 @@
             </Grid>
         </Border>
     </Grid>
+    </Border>
 </Window>

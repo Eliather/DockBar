@@ -15,6 +15,9 @@ public class DockConfig
     public byte BackgroundR { get; set; } = 0;
     public byte BackgroundG { get; set; } = 0;
     public byte BackgroundB { get; set; } = 0;
+    public byte AccentR { get; set; } = 55;
+    public byte AccentG { get; set; } = 115;
+    public byte AccentB { get; set; } = 245;
     public bool UseLightText { get; set; } = true;
     public bool EnableTextShadow { get; set; } = true;
     public bool AutoStartEnabled { get; set; } = false;

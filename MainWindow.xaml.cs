@@ -66,6 +66,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private FileSystemWatcher? _configWatcher;
     private DateTime _suppressConfigWatcherUntilUtc;
 
+    public DockConfig Config => _config;
     public ObservableCollection<ShortcutItem> Shortcuts { get; } = new();
     public ObservableCollection<ShortcutItem> VisibleShortcuts { get; } = new();
     private int _itemsPerPage = 6;
@@ -267,7 +268,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             var message = hadError
                 ? LocalizationService.Get("Config_ReadError")
                 : LocalizationService.Get("Config_NotFound");
-            System.Windows.MessageBox.Show(message, "DockBar", MessageBoxButton.OK, MessageBoxImage.Warning);
+            ThemedMessageBox.Show(message, "DockBar", MessageBoxButton.OK, MessageBoxImage.Warning);
             PersistConfigToDisk(loaded);
         }
         ApplyConfigState(loaded);
@@ -329,7 +330,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
-        var result = System.Windows.MessageBox.Show(
+        var result = ThemedMessageBox.Show(
             LocalizationService.Get("AutoStart_Prompt"),
             LocalizationService.Get("AutoStart_Title"),
             MessageBoxButton.YesNo,
@@ -342,6 +343,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void ApplyVisualConfig()
     {
+        ThemeService.Apply(_config);
         IconSize = _config.IconSize;
         Width = Math.Max(_config.DockWidth, 175);
         UpdateBackgroundBrush();
@@ -1298,29 +1300,35 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var menu = new System.Windows.Controls.ContextMenu
         {
             PlacementTarget = sender as System.Windows.Controls.Button,
-            Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
-            Style = (Style)FindResource("DockContextMenuStyle")
+            Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom
         };
 
-        var menuItemStyle = (Style)FindResource("DockContextMenuItemStyle");
+        if (TryFindResource("DockContextMenuStyle") is Style menuStyle)
+        {
+            menu.Style = menuStyle;
+        }
+
+        var menuItemStyle = TryFindResource("DockContextMenuItemStyle") as Style;
 
         var fileItem = new System.Windows.Controls.MenuItem
         {
-            Header = LocalizationService.Get("AddMenu_File"),
-            Style = menuItemStyle
+            Header = LocalizationService.Get("AddMenu_File")
         };
+        if (menuItemStyle != null) fileItem.Style = menuItemStyle;
         fileItem.Click += (_, _) => AddFileShortcut();
+
         var storeItem = new System.Windows.Controls.MenuItem
         {
-            Header = LocalizationService.Get("AddMenu_Store"),
-            Style = menuItemStyle
+            Header = LocalizationService.Get("AddMenu_Store")
         };
+        if (menuItemStyle != null) storeItem.Style = menuItemStyle;
         storeItem.Click += (_, _) => AddStoreAppFlow();
+
         var uriItem = new System.Windows.Controls.MenuItem
         {
-            Header = LocalizationService.Get("AddMenu_Uri"),
-            Style = menuItemStyle
+            Header = LocalizationService.Get("AddMenu_Uri")
         };
+        if (menuItemStyle != null) uriItem.Style = menuItemStyle;
         uriItem.Click += (_, _) => AddUriShortcut();
 
         menu.Items.Add(fileItem);
@@ -1639,14 +1647,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void ShowUpdateMessage(string message, string title, MessageBoxButton button, MessageBoxImage image)
     {
-        if (IsVisible && WindowState != WindowState.Minimized)
-        {
-            System.Windows.MessageBox.Show(this, message, title, button, image);
-        }
-        else
-        {
-            System.Windows.MessageBox.Show(message, title, button, image);
-        }
+        var owner = IsVisible && WindowState != WindowState.Minimized ? this : null;
+        ThemedMessageBox.Show(owner, message, title, button, image);
     }
 
     private void SaveConfig()

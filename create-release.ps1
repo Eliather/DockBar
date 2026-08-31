@@ -22,8 +22,8 @@ Write-Host "Token obtenido correctamente."
 
 $owner = "Eliather"
 $repo = "DockBar"
-$tag = "v1.7.2"
-$releaseName = "DockBar v1.7.2"
+$tag = "v1.8.0"
+$releaseName = "DockBar v1.8.0"
 $releaseNotes = [System.IO.File]::ReadAllText((Resolve-Path "release_notes.md"), [System.Text.Encoding]::UTF8)
 
 Add-Type -AssemblyName System.Net.Http
@@ -92,7 +92,7 @@ Write-Host "Release URL: $($release.html_url)"
 # 2. Subir assets
 $assetsToUpload = @(
     "DockBarSetup.exe",
-    "DockBar-win-x64-v1.7.2.zip",
+    "DockBar-win-x64-v1.8.0.zip",
     "DockBar.msix"
 )
 
@@ -136,6 +136,6 @@ foreach ($fileName in $assetsToUpload) {
 
 Write-Host ""
 Write-Host "=========================================================="
-Write-Host "  Release v1.7.2 publicado COMPLETAMENTE en GitHub!"
+Write-Host "  Release v1.8.0 publicado COMPLETAMENTE en GitHub!"
 Write-Host "  URL: $($release.html_url)"
 Write-Host "=========================================================="

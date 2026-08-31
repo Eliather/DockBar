@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
 using DockBar.Services;
 
@@ -71,7 +72,25 @@ public partial class AddLinkWindow : Window, INotifyPropertyChanged
         ForegroundBrush = foreground;
         InitializeComponent();
         DataContext = this;
-        SourceInitialized += (_, _) => WindowSwitcherHelper.HideFromWindowSwitchers(this);
+        SourceInitialized += (_, _) =>
+        {
+            WindowSwitcherHelper.HideFromWindowSwitchers(this);
+            ThemeService.ApplyWindowBackdrop(this);
+        };
+    }
+
+    private void Header_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == MouseButton.Left)
+        {
+            DragMove();
+        }
+    }
+
+    private void Close_Click(object sender, RoutedEventArgs e)
+    {
+        DialogResult = false;
+        Close();
     }
 
     private void Save_Click(object sender, RoutedEventArgs e)

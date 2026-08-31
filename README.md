@@ -1,5 +1,5 @@
 # DockBar
-DockBar es una barra lateral de accesos directos estilo dock para Windows desarrollada en C# y WPF. La versión `1.7.2` perfecciona la detección inteligente de juegos en modo ventana completa / sin bordes (*Borderless Fullscreen*), optimiza los tiempos de respuesta ante transiciones de pantalla completa, mantiene el efecto Glass real por hardware y la gestión continua de superposición y Z-Order.
+DockBar es una barra lateral de accesos directos estilo dock para Windows desarrollada en C# y WPF. La versión `1.8.0` renueva integralmente el sistema visual de toda la aplicación, unificando todos los menús, diálogos y ventanas de configuración bajo una estética cristalina DWM Glass pura, controles semiredondeados, paleta de énfasis secundaria personalizable y selector de color dual HSV/HEX interactivo.
 
 <img width="256" height="256" alt="Dock" src="https://github.com/user-attachments/assets/eb6fd915-77f7-4298-b41b-90a7d14f41d1" />
 
@@ -15,20 +15,30 @@ DockBar proporciona una barra lateral compacta y moderna para Windows con soport
 
 El proyecto está diseñado bajo cinco prioridades esenciales:
 
-- **Instancia única garantizada**: Protección del sistema mediante `Mutex` y `EventWaitHandle` para evitar procesos duplicados; abrir un segundo ejecutable revela y enfoca instantáneamente la instancia activa.
-- **Interacción ultrarrápida**: Enumeración instantánea de aplicaciones y juegos mediante APIs nativas Win32 Shell COM (< 5 ms de tiempo de respuesta) sin subprocesos de PowerShell.
-- **Detección robusta de juegos y modo ventana completa**: Análisis geométrico DWM y Win32 de doble capa con tolerancia adaptativa que reconoce juegos en pantalla completa exclusiva o ventana sin bordes (*Borderless Windowed*), evitando aperturas accidentales del dock durante las partidas.
-- **Efecto Glass y transparencia real**: Composición por hardware DWM con soporte de transparencia cristalina pura (0% - 100%) y sombra dinámica adaptativa para texto claro y oscuro.
-- **Cero dependencias de terceros**: Código fuente en C# 13 y .NET 10.0 que utiliza exclusivamente APIs estándar de Windows sin librerías externas pesadas.
+- **Efecto Glass y estética unificada en toda la aplicación**: Composición por hardware DWM (`WindowChrome GlassFrameThickness="-1"`) extendida a todas las ventanas secundarias (Ajustes, Agregar Enlace, Apps Instaladas, Actualizaciones, Renombrar, etc.), respetando la opacidad, color de fondo y efecto Glass elegidos por el usuario.
+- **Paleta de Énfasis / Acento Secundaria**: Nueva personalización para botones principales (como *Guardar*), deslizadores (sliders), switches, cajas de selección y resaltados interactivos.
+- **Selector de Color Dual HSV y HEX**: El lienzo interactivo de saturación/brillo, el deslizador de tono y la entrada hexadecimal pueden utilizarse tanto para el fondo del dock como para el color de énfasis de los botones.
+- **Instancia única y rendimiento nativo**: Enumeración instantánea de aplicaciones y juegos mediante APIs nativas Win32 Shell COM (< 5 ms de tiempo de respuesta) sin subprocesos lentos ni dependencias pesadas.
+- **Detección robusta de juegos y modo ventana completa**: Reconocimiento inteligente de juegos en pantalla completa exclusiva o ventana sin bordes (*Borderless Windowed*), evitando aperturas accidentales del dock durante las partidas.
 
 ---
 
-## Novedades en la versión 1.7.2
-- **Detección Geométrica Robusta para Juegos en Ventana Completa (`MainWindow.xaml.cs`)**: Corrección crítica que permite a DockBar detectar y ocultarse correctamente ante videojuegos que corren en modo "Ventana Pantalla Completa" / "Sin Bordes" (*Borderless Windowed*), evitando que el dock se despliegue o intercepte clics durante el juego.
-- **Diferenciación Dinámica de Aplicaciones Maximizadas vs Juegos**: Las ventanas de productividad maximizadas (Chrome, VS Code, Explorer) siguen conviviendo con el dock normalmente, mientras que los juegos a pantalla completa suspenden el dock y su borde sensible por completo.
-- **Respuesta Ultrarrápida en Conmutación de Foco**: Reducción del temporizador de estabilización a 150 ms para una recuperación y ocultación instantáneas al alternar entre juegos y escritorio (Alt+Tab).
-- **Protección de Ventanas Minimizadas**: Detección nativa con `IsIconic` para evitar transiciones de estado erróneas cuando las aplicaciones en primer plano se minimizan.
-- **Mantenimiento Continuo de TopMost e Instancia Única**: Máxima estabilidad de superposición y prevención estricta de procesos duplicados.
+## Novedades en la versión 1.8.0
+- **Estética Unificada DWM Glass en Todas las Ventanas y Menús**:
+  - Todas las ventanas secundarias (`SettingsWindow`, `AddLinkWindow`, `StoreAppPickerWindow`, `UpdateWindow`, `AboutWindow`, `RenameWindow`, `ThemedMessageDialogWindow` y `TrayMenuWindow`) han sido reconstruidas con `WindowChrome` nativo sin bordes opacos ni barras de título estándar del sistema operativo.
+  - El fondo de cada ventana y menú hereda la composición Glass DWM real y la opacidad configurada en el dock.
+- **Controles Semiredondeados Estilizados**:
+  - Los botones de acción, cajas de texto, switches y deslizadores ahora adoptan esquinas semiredondeadas (`CornerRadius="4"` a `6"`) acordes a la identidad visual de la barra de acciones de DockBar.
+- **Paleta Secundaria / Color de Énfasis (Accent Color)**:
+  - Nueva propiedad `AccentR`, `AccentG`, `AccentB` en `DockConfig.cs` con persistencia en `shortcuts.json`.
+  - Permite seleccionar el color de contraste de los botones principales (como *Guardar*), pistas activas de sliders, switches y elementos seleccionados.
+- **Selector de Color Dual (Fondo y Énfasis) con Lienzo HSV y HEX**:
+  - Selector segmentado `[ 🎨 Fondo del dock ]` / `[ ⚡ Énfasis / Botones ]` en la ventana de Ajustes.
+  - El lienzo interactivo HSV y el cuadro de entrada HEX se reutilizan para ajustar con total libertad cualquier color para ambos objetivos con previsualización en vivo.
+- **Menús Contextuales Flotantes Glass**:
+  - Menú contextual de "Agregar acceso" (`+`) y menú de clic derecho actualizados con estilos dinámicos translúcidos y esquinas semiredondeadas.
+- **Detección de Fuente de Instalación en Actualizaciones**:
+  - El diálogo de actualización y el menú contextual reconocen automáticamente si la aplicación fue instalada mediante Microsoft Store (MSIX) o GitHub, dirigiendo al usuario a la tienda o al repositorio según corresponda.
 
 ---
 
@@ -43,14 +53,6 @@ El proyecto está diseñado bajo cinco prioridades esenciales:
 - Icono en el área de notificación (bandeja del sistema) con acciones rápidas.
 - Oculto de los selectores de tareas de Windows (Alt+Tab y Win+Tab).
 - Configuración persistente guardada en `%AppData%\DockBar\shortcuts.json`.
-
----
-
-## Mejoras de rendimiento
-- **Enumeración Shell COM nativa**: Búsqueda instantánea de aplicaciones de Microsoft Store en menos de 5 ms.
-- **Deserialización JSON por Stream**: Carga y guardado directo por flujo de datos para máxima velocidad y menor recolección de basura.
-- **Caché inteligente de íconos**: `IconService` y `ShellItemService` evitan extracciones redundantes del disco.
-- **Guardado atómico por lotes**: Persistencia segura de la configuración al modificar múltiples accesos directos.
 
 ---
 
@@ -69,7 +71,10 @@ dotnet build
 dotnet run
 ```
 
-Si la compilación reporta que el archivo `.exe` o `.dll` está bloqueado, cierra la instancia de DockBar en ejecución y vuelve a compilar.
+Para generar la versión de publicación optimizada:
+```bash
+dotnet publish DockBar.csproj -c Release -r win-x64 --self-contained false -o publish
+```
 
 ---
 
@@ -88,11 +93,15 @@ Ejemplo de estructura `shortcuts.json`:
   "AutoHideDelaySeconds": 0,
   "HideAnimationMs": 200,
   "UseTransparency": true,
-  "BackgroundOpacity": 0.72,
-  "BackgroundR": 17,
-  "BackgroundG": 24,
-  "BackgroundB": 39,
+  "BackgroundOpacity": 0.45,
+  "BackgroundR": 0,
+  "BackgroundG": 0,
+  "BackgroundB": 0,
+  "AccentR": 55,
+  "AccentG": 115,
+  "AccentB": 245,
   "UseLightText": true,
+  "EnableTextShadow": true,
   "AutoStartEnabled": false,
   "Shortcuts": [
     { "Name": "Explorador", "Path": "C:\\Windows\\explorer.exe" },
@@ -104,38 +113,16 @@ Ejemplo de estructura `shortcuts.json`:
 
 ---
 
-## Arquitectura del código
-- [App.xaml.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/App.xaml.cs): Ciclo de vida, control de instancia única (`Mutex` y `EventWaitHandle`) e icono de la bandeja del sistema.
-- [MainWindow.xaml.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/MainWindow.xaml.cs): Interfaz principal, auto-ocultación, drag & drop, paginación, hooks de eventos del sistema (`SetWinEventHook`) y detección de pantalla completa.
-- [EdgeHotspotWindow.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/EdgeHotspotWindow.cs): Ventana de borde ultraligera con gestión de Z-order para detectar el puntero del mouse al estar oculto.
-- [GlassEffectHelper.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/GlassEffectHelper.cs): Composición nativa por hardware DWM para el efecto Glass acrílico y transparente.
-- [SettingsWindow.xaml.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/SettingsWindow.xaml.cs): Interfaz de ajustes, previsualización en vivo, selector HSV y configuración de apariencia.
+## Arquitectura de componentes
+- [MainWindow.xaml.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/MainWindow.xaml.cs): Barra lateral principal, interacción táctil/ratón, animación de visibilidad y detección de juegos.
+- [SettingsWindow.xaml.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/SettingsWindow.xaml.cs): Panel de personalización con selector dual HSV/HEX de fondo y énfasis, sliders y paletas de color.
+- [ThemeService.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/Services/ThemeService.cs): Motor centralizado de temas dinámicos y composición DWM Glass por hardware.
+- [StoreAppPickerWindow.xaml.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/StoreAppPickerWindow.xaml.cs): Selector de aplicaciones UWP y de la tienda Windows.
 - [AddLinkWindow.xaml.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/AddLinkWindow.xaml.cs): Diálogo para añadir ejecutables, carpetas, URLs web o comandos de sistema.
-- [StoreAppPickerWindow.xaml.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/StoreAppPickerWindow.xaml.cs): Selector de aplicaciones de Microsoft Store con enumeración COM nativa.
-- [UpdateWindow.xaml.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/UpdateWindow.xaml.cs): Ventana de actualización con notas de versión y barra de progreso.
-- [WindowSwitcherHelper.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/WindowSwitcherHelper.cs): Oculta la aplicación de los conmutadores de ventanas de Windows (Alt+Tab).
-- [Services/](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/Services): Servicios modulares de configuración, íconos, shell, Steam y actualizaciones.
+- [TrayMenuWindow.xaml.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/TrayMenuWindow.xaml.cs): Menú flotante del área de notificación.
+- [UpdateWindow.xaml.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/UpdateWindow.xaml.cs): Diálogo de comprobación e instalación de actualizaciones.
 
 ---
 
-## Empaquetado y Distribución
-
-### Opción A: Paquete MSIX (Microsoft Store y Sideloading)
-DockBar incluye un script automatizado sin dependencias externas para generar el paquete MSIX:
-```powershell
-.\build-msix.ps1
-```
-* Genera `DockBar.msix` firmado con certificado de desarrollador listo para pruebas o publicación en Microsoft Partner Center.
-
-### Opción B: Instalador clásico NSIS (Win32)
-```powershell
-.\build-installer.ps1
-```
-* Compila la versión Release para `win-x64` y genera el instalador `DockBarSetup.exe`.
-
----
-
-## Privacidad
-- Sin telemetría ni rastreo de actividad.
-- Sin sincronización en la nube ni envío de datos personales.
-- Funcionamiento 100% local y autónomo.
+## Licencia y Créditos
+Desarrollado por **Eliather**. Licenciado bajo la Licencia MIT.

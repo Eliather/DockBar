@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:DockBar"
         Title="DockBar"
-        Width="212"
+        Width="216"
         SizeToContent="Height"
         WindowStartupLocation="Manual"
         WindowStyle="None"
@@ -32,17 +32,20 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="9"
+                                CornerRadius="4"
                                 SnapsToDevicePixels="True">
                             <ContentPresenter Margin="{TemplateBinding Padding}"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="root" Property="Background" Value="{StaticResource AppAccentSoftBrush}"/>
-                                <Setter TargetName="root" Property="BorderBrush" Value="{StaticResource AppAccentBrush}"/>
+                                <Setter TargetName="root" Property="Background" Value="{Binding ButtonHoverBackgroundBrush, RelativeSource={RelativeSource AncestorType=local:TrayMenuWindow}}"/>
+                                <Setter TargetName="root" Property="BorderBrush" Value="{Binding ButtonHoverBorderBrush, RelativeSource={RelativeSource AncestorType=local:TrayMenuWindow}}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="root" Property="Opacity" Value="0.86"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Cursor" Value="Arrow"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -51,7 +54,7 @@
         </Style>
 
         <Style x:Key="TrayMenuLabelStyle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource AppTextBrush}"/>
+            <Setter Property="Foreground" Value="{Binding MenuTextBrush, RelativeSource={RelativeSource AncestorType=local:TrayMenuWindow}}"/>
             <Setter Property="FontSize" Value="11.5"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
@@ -61,9 +64,9 @@
         <Style x:Key="TrayMenuGlyphHostStyle" TargetType="Border">
             <Setter Property="Width" Value="18"/>
             <Setter Property="Height" Value="18"/>
-            <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="Background" Value="{StaticResource AppPanelBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource AppBorderBrush}"/>
+            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="Background" Value="{Binding GlyphHostBrush, RelativeSource={RelativeSource AncestorType=local:TrayMenuWindow}}"/>
+            <Setter Property="BorderBrush" Value="{Binding GlyphBorderBrush, RelativeSource={RelativeSource AncestorType=local:TrayMenuWindow}}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
@@ -71,7 +74,7 @@
         <Style x:Key="TrayMenuGlyphStyle" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
             <Setter Property="FontSize" Value="11.5"/>
-            <Setter Property="Foreground" Value="{StaticResource AppTextBrush}"/>
+            <Setter Property="Foreground" Value="{Binding MenuTextBrush, RelativeSource={RelativeSource AncestorType=local:TrayMenuWindow}}"/>
             <Setter Property="HorizontalAlignment" Value="Center"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="TextAlignment" Value="Center"/>
@@ -80,10 +83,10 @@
 
     <Border Margin="6"
             Padding="6"
-            Background="{DynamicResource AppSurfaceBrush}"
-            BorderBrush="{DynamicResource AppBorderStrongBrush}"
+            Background="{Binding MenuBackgroundBrush}"
+            BorderBrush="{Binding MenuBorderBrush}"
             BorderThickness="1"
-            CornerRadius="14">
+            CornerRadius="6">
         <Border.Effect>
             <DropShadowEffect Color="#B0000000"
                               BlurRadius="18"
@@ -94,10 +97,10 @@
         <StackPanel>
             <Border Padding="8,6"
                     Margin="0,0,0,4"
-                    Background="{DynamicResource AppPanelBrush}"
-                    BorderBrush="{DynamicResource AppBorderBrush}"
+                    Background="{Binding HeaderPanelBrush}"
+                    BorderBrush="{Binding HeaderBorderBrush}"
                     BorderThickness="1"
-                    CornerRadius="10">
+                    CornerRadius="4">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -110,8 +113,8 @@
                             <Border Width="16"
                                     Height="18"
                                     CornerRadius="5"
-                                    Background="{DynamicResource AppAccentSoftBrush}"
-                                    BorderBrush="{DynamicResource AppAccentBrush}"
+                                    Background="{Binding GlyphHostBrush}"
+                                    BorderBrush="{Binding GlyphBorderBrush}"
                                     BorderThickness="1"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"/>
@@ -119,25 +122,25 @@
                                        Height="12"
                                        RadiusX="1.5"
                                        RadiusY="1.5"
-                                       Fill="{DynamicResource AppTextBrush}"
+                                       Fill="{Binding MenuTextBrush}"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"
                                        Margin="-4,0,0,0"/>
                             <Ellipse Width="3"
                                      Height="3"
-                                     Fill="{DynamicResource AppTextBrush}"
+                                     Fill="{Binding MenuTextBrush}"
                                      HorizontalAlignment="Center"
                                      VerticalAlignment="Top"
                                      Margin="6,5,0,0"/>
                             <Ellipse Width="3"
                                      Height="3"
-                                     Fill="{DynamicResource AppTextBrush}"
+                                     Fill="{Binding MenuTextBrush}"
                                      HorizontalAlignment="Center"
                                      VerticalAlignment="Center"
                                      Margin="6,0,0,0"/>
                             <Ellipse Width="3"
                                      Height="3"
-                                     Fill="{DynamicResource AppTextBrush}"
+                                     Fill="{Binding MenuTextBrush}"
                                      HorizontalAlignment="Center"
                                      VerticalAlignment="Bottom"
                                      Margin="6,0,0,5"/>
@@ -146,11 +149,11 @@
 
                     <StackPanel Grid.Column="2">
                         <TextBlock Text="DockBar"
-                                   Foreground="{DynamicResource AppTextBrush}"
+                                   Foreground="{Binding MenuTextBrush}"
                                    FontSize="12.5"
                                    FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding VersionTag}"
-                                   Foreground="{DynamicResource AppTextMutedBrush}"
+                                   Foreground="{Binding MenuTextMutedBrush}"
                                    FontSize="10"
                                    Margin="0,1,0,0"/>
                     </StackPanel>
@@ -217,8 +220,10 @@
             </Button>
 
             <Button Style="{StaticResource TrayMenuButtonStyle}"
+                    IsEnabled="{Binding CanUpdate}"
+                    ToolTip="{Binding UpdateTooltip}"
                     Click="Update_Click">
-                <Grid>
+                <Grid Opacity="{Binding UpdateButtonOpacity}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="18"/>
                         <ColumnDefinition Width="8"/>
@@ -237,7 +242,7 @@
 
             <Border Height="1"
                     Margin="3,3,3,6"
-                    Background="{DynamicResource AppBorderBrush}"/>
+                    Background="{Binding DividerBrush}"/>
 
             <Button Style="{StaticResource TrayMenuButtonStyle}"
                     Click="ConfigFolder_Click">

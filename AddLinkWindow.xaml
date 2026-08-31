@@ -3,153 +3,152 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:DockBar"
         Title="{local:Loc Key=AddLink_Title}"
-        Width="820"
-        Height="510"
-        MinWidth="760"
-        MinHeight="480"
+        Width="780"
+        Height="490"
+        MinWidth="700"
+        MinHeight="450"
         WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
-        Background="{DynamicResource AppCanvasBrush}"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        Background="Transparent"
+        AllowsTransparency="False"
         Foreground="{DynamicResource AppTextBrush}">
-    <Grid Margin="22">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <WindowChrome.WindowChrome>
+        <WindowChrome GlassFrameThickness="-1"
+                      CornerRadius="0"
+                      CaptionHeight="0"
+                      ResizeBorderThickness="0"
+                      UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
 
-        <Grid Grid.Row="0"
-              Margin="2,0,2,10">
-            <Grid>
+    <Border Background="{DynamicResource AppCanvasBrush}"
+            BorderBrush="{DynamicResource AppBorderStrongBrush}"
+            BorderThickness="1"
+            CornerRadius="6"
+            Padding="18"
+            SnapsToDevicePixels="True">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Custom Draggable Glass Header -->
+            <Grid Grid.Row="0"
+                  Margin="0,0,0,12"
+                  Background="Transparent"
+                  MouseLeftButtonDown="Header_MouseDown">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Margin="0,0,18,0">
+                <StackPanel Margin="0,0,12,0" VerticalAlignment="Center">
                     <TextBlock Text="{local:Loc Key=AddLink_Title}"
                                Style="{StaticResource DialogWindowTitleStyle}"
-                               FontSize="21"/>
+                               FontSize="18"/>
                     <TextBlock Text="{local:Loc Key=AddLink_Subtitle}"
                                Style="{StaticResource DialogWindowSubtitleStyle}"
-                               MaxWidth="500"
-                               Margin="0,3,0,0"/>
+                               Margin="0,2,0,0"/>
                 </StackPanel>
 
-                <Border Grid.Column="1"
-                        Width="56"
-                        Height="56"
-                        HorizontalAlignment="Right"
-                        Background="{Binding BackgroundBrush}"
-                        BorderBrush="{DynamicResource AppBorderStrongBrush}"
-                        BorderThickness="1"
-                        CornerRadius="16">
-                    <Viewbox Width="22"
-                             Height="22"
-                             VerticalAlignment="Center"
-                             HorizontalAlignment="Center">
-                        <Grid Width="24" Height="24">
-                            <Path Data="M10.25,13.75L8,16C6.76,17.24 4.74,17.24 3.5,16C2.26,14.76 2.26,12.74 3.5,11.5L7.75,7.25C8.99,6.01 11.01,6.01 12.25,7.25"
-                                  Stroke="{Binding ForegroundBrush}"
-                                  StrokeThickness="1.8"
-                                  StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round"
-                                  StrokeLineJoin="Round"/>
-                            <Path Data="M13.75,10.25L16,8C17.24,6.76 19.26,6.76 20.5,8C21.74,9.24 21.74,11.26 20.5,12.5L16.25,16.75C15.01,17.99 12.99,17.99 11.75,16.75"
-                                  Stroke="{Binding ForegroundBrush}"
-                                  StrokeThickness="1.8"
-                                  StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round"
-                                  StrokeLineJoin="Round"/>
-                        </Grid>
-                    </Viewbox>
-                </Border>
+                <Button Grid.Column="1"
+                        Style="{StaticResource WindowCloseButtonStyle}"
+                        VerticalAlignment="Top"
+                        Click="Close_Click"/>
             </Grid>
+
+            <!-- Main Input Card -->
+            <Border Grid.Row="1"
+                    Style="{StaticResource DialogCardStyle}"
+                    Padding="14">
+                <StackPanel>
+                    <TextBlock Text="{local:Loc Key=AddLink_Target}"
+                               Style="{StaticResource DialogLabelStyle}"
+                               FontSize="12"/>
+                    <TextBox x:Name="TargetBox"
+                             Style="{StaticResource DialogTextBoxStyle}"
+                             FontSize="12"
+                             Padding="10,7"
+                             Text="{Binding Target, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Text="{local:Loc Key=AddLink_TargetHint}"
+                               Style="{StaticResource DialogMutedTextStyle}"
+                               FontSize="11"
+                               Margin="0,5,0,0"/>
+
+                    <TextBlock Text="{Binding ValidationMessage}"
+                               Foreground="#FFF05050"
+                               FontSize="11"
+                               Margin="0,5,0,0"
+                               TextWrapping="Wrap">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasValidationMessage}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
+                    <TextBlock Text="{local:Loc Key=AddLink_NameOptional}"
+                               Style="{StaticResource DialogLabelStyle}"
+                               FontSize="12"
+                               Margin="0,12,0,5"/>
+                    <TextBox x:Name="NameBox"
+                             Style="{StaticResource DialogTextBoxStyle}"
+                             FontSize="12"
+                             Padding="10,7"
+                             Text="{Binding DisplayName, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Text="{local:Loc Key=AddLink_NameHint}"
+                               Style="{StaticResource DialogMutedTextStyle}"
+                               FontSize="11"
+                               Margin="0,5,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Action Bar Footer -->
+            <Border Grid.Row="2"
+                    Style="{StaticResource DialogSurfaceStyle}"
+                    Margin="0,12,0,0"
+                    Padding="12,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="{local:Loc Key=AddLink_ExamplesFooter}"
+                               Style="{StaticResource DialogMutedTextStyle}"
+                               FontSize="11"
+                               VerticalAlignment="Center"
+                               Margin="4,0,14,0"/>
+
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Right">
+                        <Button Content="{local:Loc Key=Common_Cancel}"
+                                Style="{StaticResource DialogButtonSecondaryStyle}"
+                                Margin="0,0,8,0"
+                                MinWidth="80"
+                                IsCancel="True"
+                                Click="Close_Click"/>
+                        <Button Content="{local:Loc Key=Common_Save}"
+                                Style="{StaticResource DialogButtonPrimaryStyle}"
+                                MinWidth="85"
+                                IsDefault="True"
+                                Click="Save_Click"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
         </Grid>
-
-        <Border Grid.Row="1"
-                Style="{StaticResource DialogCardStyle}"
-                Padding="16">
-            <StackPanel>
-                <TextBlock Text="{local:Loc Key=AddLink_Target}"
-                           Style="{StaticResource DialogLabelStyle}"
-                           FontSize="12.5"
-                           Margin="0,0,0,5"/>
-                <TextBox x:Name="TargetBox"
-                         Style="{StaticResource DialogTextBoxStyle}"
-                         FontSize="12.5"
-                         Padding="11,7"
-                         Text="{Binding Target, UpdateSourceTrigger=PropertyChanged}"/>
-
-                <TextBlock Text="{local:Loc Key=AddLink_TargetHint}"
-                           Style="{StaticResource DialogMutedTextStyle}"
-                           FontSize="11"
-                           Margin="0,7,0,0"/>
-
-                <TextBlock Text="{Binding ValidationMessage}"
-                           Foreground="{DynamicResource AppDangerBrush}"
-                           FontSize="11"
-                           Margin="0,6,0,0"
-                           TextWrapping="Wrap">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding HasValidationMessage}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-
-                <TextBlock Text="{local:Loc Key=AddLink_NameOptional}"
-                           Style="{StaticResource DialogLabelStyle}"
-                           FontSize="12.5"
-                           Margin="0,14,0,5"/>
-                <TextBox x:Name="NameBox"
-                         Style="{StaticResource DialogTextBoxStyle}"
-                         FontSize="12.5"
-                         Padding="11,7"
-                         Text="{Binding DisplayName, UpdateSourceTrigger=PropertyChanged}"/>
-
-                <TextBlock Text="{local:Loc Key=AddLink_NameHint}"
-                           Style="{StaticResource DialogMutedTextStyle}"
-                           FontSize="11"
-                           Margin="0,7,0,0"/>
-            </StackPanel>
-        </Border>
-
-        <Border Grid.Row="2"
-                Style="{StaticResource DialogSurfaceStyle}"
-                Margin="0,12,0,0"
-                Padding="14,12">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
-                <TextBlock Text="{local:Loc Key=AddLink_ExamplesFooter}"
-                           Style="{StaticResource DialogMutedTextStyle}"
-                           FontSize="11"
-                           VerticalAlignment="Center"
-                           Margin="4,0,18,0"/>
-
-                <StackPanel Grid.Column="1"
-                            Orientation="Horizontal"
-                            HorizontalAlignment="Right">
-                    <Button Content="{local:Loc Key=Common_Cancel}"
-                            Style="{StaticResource DialogButtonSecondaryStyle}"
-                            Margin="0,0,10,0"
-                            IsCancel="True"/>
-                    <Button Content="{local:Loc Key=Common_Save}"
-                            Style="{StaticResource DialogButtonPrimaryStyle}"
-                            IsDefault="True"
-                            Click="Save_Click"/>
-                </StackPanel>
-            </Grid>
-        </Border>
-    </Grid>
+    </Border>
 </Window>

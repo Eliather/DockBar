@@ -3,155 +3,132 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:DockBar"
         Title="{local:Loc Key=About_Title}"
-        Width="540"
-        Height="420"
-        MinWidth="500"
-        ResizeMode="NoResize"
+        Width="520"
+        Height="390"
+        MinWidth="480"
         WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
+        ResizeMode="NoResize"
         ShowInTaskbar="False"
-        Background="{DynamicResource AppCanvasBrush}"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        Background="Transparent"
+        AllowsTransparency="False"
         Foreground="{DynamicResource AppTextBrush}">
-    <Grid Margin="22">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <WindowChrome.WindowChrome>
+        <WindowChrome GlassFrameThickness="-1"
+                      CornerRadius="0"
+                      CaptionHeight="0"
+                      ResizeBorderThickness="0"
+                      UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
 
-        <Border Grid.Row="0"
-                Style="{StaticResource DialogSurfaceStyle}"
-                Margin="0,0,0,16">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="104"/>
-                </Grid.ColumnDefinitions>
-
-                <StackPanel Margin="0,0,18,0">
-                    <TextBlock Text="{local:Loc Key=About_Title}"
-                               Style="{StaticResource DialogWindowTitleStyle}"
-                               FontSize="24"/>
-                    <TextBlock Text="{Binding SubtitleText}"
-                               Style="{StaticResource DialogWindowSubtitleStyle}"
-                               MaxWidth="320"/>
-                </StackPanel>
-
-                <Border Grid.Column="1"
-                        Width="88"
-                        Height="88"
-                        HorizontalAlignment="Right"
-                        Background="{DynamicResource AppPanelBrush}"
-                        BorderBrush="{DynamicResource AppBorderStrongBrush}"
-                        BorderThickness="1"
-                        CornerRadius="24">
-                    <Viewbox Width="38"
-                             Height="38"
-                             VerticalAlignment="Center"
-                             HorizontalAlignment="Center">
-                        <Grid Width="24" Height="24">
-                            <Border Width="16"
-                                    Height="18"
-                                    CornerRadius="5"
-                                    Background="{DynamicResource AppAccentSoftBrush}"
-                                    BorderBrush="{DynamicResource AppAccentBrush}"
-                                    BorderThickness="1"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center"/>
-                            <Rectangle Width="3"
-                                       Height="12"
-                                       RadiusX="1.5"
-                                       RadiusY="1.5"
-                                       Fill="{DynamicResource AppTextBrush}"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"
-                                       Margin="-4,0,0,0"/>
-                            <Ellipse Width="3"
-                                     Height="3"
-                                     Fill="{DynamicResource AppTextBrush}"
-                                     HorizontalAlignment="Center"
-                                     VerticalAlignment="Top"
-                                     Margin="6,5,0,0"/>
-                            <Ellipse Width="3"
-                                     Height="3"
-                                     Fill="{DynamicResource AppTextBrush}"
-                                     HorizontalAlignment="Center"
-                                     VerticalAlignment="Center"
-                                     Margin="6,0,0,0"/>
-                            <Ellipse Width="3"
-                                     Height="3"
-                                     Fill="{DynamicResource AppTextBrush}"
-                                     HorizontalAlignment="Center"
-                                     VerticalAlignment="Bottom"
-                                     Margin="6,0,0,5"/>
-                        </Grid>
-                    </Viewbox>
-                </Border>
-            </Grid>
-        </Border>
-
-        <Grid Grid.Row="1">
+    <Border Background="{DynamicResource AppCanvasBrush}"
+            BorderBrush="{DynamicResource AppBorderStrongBrush}"
+            BorderThickness="1"
+            CornerRadius="6"
+            Padding="18"
+            SnapsToDevicePixels="True">
+        <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="14"/>
                 <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="14"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
 
-            <Border Grid.Row="0"
-                    Grid.Column="0"
-                    Style="{StaticResource DialogMetricCardStyle}">
-                <StackPanel>
-                    <TextBlock Text="{local:Loc Key=About_Version}"
-                               Style="{StaticResource DialogMetricCaptionStyle}"/>
-                    <TextBlock Text="{Binding VersionValue}"
-                               Style="{StaticResource DialogMetricValueStyle}"
-                               Margin="0,6,0,0"/>
+            <!-- Custom Draggable Glass Header -->
+            <Grid Grid.Row="0"
+                  Margin="0,0,0,12"
+                  Background="Transparent"
+                  MouseLeftButtonDown="Header_MouseDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Margin="0,0,12,0" VerticalAlignment="Center">
+                    <TextBlock Text="{local:Loc Key=About_Title}"
+                               Style="{StaticResource DialogWindowTitleStyle}"
+                               FontSize="18"/>
+                    <TextBlock Text="{Binding SubtitleText}"
+                               Style="{StaticResource DialogWindowSubtitleStyle}"
+                               Margin="0,2,0,0"/>
                 </StackPanel>
-            </Border>
 
-            <Border Grid.Row="0"
-                    Grid.Column="2"
-                    Style="{StaticResource DialogMetricCardStyle}">
-                <StackPanel>
-                    <TextBlock Text="{local:Loc Key=About_DeveloperCaption}"
-                               Style="{StaticResource DialogMetricCaptionStyle}"/>
-                    <TextBlock Text="{Binding DeveloperName}"
-                               Style="{StaticResource DialogMetricValueStyle}"
-                               Margin="0,6,0,0"/>
-                </StackPanel>
-            </Border>
+                <Button Grid.Column="1"
+                        Style="{StaticResource WindowCloseButtonStyle}"
+                        VerticalAlignment="Top"
+                        Click="Close_Click"/>
+            </Grid>
 
+            <!-- Info Content -->
+            <Grid Grid.Row="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="8"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Row="0"
+                        Grid.Column="0"
+                        Style="{StaticResource DialogMetricCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="{local:Loc Key=About_Version}"
+                                   Style="{StaticResource DialogMetricCaptionStyle}"/>
+                        <TextBlock Text="{Binding VersionValue}"
+                                   Style="{StaticResource DialogMetricValueStyle}"
+                                   Margin="0,3,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Row="0"
+                        Grid.Column="2"
+                        Style="{StaticResource DialogMetricCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="{local:Loc Key=About_DeveloperCaption}"
+                                   Style="{StaticResource DialogMetricCaptionStyle}"/>
+                        <TextBlock Text="{Binding DeveloperName}"
+                                   Style="{StaticResource DialogMetricValueStyle}"
+                                   Margin="0,3,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Row="2"
+                        Grid.ColumnSpan="3"
+                        Style="{StaticResource DialogCardStyle}"
+                        Padding="12">
+                    <StackPanel>
+                        <TextBlock Text="{Binding DescriptionText}"
+                                   Style="{StaticResource DialogSectionBodyStyle}"
+                                   Margin="0,0,0,10"/>
+                        <TextBlock Text="{Binding ConfigPathLabel}"
+                                   Style="{StaticResource DialogLabelStyle}"/>
+                        <TextBlock Text="{Binding ConfigPathValue}"
+                                   Style="{StaticResource DialogMutedTextStyle}"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Action Bar Footer -->
             <Border Grid.Row="2"
-                    Grid.ColumnSpan="3"
-                    Style="{StaticResource DialogCardStyle}"
-                    Padding="18">
-                <StackPanel>
-                    <TextBlock Text="{Binding DescriptionText}"
-                               Style="{StaticResource DialogSectionBodyStyle}"
-                               Margin="0,0,0,14"/>
-                    <TextBlock Text="{Binding ConfigPathLabel}"
-                               Style="{StaticResource DialogLabelStyle}"/>
-                    <TextBlock Text="{Binding ConfigPathValue}"
-                               Style="{StaticResource DialogMutedTextStyle}"/>
+                    Style="{StaticResource DialogSurfaceStyle}"
+                    Margin="0,10,0,0"
+                    Padding="10,8">
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Right">
+                    <Button Content="{local:Loc Key=Common_Close}"
+                            Style="{StaticResource DialogButtonPrimaryStyle}"
+                            MinWidth="85"
+                            Click="Close_Click"
+                            IsCancel="True"/>
                 </StackPanel>
             </Border>
         </Grid>
-
-        <Border Grid.Row="2"
-                Style="{StaticResource DialogSurfaceStyle}"
-                Margin="0,16,0,0"
-                Padding="18">
-            <StackPanel Orientation="Horizontal"
-                        HorizontalAlignment="Right">
-                <Button Content="{local:Loc Key=Common_Close}"
-                        Style="{StaticResource DialogButtonPrimaryStyle}"
-                        Click="Close_Click"
-                        IsCancel="True"/>
-            </StackPanel>
-        </Border>
-    </Grid>
+    </Border>
 </Window>

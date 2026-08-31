@@ -28,7 +28,19 @@ public partial class AboutWindow : Window
 
         InitializeComponent();
         DataContext = this;
-        SourceInitialized += (_, _) => WindowSwitcherHelper.HideFromWindowSwitchers(this);
+        SourceInitialized += (_, _) =>
+        {
+            WindowSwitcherHelper.HideFromWindowSwitchers(this);
+            ThemeService.ApplyWindowBackdrop(this);
+        };
+    }
+
+    private void Header_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
+        {
+            DragMove();
+        }
     }
 
     private void Close_Click(object sender, RoutedEventArgs e)
