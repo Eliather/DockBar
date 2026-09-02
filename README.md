@@ -1,5 +1,5 @@
 # DockBar
-DockBar es una barra lateral de accesos directos estilo dock para Windows desarrollada en C# y WPF. La versión `1.8.0` renueva integralmente el sistema visual de toda la aplicación, unificando todos los menús, diálogos y ventanas de configuración bajo una estética cristalina DWM Glass pura, controles semiredondeados, paleta de énfasis secundaria personalizable y selector de color dual HSV/HEX interactivo.
+DockBar es una barra lateral de accesos directos estilo dock para Windows desarrollada en C# y WPF. La versión `1.8.1` consolida y perfecciona el nuevo sistema visual de la aplicación bajo una estética cristalina DWM Glass pura, controles semiredondeados, paleta de énfasis secundaria personalizable y selector de color dual HSV/HEX interactivo.
 
 <img width="256" height="256" alt="Dock" src="https://github.com/user-attachments/assets/eb6fd915-77f7-4298-b41b-90a7d14f41d1" />
 
@@ -23,20 +23,22 @@ El proyecto está diseñado bajo cinco prioridades esenciales:
 
 ---
 
-## Novedades en la versión 1.8.0
+## Novedades en la versión 1.8.1
+- **Corrección en la Clonación y Persistencia del Color de Énfasis**:
+  - Se corrigió un problema donde los valores de acento secundario (`AccentR`, `AccentG`, `AccentB`) no se propagaban en el método de clonación de configuración (`CloneConfig`), asegurando que las modificaciones y previsualizaciones en la ventana de Ajustes se preserven con total exactitud.
 - **Estética Unificada DWM Glass en Todas las Ventanas y Menús**:
-  - Todas las ventanas secundarias (`SettingsWindow`, `AddLinkWindow`, `StoreAppPickerWindow`, `UpdateWindow`, `AboutWindow`, `RenameWindow`, `ThemedMessageDialogWindow` y `TrayMenuWindow`) han sido reconstruidas con `WindowChrome` nativo sin bordes opacos ni barras de título estándar del sistema operativo.
+  - Todas las ventanas secundarias (`SettingsWindow`, `AddLinkWindow`, `StoreAppPickerWindow`, `UpdateWindow`, `AboutWindow`, `RenameWindow`, `ThemedMessageDialogWindow` y `TrayMenuWindow`) reconstruidas con `WindowChrome` nativo sin bordes opacos ni barras de título estándar del sistema operativo.
   - El fondo de cada ventana y menú hereda la composición Glass DWM real y la opacidad configurada en el dock.
 - **Controles Semiredondeados Estilizados**:
-  - Los botones de acción, cajas de texto, switches y deslizadores ahora adoptan esquinas semiredondeadas (`CornerRadius="4"` a `6"`) acordes a la identidad visual de la barra de acciones de DockBar.
+  - Los botones de acción, cajas de texto, switches y deslizadores adoptan esquinas semiredondeadas (`CornerRadius="4"` a `6"`) acordes a la identidad visual de la barra de acciones de DockBar.
 - **Paleta Secundaria / Color de Énfasis (Accent Color)**:
-  - Nueva propiedad `AccentR`, `AccentG`, `AccentB` en `DockConfig.cs` con persistencia en `shortcuts.json`.
+  - Propiedad `AccentR`, `AccentG`, `AccentB` en `DockConfig.cs` con persistencia en `shortcuts.json`.
   - Permite seleccionar el color de contraste de los botones principales (como *Guardar*), pistas activas de sliders, switches y elementos seleccionados.
 - **Selector de Color Dual (Fondo y Énfasis) con Lienzo HSV y HEX**:
   - Selector segmentado `[ 🎨 Fondo del dock ]` / `[ ⚡ Énfasis / Botones ]` en la ventana de Ajustes.
   - El lienzo interactivo HSV y el cuadro de entrada HEX se reutilizan para ajustar con total libertad cualquier color para ambos objetivos con previsualización en vivo.
 - **Menús Contextuales Flotantes Glass**:
-  - Menú contextual de "Agregar acceso" (`+`) y menú de clic derecho actualizados con estilos dinámicos translúcidos y esquinas semiredondeadas.
+  - Menú contextual de "Agregar acceso" (`+`) y menú de clic derecho con estilos dinámicos translúcidos y esquinas semiredondeadas.
 - **Detección de Fuente de Instalación en Actualizaciones**:
   - El diálogo de actualización y el menú contextual reconocen automáticamente si la aplicación fue instalada mediante Microsoft Store (MSIX) o GitHub, dirigiendo al usuario a la tienda o al repositorio según corresponda.
 

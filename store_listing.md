@@ -20,8 +20,9 @@ Con DockBar obtendrás acceso instantáneo a tus programas sin saturar tu barra 
 - 100% privado: sin telemetría, sin rastreo y con mínimo consumo de recursos.
 ```
 
-### 2. Novedades de esta versión (What's new in this version - v1.8.0)
+### 2. Novedades de esta versión (What's new in this version - v1.8.1)
 ```text
+- Corrección de Color de Énfasis: preservación y clonación exacta de los valores de acento secundario al previsualizar o ajustar la configuración.
 - Estética Unificada DWM Glass: todas las ventanas, diálogos y menús secundarios ahora utilizan composición DWM Glass nativa por hardware y bordes limpios sin marcos estándar de Windows.
 - Paleta Secundaria y Color de Énfasis: personaliza el color de acento de los botones principales (como Guardar), deslizadores (sliders), switches y controles interactivos.
 - Selector de Color Dual (Fondo vs Énfasis): el lienzo interactivo HSV (rueda/canvas de color) y el cuadro de entrada HEX pueden utilizarse tanto para el fondo del dock como para el color de énfasis de los botones.
@@ -65,8 +66,9 @@ Experience faster multitasking without cluttering your desktop or taskbar:
 - Completely private: zero telemetry, no background trackers, and minimal memory footprint.
 ```
 
-### 2. Novedades de esta versión (What's new in this version - v1.8.0)
+### 2. Novedades de esta versión (What's new in this version - v1.8.1)
 ```text
+- Accent Color Fix: accurate cloning and preservation of secondary accent color properties during settings previews and changes.
 - Unified DWM Glass Aesthetic: all secondary windows, dialogs, and menus now use native hardware DWM Glass composition without standard OS title bars.
 - Secondary Accent Color Palette: customize the highlight color of primary action buttons (like Save), active slider tracks, switches, and interactive elements.
 - Dual Color Picker (Background vs Accent): use the interactive HSV saturation/brightness canvas and HEX text box for both the dock background and the accent color.
