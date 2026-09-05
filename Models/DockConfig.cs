@@ -1,6 +1,16 @@
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace DockBar.Models;
+
+public class ExperimentalConfig
+{
+    public bool ShowClock { get; set; } = false;
+    public double ClockFontSize { get; set; } = 18;
+    public bool ClockFormat24H { get; set; } = true;
+    public bool ShowClockSeconds { get; set; } = false;
+    public bool ShowClockDate { get; set; } = true;
+}
 
 public class DockConfig
 {
@@ -22,4 +32,43 @@ public class DockConfig
     public bool EnableTextShadow { get; set; } = true;
     public bool AutoStartEnabled { get; set; } = false;
     public bool AutoStartPrompted { get; set; } = false;
+
+    // Sección aislada de configuraciones experimentales
+    public ExperimentalConfig Experimental { get; set; } = new();
+
+    // Propiedades puente para enlaces directos en XAML y lógica interna
+    [JsonIgnore]
+    public bool ShowClock
+    {
+        get => Experimental.ShowClock;
+        set => Experimental.ShowClock = value;
+    }
+
+    [JsonIgnore]
+    public double ClockFontSize
+    {
+        get => Experimental.ClockFontSize;
+        set => Experimental.ClockFontSize = value;
+    }
+
+    [JsonIgnore]
+    public bool ClockFormat24H
+    {
+        get => Experimental.ClockFormat24H;
+        set => Experimental.ClockFormat24H = value;
+    }
+
+    [JsonIgnore]
+    public bool ShowClockSeconds
+    {
+        get => Experimental.ShowClockSeconds;
+        set => Experimental.ShowClockSeconds = value;
+    }
+
+    [JsonIgnore]
+    public bool ShowClockDate
+    {
+        get => Experimental.ShowClockDate;
+        set => Experimental.ShowClockDate = value;
+    }
 }

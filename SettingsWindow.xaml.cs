@@ -28,6 +28,45 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
     private double _sat = 1.0;
     private double _val = 1.0;
     private bool _isEditingBackground = true;
+    private bool _isBasicTabSelected = true;
+    private readonly System.Windows.Threading.DispatcherTimer _previewClockTimer;
+
+    public bool IsBasicTabSelected
+    {
+        get => _isBasicTabSelected;
+        set
+        {
+            if (_isBasicTabSelected != value)
+            {
+                _isBasicTabSelected = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsExperimentalTabSelected));
+            }
+        }
+    }
+
+    public bool IsExperimentalTabSelected
+    {
+        get => !_isBasicTabSelected;
+        set => IsBasicTabSelected = !value;
+    }
+
+    public string PreviewClockTime
+    {
+        get
+        {
+            var now = DateTime.Now;
+            var format = Config.ClockFormat24H ? "HH:mm" : "hh:mm tt";
+            if (Config.ShowClockSeconds)
+            {
+                format = Config.ClockFormat24H ? "HH:mm:ss" : "hh:mm:ss tt";
+            }
+            return now.ToString(format);
+        }
+    }
+
+    public string PreviewClockDate => DateTime.Now.ToString("ddd, d MMM");
+    public double PreviewClockDateFontSize => Math.Max(9, Math.Round((Config.ClockFontSize > 0 ? Config.ClockFontSize : 18) * 0.65));
 
     public bool IsEditingBackground
     {
@@ -189,6 +228,32 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         SyncHsvToActiveTarget();
         UpdatePreviewBrush();
         UpdateTextBrush();
+
+        _previewClockTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(500)
+        };
+        _previewClockTimer.Tick += (_, _) =>
+        {
+            OnPropertyChanged(nameof(PreviewClockTime));
+            OnPropertyChanged(nameof(PreviewClockDate));
+        };
+        _previewClockTimer.Start();
+        Closed += (_, _) => _previewClockTimer.Stop();
+    }
+
+    private void ExperimentalOption_Changed(object sender, RoutedEventArgs e)
+    {
+        OnPropertyChanged(nameof(PreviewClockTime));
+        OnPropertyChanged(nameof(PreviewClockDate));
+        OnPropertyChanged(nameof(PreviewClockDateFontSize));
+        OnPropertyChanged(nameof(Config));
+    }
+
+    private void ClockFontSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        OnPropertyChanged(nameof(PreviewClockDateFontSize));
+        OnPropertyChanged(nameof(Config));
     }
 
     private void ColorTargetChanged(object sender, RoutedEventArgs e)
@@ -316,6 +381,11 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         Config.AccentR = 55;
         Config.AccentG = 115;
         Config.AccentB = 245;
+        Config.ShowClock = false;
+        Config.ClockFontSize = 18;
+        Config.ClockFormat24H = true;
+        Config.ShowClockSeconds = false;
+        Config.ShowClockDate = true;
         _pendingR = Config.BackgroundR;
         _pendingG = Config.BackgroundG;
         _pendingB = Config.BackgroundB;
@@ -324,6 +394,9 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         ThemeService.Apply(Config);
         OnPropertyChanged(nameof(Config));
         OnPropertyChanged(nameof(AccentPreviewBrush));
+        OnPropertyChanged(nameof(PreviewClockTime));
+        OnPropertyChanged(nameof(PreviewClockDate));
+        OnPropertyChanged(nameof(PreviewClockDateFontSize));
     }
 
     private bool TryApplyHex(string? text)

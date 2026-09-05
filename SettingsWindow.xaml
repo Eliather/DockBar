@@ -24,6 +24,7 @@
                       UseAeroCaptionButtons="False"/>
     </WindowChrome.WindowChrome>
     <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <Style x:Key="SettingsSurfaceStyle" TargetType="Border" BasedOn="{StaticResource DialogSurfaceStyle}">
             <Setter Property="Padding" Value="12"/>
             <Setter Property="CornerRadius" Value="6"/>
@@ -86,22 +87,48 @@
             </Grid.RowDefinitions>
 
             <Grid Grid.Row="0"
-                  Margin="0,0,0,10"
+                  Margin="0,0,0,12"
                   Background="Transparent"
                   MouseLeftButtonDown="Header_MouseDown">
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="{local:Loc Key=Settings_Title}"
                            Style="{StaticResource SettingsTitleStyle}"
-                           VerticalAlignment="Center"/>
-                <Button Grid.Column="1"
+                           VerticalAlignment="Center"
+                           Margin="0,0,16,0"/>
+
+                <Border Grid.Column="1"
+                        Style="{StaticResource DialogSurfaceStyle}"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        Padding="3"
+                        CornerRadius="6">
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton x:Name="TabBasicRadio"
+                                     Content="{local:Loc Key=Settings_TabBasic}"
+                                     IsChecked="{Binding IsBasicTabSelected, Mode=TwoWay}"
+                                     Style="{StaticResource DialogSegmentedRadioStyle}"
+                                     Padding="14,6"/>
+                        <RadioButton x:Name="TabExperimentalRadio"
+                                     Content="{local:Loc Key=Settings_TabExperimental}"
+                                     IsChecked="{Binding IsExperimentalTabSelected, Mode=TwoWay}"
+                                     Margin="4,0,0,0"
+                                     Style="{StaticResource DialogSegmentedRadioStyle}"
+                                     Padding="14,6"/>
+                    </StackPanel>
+                </Border>
+
+                <Button Grid.Column="2"
                         Style="{StaticResource WindowCloseButtonStyle}"
                         Click="Cancel_Click"/>
             </Grid>
 
-        <Grid Grid.Row="1">
+        <!-- Vista 1: Configuración Básica -->
+        <Grid Grid.Row="1"
+              Visibility="{Binding IsBasicTabSelected, Converter={StaticResource BoolToVisibilityConverter}}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="446"/>
                 <ColumnDefinition Width="22"/>
@@ -668,6 +695,225 @@
                             </StackPanel>
                         </Grid>
                     </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Vista 2: Funciones Experimentales -->
+        <Grid Grid.Row="1"
+              Visibility="{Binding IsExperimentalTabSelected, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="500"/>
+                <ColumnDefinition Width="22"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Columna Izquierda: Tarjetas de opciones experimentales -->
+            <StackPanel Grid.Column="0">
+                <!-- Banner de advertencia / intro experimental -->
+                <Border Style="{StaticResource SettingsCardStyle}"
+                        Margin="0,0,0,12">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Width="40" Height="40"
+                                CornerRadius="8"
+                                Background="{DynamicResource AppAccentSoftBrush}"
+                                BorderBrush="{DynamicResource AppAccentBrush}"
+                                BorderThickness="1"
+                                Margin="0,0,14,0"
+                                VerticalAlignment="Center">
+                            <TextBlock Text="🧪"
+                                       FontSize="20"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="{local:Loc Key=Settings_ExperimentalBanner}"
+                                       Style="{StaticResource SettingsSectionTitleStyle}"/>
+                            <TextBlock Text="{local:Loc Key=Settings_ExperimentalHint}"
+                                       Style="{StaticResource SettingsSectionBodyStyle}"
+                                       Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Tarjeta Reloj en Tiempo Real -->
+                <Border Style="{StaticResource SettingsCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="{local:Loc Key=Settings_ClockSection}"
+                                   Style="{StaticResource SettingsSectionTitleStyle}"/>
+                        <TextBlock Text="{local:Loc Key=Settings_ClockSectionHint}"
+                                   Style="{StaticResource SettingsSectionBodyStyle}"/>
+
+                        <CheckBox Content="{local:Loc Key=Settings_ShowClock}"
+                                  Style="{StaticResource DialogCheckBoxStyle}"
+                                  IsChecked="{Binding Config.ShowClock, Mode=TwoWay}"
+                                  Checked="ExperimentalOption_Changed"
+                                  Unchecked="ExperimentalOption_Changed"
+                                  Margin="0,4,0,12"
+                                  FontWeight="SemiBold"/>
+
+                        <!-- Sub-opciones de formato (habilitadas si ShowClock está activo) -->
+                        <Border Style="{StaticResource SettingsInsetCardStyle}"
+                                Padding="12,10"
+                                IsEnabled="{Binding Config.ShowClock}">
+                            <StackPanel>
+                                <TextBlock Text="{local:Loc Key=Settings_AppearanceHint}"
+                                           Style="{StaticResource SettingsLabelStyle}"
+                                           Margin="0,0,0,8"/>
+
+                                <CheckBox Content="{local:Loc Key=Settings_Clock24H}"
+                                          Style="{StaticResource DialogCheckBoxStyle}"
+                                          IsChecked="{Binding Config.ClockFormat24H, Mode=TwoWay}"
+                                          Checked="ExperimentalOption_Changed"
+                                          Unchecked="ExperimentalOption_Changed"
+                                          Margin="0,2,0,8"/>
+
+                                <CheckBox Content="{local:Loc Key=Settings_ClockSeconds}"
+                                          Style="{StaticResource DialogCheckBoxStyle}"
+                                          IsChecked="{Binding Config.ShowClockSeconds, Mode=TwoWay}"
+                                          Checked="ExperimentalOption_Changed"
+                                          Unchecked="ExperimentalOption_Changed"
+                                          Margin="0,0,0,8"/>
+
+                                <CheckBox Content="{local:Loc Key=Settings_ClockDate}"
+                                          Style="{StaticResource DialogCheckBoxStyle}"
+                                          IsChecked="{Binding Config.ShowClockDate, Mode=TwoWay}"
+                                          Checked="ExperimentalOption_Changed"
+                                          Unchecked="ExperimentalOption_Changed"
+                                          Margin="0,0,0,8"/>
+
+                                <TextBlock Text="{local:Loc Key=Settings_ClockFontSize}"
+                                           Style="{StaticResource SettingsLabelStyle}"
+                                           Margin="0,4,0,4"/>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Slider x:Name="ClockFontSlider"
+                                            Grid.Column="0"
+                                            Style="{StaticResource DialogSliderStyle}"
+                                            Minimum="10"
+                                            Maximum="36"
+                                            Value="{Binding Config.ClockFontSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            ValueChanged="ClockFontSlider_ValueChanged"/>
+                                    <TextBox Grid.Column="1"
+                                             MinWidth="78"
+                                             Margin="8,0,0,0"
+                                             Style="{StaticResource SettingsTextBoxStyle}"
+                                             HorizontalContentAlignment="Center"
+                                             Text="{Binding Config.ClockFontSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=F0}"
+                                             PreviewTextInput="NumericTextBox_PreviewTextInput"
+                                             LostFocus="NumericTextBox_LostFocus"
+                                             DataObject.Pasting="NumericTextBox_Pasting"
+                                             Tag="10|36"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- Columna Derecha: Vista previa en vivo del Reloj en el Dock -->
+            <Border Grid.Column="2"
+                    Style="{StaticResource SettingsCardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0"
+                               Text="{local:Loc Key=Settings_ClockPreview}"
+                               Style="{StaticResource SettingsSectionTitleStyle}"/>
+                    <TextBlock Grid.Row="1"
+                               Text="{local:Loc Key=Settings_PreviewHint}"
+                               Style="{StaticResource SettingsSectionBodyStyle}"/>
+
+                    <Border Grid.Row="2"
+                            Style="{StaticResource SettingsInsetCardStyle}"
+                            Padding="16"
+                            VerticalAlignment="Stretch">
+                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <!-- Marco de simulación del Dock -->
+                            <Border Width="170"
+                                    Height="380"
+                                    CornerRadius="10"
+                                    Background="{Binding PreviewBrush}"
+                                    BorderBrush="#44FFFFFF"
+                                    BorderThickness="1"
+                                    Padding="10">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Acceso simulado superior -->
+                                    <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,8,0,0">
+                                        <Border Width="38" Height="38" CornerRadius="6" Background="#22FFFFFF" BorderBrush="#35FFFFFF" BorderThickness="1" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="App" Foreground="{Binding TextBrush}" FontSize="10" TextAlignment="Center" Margin="0,3,0,0" Opacity="0.85"/>
+                                    </StackPanel>
+
+                                    <!-- Indicador de espacio libre -->
+                                    <Border Grid.Row="1"
+                                            Margin="8,14,8,14"
+                                            BorderBrush="#25FFFFFF"
+                                            BorderThickness="1"
+                                            CornerRadius="4"
+                                            SnapsToDevicePixels="True">
+                                        <TextBlock Text="[ Espacio libre ]"
+                                                   Foreground="{Binding TextBrush}"
+                                                   Opacity="0.35"
+                                                   FontSize="10"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"/>
+                                    </Border>
+
+                                    <!-- Vista previa en tiempo real del Reloj -->
+                                    <Border Grid.Row="2"
+                                            Margin="0,0,0,10"
+                                            Padding="8,5"
+                                            CornerRadius="6"
+                                            Background="#14FFFFFF"
+                                            HorizontalAlignment="Center"
+                                            Visibility="{Binding Config.ShowClock, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <StackPanel HorizontalAlignment="Center">
+                                            <TextBlock Text="{Binding PreviewClockTime}"
+                                                       Foreground="{Binding TextBrush}"
+                                                       FontWeight="SemiBold"
+                                                       FontSize="{Binding Config.ClockFontSize}"
+                                                       TextAlignment="Center"
+                                                       HorizontalAlignment="Center"/>
+                                            <TextBlock Text="{Binding PreviewClockDate}"
+                                                       Foreground="{Binding TextBrush}"
+                                                       FontSize="{Binding PreviewClockDateFontSize}"
+                                                       Opacity="0.82"
+                                                       TextAlignment="Center"
+                                                       HorizontalAlignment="Center"
+                                                       Margin="0,1,0,0"
+                                                       Visibility="{Binding Config.ShowClockDate, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Botones de acción inferiores simulados -->
+                                    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,4">
+                                        <Border Width="20" Height="20" CornerRadius="4" Background="#16FFFFFF" BorderBrush="#25FFFFFF" BorderThickness="1" Margin="2,0"/>
+                                        <Border Width="20" Height="20" CornerRadius="4" Background="#16FFFFFF" BorderBrush="#25FFFFFF" BorderThickness="1" Margin="2,0"/>
+                                        <Border Width="20" Height="20" CornerRadius="4" Background="#16FFFFFF" BorderBrush="#25FFFFFF" BorderThickness="1" Margin="2,0"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Border>
                 </Grid>
             </Border>
         </Grid>

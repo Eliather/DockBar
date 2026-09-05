@@ -20,15 +20,13 @@ Con DockBar obtendrás acceso instantáneo a tus programas sin saturar tu barra 
 - 100% privado: sin telemetría, sin rastreo y con mínimo consumo de recursos.
 ```
 
-### 2. Novedades de esta versión (What's new in this version - v1.8.1)
+### 2. Novedades de esta versión (What's new in this version - v1.8.2)
 ```text
-- Corrección de Color de Énfasis: preservación y clonación exacta de los valores de acento secundario al previsualizar o ajustar la configuración.
-- Estética Unificada DWM Glass: todas las ventanas, diálogos y menús secundarios ahora utilizan composición DWM Glass nativa por hardware y bordes limpios sin marcos estándar de Windows.
-- Paleta Secundaria y Color de Énfasis: personaliza el color de acento de los botones principales (como Guardar), deslizadores (sliders), switches y controles interactivos.
-- Selector de Color Dual (Fondo vs Énfasis): el lienzo interactivo HSV (rueda/canvas de color) y el cuadro de entrada HEX pueden utilizarse tanto para el fondo del dock como para el color de énfasis de los botones.
-- Controles Semiredondeados: botones y campos con esquinas semiredondeadas estilizadas acordes a la identidad visual de la barra de acciones.
-- Menús Contextuales Glass: menús flotantes translúcidos con micro-animaciones al pasar el cursor.
-- Detección de Instalación en Actualizaciones: diferenciación automática entre versión de Microsoft Store y GitHub.
+- Pestañas en el Menú de Ajustes: nueva navegación segmentada dividida en Configuración básica y Experimental.
+- Reloj en Tiempo Real (Experimental): aprovecha el espacio libre de la barra para mostrar la hora y fecha continua como en Windows.
+- Personalización del Reloj: formato 24h/12h, mostrar/ocultar segundos en tiempo real y fecha debajo de la hora.
+- Slider de Tamaño de Fuente: deslizador interactivo (10 a 36 px) para ajustar el tamaño del reloj con vista previa en vivo.
+- Guardado Experimental Aislado: almacenamiento desacoplado y blindado contra corrupciones de archivo para proteger los accesos directos.
 ```
 
 ### 3. Características del producto (Product Features - Lista de viñetas)
@@ -42,6 +40,7 @@ Con DockBar obtendrás acceso instantáneo a tus programas sin saturar tu barra 
 - Efecto Glass / Acrílico con rango de opacidad total (0% - 100%) y sombra adaptativa de texto
 - Paleta de color secundaria para botones de acción y deslizadores
 - Selector dual de color con lienzo HSV interactivo y entrada HEX
+- Pestañas de configuración con sección Experimental y widget de reloj en tiempo real
 - Modo edición intuitivo para reordenar, renombrar y cambiar íconos
 - Paginación dinámica integrada cuando se gestionan múltiples accesos directos
 - Inicio automático opcional con Windows
@@ -66,15 +65,13 @@ Experience faster multitasking without cluttering your desktop or taskbar:
 - Completely private: zero telemetry, no background trackers, and minimal memory footprint.
 ```
 
-### 2. Novedades de esta versión (What's new in this version - v1.8.1)
+### 2. Novedades de esta versión (What's new in this version - v1.8.2)
 ```text
-- Accent Color Fix: accurate cloning and preservation of secondary accent color properties during settings previews and changes.
-- Unified DWM Glass Aesthetic: all secondary windows, dialogs, and menus now use native hardware DWM Glass composition without standard OS title bars.
-- Secondary Accent Color Palette: customize the highlight color of primary action buttons (like Save), active slider tracks, switches, and interactive elements.
-- Dual Color Picker (Background vs Accent): use the interactive HSV saturation/brightness canvas and HEX text box for both the dock background and the accent color.
-- Semi-Rounded Controls: action buttons, text boxes, and sliders styled with cohesive semi-rounded corners.
-- Glass Context Menus: floating context menus styled with translucent blur and hover highlights.
-- Smart Update Channel Detection: accurately identifies Microsoft Store vs GitHub builds.
+- Settings Navigation Tabs: new segmented navigation with Basic Settings and Experimental tabs.
+- Real-Time Clock Widget (Experimental): utilizes free dock space to display live time and date like Windows.
+- Clock Customization: 24h/12h toggle, real-time seconds toggle, and date display option.
+- Clock Font Size Slider: interactive slider (10 to 36 px) to adjust clock text scale with live preview.
+- Isolated Experimental Storage: decoupled configuration block with defensive corruption recovery to protect shortcuts.
 ```
 
 ### 3. Características del producto (Product Features - Bullet points)

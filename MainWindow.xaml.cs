@@ -58,6 +58,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private bool _isPaused = false;
     private bool _updateCheckRunning;
     private readonly DispatcherTimer _systemRecoveryTimer;
+    private readonly DispatcherTimer _clockTimer;
     private bool _reloadConfigOnRecovery;
     private int _recoveryPassesRemaining;
     private bool _itemsPerPageRefreshQueued;
@@ -65,6 +66,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private EdgeHotspotWindow? _edgeHotspot;
     private FileSystemWatcher? _configWatcher;
     private DateTime _suppressConfigWatcherUntilUtc;
+
+    public string ClockTimeString { get; private set; } = "";
+    public string ClockDateString { get; private set; } = "";
+    public string ClockFullDateTooltip { get; private set; } = "";
+    public bool IsClockVisible => _config.ShowClock && !IsEditMode;
+    public bool IsClockDateVisible => _config.ShowClockDate;
+    public double ClockFontSize => _config.ClockFontSize > 0 ? _config.ClockFontSize : 18;
+    public double ClockDateFontSize => Math.Max(9, Math.Round(ClockFontSize * 0.65));
 
     public DockConfig Config => _config;
     public ObservableCollection<ShortcutItem> Shortcuts { get; } = new();
@@ -229,6 +238,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _hideTimer = new DispatcherTimer();
         _hideTimer.Tick += HideTimer_Tick;
 
+        _clockTimer = new DispatcherTimer();
+        _clockTimer.Tick += (_, _) => UpdateClockDisplay();
+
         _fullscreenDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
         _fullscreenDebounceTimer.Tick += (_, _) =>
         {
@@ -349,11 +361,54 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         UpdateBackgroundBrush();
         UpdateTextBrush();
         UpdateHideTimerInterval();
+        UpdateClockState();
         UpdateItemsPerPage();
         AlignDock(!_isHidden);
         UpdateVisibleItems();
         ApplyGlassEffect();
         UpdateEdgeHotspotState();
+    }
+
+    private void UpdateClockState()
+    {
+        if (_config.ShowClock)
+        {
+            _clockTimer.Interval = _config.ShowClockSeconds
+                ? TimeSpan.FromMilliseconds(500)
+                : TimeSpan.FromSeconds(1);
+            if (!_clockTimer.IsEnabled)
+            {
+                _clockTimer.Start();
+            }
+            UpdateClockDisplay();
+        }
+        else
+        {
+            if (_clockTimer.IsEnabled)
+            {
+                _clockTimer.Stop();
+            }
+        }
+        OnPropertyChanged(nameof(IsClockVisible));
+        OnPropertyChanged(nameof(IsClockDateVisible));
+        OnPropertyChanged(nameof(ClockFontSize));
+        OnPropertyChanged(nameof(ClockDateFontSize));
+    }
+
+    private void UpdateClockDisplay()
+    {
+        var now = DateTime.Now;
+        var timeFormat = _config.ClockFormat24H ? "HH:mm" : "hh:mm tt";
+        if (_config.ShowClockSeconds)
+        {
+            timeFormat = _config.ClockFormat24H ? "HH:mm:ss" : "hh:mm:ss tt";
+        }
+        ClockTimeString = now.ToString(timeFormat);
+        ClockDateString = now.ToString("ddd, d MMM");
+        ClockFullDateTooltip = now.ToLongDateString();
+        OnPropertyChanged(nameof(ClockTimeString));
+        OnPropertyChanged(nameof(ClockDateString));
+        OnPropertyChanged(nameof(ClockFullDateTooltip));
     }
 
     private void UpdateHideTimerInterval()
@@ -1549,6 +1604,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             EnableTextShadow = source.EnableTextShadow,
             AutoStartEnabled = source.AutoStartEnabled,
             AutoStartPrompted = source.AutoStartPrompted,
+            Experimental = new ExperimentalConfig
+            {
+                ShowClock = source.ShowClock,
+                ClockFontSize = source.ClockFontSize,
+                ClockFormat24H = source.ClockFormat24H,
+                ShowClockSeconds = source.ShowClockSeconds,
+                ShowClockDate = source.ShowClockDate
+            },
             Shortcuts = shortcuts.Select(s => new ShortcutItem
             {
                 Name = s.Name,
@@ -2065,12 +2128,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             var bounds = GetMonitorBounds();
             var monitorHeight = bounds.Height > 0 ? bounds.Height : SystemParameters.PrimaryScreenHeight;
             var perItem = Math.Max(IconSize + fallbackItemVerticalChrome, 1);
-            var usableHeight = Math.Max(1, monitorHeight - fallbackChromeWithoutPagination);
+            var clockChrome = _config.ShowClock ? 48.0 : 0.0;
+            var usableHeight = Math.Max(1, monitorHeight - fallbackChromeWithoutPagination - clockChrome);
             var count = Math.Max(1, (int)Math.Floor(usableHeight / perItem));
 
             if (Shortcuts.Count > count)
             {
-                usableHeight = Math.Max(1, monitorHeight - fallbackChromeWithPagination);
+                usableHeight = Math.Max(1, monitorHeight - fallbackChromeWithPagination - clockChrome);
                 count = Math.Max(1, (int)Math.Floor(usableHeight / perItem));
             }
 
@@ -2144,6 +2208,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         UpdateVisibleItems();
         OnPropertyChanged(nameof(HasMultiplePages));
         OnPropertyChanged(nameof(PaginationVisibility));
+        OnPropertyChanged(nameof(IsClockVisible));
     }
 
     protected void OnPropertyChanged([CallerMemberName] string? name = null)

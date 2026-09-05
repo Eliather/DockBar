@@ -1,5 +1,5 @@
 # DockBar
-DockBar es una barra lateral de accesos directos estilo dock para Windows desarrollada en C# y WPF. La versión `1.8.1` consolida y perfecciona el nuevo sistema visual de la aplicación bajo una estética cristalina DWM Glass pura, controles semiredondeados, paleta de énfasis secundaria personalizable y selector de color dual HSV/HEX interactivo.
+DockBar es una barra lateral de accesos directos estilo dock para Windows desarrollada en C# y WPF. La versión `1.8.2` introduce un nuevo sistema de pestañas en el panel de Ajustes (Configuración básica y Experimental), un widget de reloj en tiempo real para aprovechar el espacio libre de la barra al estilo de Windows y un sistema de guardado experimental desacoplado y seguro contra corrupciones.
 
 <img width="256" height="256" alt="Dock" src="https://github.com/user-attachments/assets/eb6fd915-77f7-4298-b41b-90a7d14f41d1" />
 
@@ -11,36 +11,34 @@ https://github.com/user-attachments/assets/9a4ea52f-8131-471e-8bd3-89122aa3dec7
 ---
 
 ## Descripción general
-DockBar proporciona una barra lateral compacta y moderna para Windows con soporte para accesos directos, modo de edición, ocultación automática fluida, configuración persistente y un panel de ajustes totalmente rediseñado.
+DockBar proporciona una barra lateral compacta y moderna para Windows con soporte para accesos directos, modo de edición, ocultación automática fluida, configuración persistente y un panel de ajustes totalmente rediseñado con pestañas y soporte para funciones experimentales.
 
 El proyecto está diseñado bajo cinco prioridades esenciales:
 
 - **Efecto Glass y estética unificada en toda la aplicación**: Composición por hardware DWM (`WindowChrome GlassFrameThickness="-1"`) extendida a todas las ventanas secundarias (Ajustes, Agregar Enlace, Apps Instaladas, Actualizaciones, Renombrar, etc.), respetando la opacidad, color de fondo y efecto Glass elegidos por el usuario.
-- **Paleta de Énfasis / Acento Secundaria**: Nueva personalización para botones principales (como *Guardar*), deslizadores (sliders), switches, cajas de selección y resaltados interactivos.
+- **Pestañas y Funciones Experimentales**: Organización clara en el menú de Ajustes entre la configuración básica y las funciones experimentales en desarrollo, como el reloj en tiempo real.
+- **Paleta de Énfasis / Acento Secundaria**: Personalización para botones principales (como *Guardar*), deslizadores (sliders), switches, cajas de selección y resaltados interactivos.
 - **Selector de Color Dual HSV y HEX**: El lienzo interactivo de saturación/brillo, el deslizador de tono y la entrada hexadecimal pueden utilizarse tanto para el fondo del dock como para el color de énfasis de los botones.
 - **Instancia única y rendimiento nativo**: Enumeración instantánea de aplicaciones y juegos mediante APIs nativas Win32 Shell COM (< 5 ms de tiempo de respuesta) sin subprocesos lentos ni dependencias pesadas.
-- **Detección robusta de juegos y modo ventana completa**: Reconocimiento inteligente de juegos en pantalla completa exclusiva o ventana sin bordes (*Borderless Windowed*), evitando aperturas accidentales del dock durante las partidas.
 
 ---
 
-## Novedades en la versión 1.8.1
-- **Corrección en la Clonación y Persistencia del Color de Énfasis**:
-  - Se corrigió un problema donde los valores de acento secundario (`AccentR`, `AccentG`, `AccentB`) no se propagaban en el método de clonación de configuración (`CloneConfig`), asegurando que las modificaciones y previsualizaciones en la ventana de Ajustes se preserven con total exactitud.
-- **Estética Unificada DWM Glass en Todas las Ventanas y Menús**:
-  - Todas las ventanas secundarias (`SettingsWindow`, `AddLinkWindow`, `StoreAppPickerWindow`, `UpdateWindow`, `AboutWindow`, `RenameWindow`, `ThemedMessageDialogWindow` y `TrayMenuWindow`) reconstruidas con `WindowChrome` nativo sin bordes opacos ni barras de título estándar del sistema operativo.
-  - El fondo de cada ventana y menú hereda la composición Glass DWM real y la opacidad configurada en el dock.
-- **Controles Semiredondeados Estilizados**:
-  - Los botones de acción, cajas de texto, switches y deslizadores adoptan esquinas semiredondeadas (`CornerRadius="4"` a `6"`) acordes a la identidad visual de la barra de acciones de DockBar.
-- **Paleta Secundaria / Color de Énfasis (Accent Color)**:
-  - Propiedad `AccentR`, `AccentG`, `AccentB` en `DockConfig.cs` con persistencia en `shortcuts.json`.
-  - Permite seleccionar el color de contraste de los botones principales (como *Guardar*), pistas activas de sliders, switches y elementos seleccionados.
-- **Selector de Color Dual (Fondo y Énfasis) con Lienzo HSV y HEX**:
-  - Selector segmentado `[ 🎨 Fondo del dock ]` / `[ ⚡ Énfasis / Botones ]` en la ventana de Ajustes.
-  - El lienzo interactivo HSV y el cuadro de entrada HEX se reutilizan para ajustar con total libertad cualquier color para ambos objetivos con previsualización en vivo.
-- **Menús Contextuales Flotantes Glass**:
-  - Menú contextual de "Agregar acceso" (`+`) y menú de clic derecho con estilos dinámicos translúcidos y esquinas semiredondeadas.
-- **Detección de Fuente de Instalación en Actualizaciones**:
-  - El diálogo de actualización y el menú contextual reconocen automáticamente si la aplicación fue instalada mediante Microsoft Store (MSIX) o GitHub, dirigiendo al usuario a la tienda o al repositorio según corresponda.
+## Novedades en la versión 1.8.2
+- **Pestañas en el Menú de Ajustes**:
+  - Navegación segmentada en la parte superior de la ventana de Ajustes con dos vistas: **Configuración básica** (tamaño, auto-ocultamiento, colores y Glass) y **Experimental** (funciones avanzadas y en desarrollo).
+- **Reloj en Tiempo Real en la Barra (Dock)**:
+  - Aprovecha el espacio libre que queda en las barras donde no cabe otro programa para mostrar la hora y fecha continua como en Windows.
+  - Ubicado de forma ergonómica sobre la paginación y los botones de acción del dock.
+  - Personalizable con formato 24 horas (ej. `14:25`) o 12 horas con AM/PM (ej. `02:25 PM`).
+  - Opción de mostrar segundos en tiempo real (`:45`) y fecha debajo de la hora.
+  - Tooltip con fecha completa al pasar el cursor por encima.
+- **Slider de Tamaño de Fuente para el Reloj**:
+  - Deslizador y caja numérica (10 a 36 px) para graduar con exactitud el tamaño del reloj.
+  - Vista previa en tiempo real en la pestaña Experimental que refleja el tamaño, colores y tipografía del dock.
+  - Ajuste dinámico del espacio de los accesos directos para evitar solapamientos.
+- **Sistema de Guardado Experimental Aislado y Seguro**:
+  - Las opciones experimentales se serializan en un bloque desacoplado `Experimental: { ... }` en `shortcuts.json`.
+  - Rescate defensivo automático contra corrupciones de archivo para proteger siempre los accesos directos del usuario.
 
 ---
 

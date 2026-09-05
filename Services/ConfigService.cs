@@ -10,7 +10,13 @@ public static class ConfigService
 {
     private const string FileName = "shortcuts.json";
     private const double GlassOpacity = 0.45;
-    private static readonly JsonSerializerOptions IndentedJsonOptions = new() { WriteIndented = true };
+    private static readonly JsonSerializerOptions IndentedJsonOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNameCaseInsensitive = true,
+        ReadCommentHandling = JsonCommentHandling.Skip,
+        AllowTrailingCommas = true
+    };
 
     public static string ConfigDirectory =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DockBar");
@@ -30,17 +36,84 @@ public static class ConfigService
             }
 
             var json = File.ReadAllText(ConfigFilePath);
-            // Backwards compatibility with the initial list-only format.
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                createdDefault = true;
+                return CreateDefault();
+            }
+
+            // Compatibilidad hacia atrás con el formato inicial de solo lista de accesos directos
             if (json.TrimStart().StartsWith("["))
             {
-                var shortcuts = JsonSerializer.Deserialize<List<ShortcutItem>>(json) ?? new List<ShortcutItem>();
+                var shortcuts = JsonSerializer.Deserialize<List<ShortcutItem>>(json, IndentedJsonOptions) ?? new List<ShortcutItem>();
                 var cfg = CreateDefault();
                 cfg.Shortcuts = shortcuts;
                 createdDefault = false;
                 return cfg;
             }
 
-            var config = JsonSerializer.Deserialize<DockConfig>(json) ?? CreateDefault();
+            DockConfig? config = null;
+            try
+            {
+                config = JsonSerializer.Deserialize<DockConfig>(json, IndentedJsonOptions);
+            }
+            catch
+            {
+                // Rescate defensivo: si existiese algún campo experimental con formato anómalo,
+                // intentamos recuperar al menos los accesos directos principales del usuario
+                try
+                {
+                    using var doc = JsonDocument.Parse(json);
+                    config = CreateDefault();
+                    if (doc.RootElement.TryGetProperty("Shortcuts", out var shortcutsElem) ||
+                        doc.RootElement.TryGetProperty("shortcuts", out shortcutsElem))
+                    {
+                        var shortcuts = shortcutsElem.Deserialize<List<ShortcutItem>>(IndentedJsonOptions);
+                        if (shortcuts != null)
+                        {
+                            config.Shortcuts = shortcuts;
+                        }
+                    }
+                }
+                catch
+                {
+                    createdDefault = true;
+                    hadError = true;
+                    return CreateDefault();
+                }
+            }
+
+            config ??= CreateDefault();
+
+            // Migración segura si los campos experimentales se guardaron previamente en la raíz
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                if (root.ValueKind == JsonValueKind.Object)
+                {
+                    config.Experimental ??= new();
+
+                    if (!root.TryGetProperty("Experimental", out _) && !root.TryGetProperty("experimental", out _))
+                    {
+                        if (root.TryGetProperty("ShowClock", out var sc) && (sc.ValueKind == JsonValueKind.True || sc.ValueKind == JsonValueKind.False))
+                            config.Experimental.ShowClock = sc.GetBoolean();
+                        if (root.TryGetProperty("ClockFontSize", out var cfs) && cfs.TryGetDouble(out var fs))
+                            config.Experimental.ClockFontSize = fs;
+                        if (root.TryGetProperty("ClockFormat24H", out var cf24) && (cf24.ValueKind == JsonValueKind.True || cf24.ValueKind == JsonValueKind.False))
+                            config.Experimental.ClockFormat24H = cf24.GetBoolean();
+                        if (root.TryGetProperty("ShowClockSeconds", out var scs) && (scs.ValueKind == JsonValueKind.True || scs.ValueKind == JsonValueKind.False))
+                            config.Experimental.ShowClockSeconds = scs.GetBoolean();
+                        if (root.TryGetProperty("ShowClockDate", out var scd) && (scd.ValueKind == JsonValueKind.True || scd.ValueKind == JsonValueKind.False))
+                            config.Experimental.ShowClockDate = scd.GetBoolean();
+                    }
+                }
+            }
+            catch
+            {
+                // Ignorar advertencias secundarias de migración
+            }
+
             config = EnsureDefaults(config);
             return config;
         }
@@ -65,6 +138,7 @@ public static class ConfigService
             {
                 config.BackgroundOpacity = GlassOpacity;
             }
+            config = EnsureDefaults(config);
             Directory.CreateDirectory(ConfigDirectory);
             var json = JsonSerializer.Serialize(config, IndentedJsonOptions);
             File.WriteAllText(ConfigFilePath, json);
@@ -88,10 +162,17 @@ public static class ConfigService
         {
             config.BackgroundOpacity = GlassOpacity;
         }
-        if (config.BackgroundR == 0 && config.BackgroundG == 0 && config.BackgroundB == 0)
+
+        config.Experimental ??= new();
+        if (config.Experimental.ClockFontSize <= 0)
         {
-            // keep black; leave else as-is
+            config.Experimental.ClockFontSize = 18;
         }
+        else
+        {
+            config.Experimental.ClockFontSize = Math.Clamp(config.Experimental.ClockFontSize, 10, 36);
+        }
+
         return config;
     }
 }
