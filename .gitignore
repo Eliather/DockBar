@@ -8,3 +8,4 @@ DockBar-win-x64*.zip
 install-cert.ps1
 .tools/
 *.msix
+.store-credentials.json
