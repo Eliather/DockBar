@@ -75,6 +75,56 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public double ClockFontSize => _config.ClockFontSize > 0 ? _config.ClockFontSize : 18;
     public double ClockDateFontSize => Math.Max(9, Math.Round(ClockFontSize * 0.65));
 
+    // Widgets experimentales: Volumen y Multimedia
+    public bool IsVolumeVisible => _config.ShowVolumeControl && !IsEditMode;
+    public bool IsMediaVisible => _config.ShowMediaControl && !IsEditMode;
+
+    public double VolumePercentValue
+    {
+        get => AudioService.Instance.VolumePercent;
+        set => AudioService.Instance.SetVolume((float)(value / 100.0));
+    }
+
+    public string VolumePercentText => $"{AudioService.Instance.VolumePercent}%";
+
+    public string VolumeTooltip
+    {
+        get
+        {
+            var dev = AudioService.Instance.DeviceName;
+            var action = AudioService.Instance.IsMuted
+                ? LocalizationService.Get("Dock_VolumeUnmute")
+                : LocalizationService.Get("Dock_VolumeMute");
+            return string.IsNullOrWhiteSpace(dev)
+                ? $"{action} ({AudioService.Instance.VolumePercent}%)"
+                : $"{dev} • {AudioService.Instance.VolumePercent}% ({action})";
+        }
+    }
+
+    public string VolumeSpeakerIconData
+    {
+        get
+        {
+            if (AudioService.Instance.IsMuted || AudioService.Instance.VolumePercent <= 0)
+                return "M3,9v6h4l5,5V4L7,9H3z M16.5,10.5l5,5 M21.5,10.5l-5,5";
+            if (AudioService.Instance.VolumePercent < 35)
+                return "M3,9v6h4l5,5V4L7,9H3z M15,9.5c0.8,0.7 1.3,1.6 1.3,2.5s-0.5,1.8-1.3,2.5";
+            if (AudioService.Instance.VolumePercent < 70)
+                return "M3,9v6h4l5,5V4L7,9H3z M15,9.5c0.8,0.7 1.3,1.6 1.3,2.5s-0.5,1.8-1.3,2.5 M17.5,7c1.5,1.3 2.5,3.1 2.5,5s-1,3.7-2.5,5";
+            return "M3,9v6h4l5,5V4L7,9H3z M15,9.5c0.8,0.7 1.3,1.6 1.3,2.5s-0.5,1.8-1.3,2.5 M17.5,7c1.5,1.3 2.5,3.1 2.5,5s-1,3.7-2.5,5 M20,4.5c2.3,1.9 3.8,4.7 3.8,7.5s-1.5,5.6-3.8,7.5";
+        }
+    }
+
+    public string MediaTrackText => MediaService.Instance.HasMedia
+        ? MediaService.Instance.FullTrackText
+        : LocalizationService.Get("Dock_MediaNoTrack");
+
+    public string MediaPlayPauseIconData => MediaService.Instance.IsPlaying
+        ? "M6,5h4v14H6V5z M14,5h4v14h-4V5z"
+        : "M8,5v14l11-7L8,5z";
+
+    private bool _isUpdatingVolumeFromService;
+
     public DockConfig Config => _config;
     public ObservableCollection<ShortcutItem> Shortcuts { get; } = new();
     public ObservableCollection<ShortcutItem> VisibleShortcuts { get; } = new();
@@ -200,16 +250,20 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 if (_isEditMode)
                 {
                     StopHideTimer();
+                    _isHidden = false;
+                    _isAnimating = false;
+                    BeginAnimation(Window.LeftProperty, null);
                     _preEditWidth = _config.DockWidth <= 0 ? Width : _config.DockWidth;
                     Width = Math.Max(350, _preEditWidth);
                     UpdateLayout();
                     AlignDock(true);
                     QueueDockRealign(true);
-                    ShowDockAnimated();
                     Dispatcher.BeginInvoke(new Action(UpdateEditModeScrollBar), DispatcherPriority.Loaded);
                 }
                 else
                 {
+                    _isAnimating = false;
+                    BeginAnimation(Window.LeftProperty, null);
                     Width = Math.Max(_config.DockWidth, 175);
                     UpdateLayout();
                     AlignDock(!_isHidden);
@@ -367,6 +421,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         UpdateVisibleItems();
         ApplyGlassEffect();
         UpdateEdgeHotspotState();
+        OnPropertyChanged(nameof(IsVolumeVisible));
+        OnPropertyChanged(nameof(IsMediaVisible));
+        OnPropertyChanged(nameof(IsClockVisible));
     }
 
     private void UpdateClockState()
@@ -493,6 +550,77 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         ApplyGlassEffect();
         QueueItemsPerPageRefresh();
         Dispatcher.BeginInvoke(new Action(() => _ = CheckForUpdatesAsync(false)), DispatcherPriority.Background);
+
+        AudioService.Instance.VolumeChanged += AudioService_VolumeChanged;
+        MediaService.Instance.MediaStateChanged += MediaService_MediaStateChanged;
+    }
+
+    private void VolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_isUpdatingVolumeFromService) return;
+        AudioService.Instance.SetVolume((float)(e.NewValue / 100.0));
+    }
+
+    private void VolumeMute_Click(object sender, RoutedEventArgs e)
+    {
+        AudioService.Instance.ToggleMute();
+    }
+
+    private void VolumePanel_MouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        AudioService.Instance.ChangeVolumeRelative(e.Delta > 0 ? 0.02f : -0.02f);
+        e.Handled = true;
+    }
+
+    private void VolumePanel_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "ms-settings:sound",
+                UseShellExecute = true
+            });
+            e.Handled = true;
+        }
+        catch { }
+    }
+
+    private void AudioService_VolumeChanged(object? sender, EventArgs e)
+    {
+        _isUpdatingVolumeFromService = true;
+        try
+        {
+            OnPropertyChanged(nameof(VolumePercentValue));
+            OnPropertyChanged(nameof(VolumePercentText));
+            OnPropertyChanged(nameof(VolumeTooltip));
+            OnPropertyChanged(nameof(VolumeSpeakerIconData));
+        }
+        finally
+        {
+            _isUpdatingVolumeFromService = false;
+        }
+    }
+
+    private void MediaPlayPause_Click(object sender, RoutedEventArgs e)
+    {
+        _ = MediaService.Instance.TogglePlayPauseAsync();
+    }
+
+    private void MediaNext_Click(object sender, RoutedEventArgs e)
+    {
+        _ = MediaService.Instance.SkipNextAsync();
+    }
+
+    private void MediaPrev_Click(object sender, RoutedEventArgs e)
+    {
+        _ = MediaService.Instance.SkipPreviousAsync();
+    }
+
+    private void MediaService_MediaStateChanged(object? sender, EventArgs e)
+    {
+        OnPropertyChanged(nameof(MediaTrackText));
+        OnPropertyChanged(nameof(MediaPlayPauseIconData));
     }
 
     private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -814,7 +942,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var area = GetMonitorBounds();
         Top = area.Top;
         Height = area.Height;
-        Left = showState ? GetShownLeft(area) : GetHiddenLeft(area);
+        var targetLeft = showState ? GetShownLeft(area) : GetHiddenLeft(area);
+        BeginAnimation(Window.LeftProperty, null);
+        Left = targetLeft;
         UpdateEdgeHotspotState();
     }
 
@@ -836,7 +966,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private double GetDockWidthForPositioning()
     {
-        return Math.Max(Width, ActualWidth);
+        if (!double.IsNaN(Width) && Width > 0)
+        {
+            return Width;
+        }
+        return ActualWidth > 0 ? ActualWidth : 175;
     }
 
     private Rect GetMonitorBounds()
@@ -975,7 +1109,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         animation.Completed += (_, _) =>
         {
             _isAnimating = false;
-            AlignDock(!_isHidden);
+            var area = GetMonitorBounds();
+            var targetLeft = !_isHidden ? GetShownLeft(area) : GetHiddenLeft(area);
+            BeginAnimation(Window.LeftProperty, null);
+            Left = targetLeft;
+            UpdateEdgeHotspotState();
         };
 
         BeginAnimation(Window.LeftProperty, animation, HandoffBehavior.SnapshotAndReplace);
@@ -1565,62 +1703,94 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
-        _edgeHotspot.ShowOnEdge(GetMonitorBounds(), _dockSide, Math.Max(EdgeRevealPx, 6));
+        _edgeHotspot.ShowOnEdge(GetMonitorBounds(), _dockSide, _config.EdgeTriggerPx > 0 ? _config.EdgeTriggerPx : 8);
+    }
+
+    private bool IsMouseOverDock()
+    {
+        if (IsMouseOver)
+        {
+            return true;
+        }
+
+        try
+        {
+            if (NativeMethods.GetCursorPos(out var pt))
+            {
+                var relativePoint = PointFromScreen(new System.Windows.Point(pt.X, pt.Y));
+                if (relativePoint.X >= 0 && relativePoint.X <= ActualWidth &&
+                    relativePoint.Y >= 0 && relativePoint.Y <= ActualHeight)
+                {
+                    return true;
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        return false;
     }
 
     public void OpenSettings()
     {
-        var draft = CloneConfig(_config);
+        var originalConfig = _config.Clone();
+        var draft = _config.Clone();
         var settings = new SettingsWindow(draft)
         {
-            Owner = this
+            Owner = this,
+            WindowStartupLocation = WindowStartupLocation.Manual
         };
 
-        if (settings.ShowDialog() == true)
+        var monitor = GetMonitorBounds();
+        settings.Left = monitor.Left + Math.Max(0, (monitor.Width - settings.Width) / 2);
+        settings.Top = monitor.Top + Math.Max(0, (monitor.Height - settings.Height) / 2);
+
+        settings.OnApplyPreview = (appliedDraft) =>
         {
-            ApplyAndSaveConfig(draft);
+            ApplyConfigState(appliedDraft);
+        };
+
+        settings.OnRevertPreview = (baseline) =>
+        {
+            ApplyConfigState(baseline);
+        };
+
+        settings.OnSaveCommitted = (committedDraft) =>
+        {
+            ApplyAndSaveConfig(committedDraft);
+            originalConfig = committedDraft.Clone();
+        };
+
+        try
+        {
+            if (settings.ShowDialog() == true)
+            {
+                ApplyAndSaveConfig(draft);
+            }
+            else
+            {
+                ApplyConfigState(originalConfig);
+            }
+        }
+        finally
+        {
+            if (IsEditMode)
+            {
+                IsEditMode = false;
+            }
+
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (!IsMouseOverDock())
+                {
+                    StartHideTimer();
+                }
+            }), DispatcherPriority.Input);
         }
     }
 
-    private static DockConfig CloneConfig(DockConfig source)
-    {
-        var shortcuts = source.Shortcuts ?? new();
-        return new DockConfig
-        {
-            DockSide = source.DockSide,
-            DockWidth = source.DockWidth,
-            IconSize = source.IconSize,
-            AutoHideDelaySeconds = source.AutoHideDelaySeconds,
-            HideAnimationMs = source.HideAnimationMs,
-            UseTransparency = source.UseTransparency,
-            BackgroundOpacity = source.BackgroundOpacity,
-            BackgroundR = source.BackgroundR,
-            BackgroundG = source.BackgroundG,
-            BackgroundB = source.BackgroundB,
-            AccentR = source.AccentR,
-            AccentG = source.AccentG,
-            AccentB = source.AccentB,
-            UseLightText = source.UseLightText,
-            EnableTextShadow = source.EnableTextShadow,
-            AutoStartEnabled = source.AutoStartEnabled,
-            AutoStartPrompted = source.AutoStartPrompted,
-            Experimental = new ExperimentalConfig
-            {
-                ShowClock = source.ShowClock,
-                ClockFontSize = source.ClockFontSize,
-                ClockFormat24H = source.ClockFormat24H,
-                ShowClockSeconds = source.ShowClockSeconds,
-                ShowClockDate = source.ShowClockDate
-            },
-            Shortcuts = shortcuts.Select(s => new ShortcutItem
-            {
-                Name = s.Name,
-                Path = s.Path,
-                Arguments = s.Arguments,
-                IconPath = s.IconPath
-            }).ToList()
-        };
-    }
+    private static DockConfig CloneConfig(DockConfig source) => source.Clone();
 
     public void ApplyAndSaveConfig(DockConfig updatedConfig)
     {
@@ -1837,6 +2007,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         DisposeConfigWatcher();
         UnregisterSystemEventHandlers();
         UnhookForegroundWatcher();
+        AudioService.Instance.VolumeChanged -= AudioService_VolumeChanged;
+        MediaService.Instance.MediaStateChanged -= MediaService_MediaStateChanged;
         base.OnClosed(e);
     }
 
@@ -2129,12 +2301,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             var monitorHeight = bounds.Height > 0 ? bounds.Height : SystemParameters.PrimaryScreenHeight;
             var perItem = Math.Max(IconSize + fallbackItemVerticalChrome, 1);
             var clockChrome = _config.ShowClock ? 48.0 : 0.0;
-            var usableHeight = Math.Max(1, monitorHeight - fallbackChromeWithoutPagination - clockChrome);
+            var volumeChrome = _config.ShowVolumeControl ? 36.0 : 0.0;
+            var mediaChrome = _config.ShowMediaControl ? 64.0 : 0.0;
+            var usableHeight = Math.Max(1, monitorHeight - fallbackChromeWithoutPagination - clockChrome - volumeChrome - mediaChrome);
             var count = Math.Max(1, (int)Math.Floor(usableHeight / perItem));
 
             if (Shortcuts.Count > count)
             {
-                usableHeight = Math.Max(1, monitorHeight - fallbackChromeWithPagination - clockChrome);
+                usableHeight = Math.Max(1, monitorHeight - fallbackChromeWithPagination - clockChrome - volumeChrome - mediaChrome);
                 count = Math.Max(1, (int)Math.Floor(usableHeight / perItem));
             }
 
@@ -2209,6 +2383,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         OnPropertyChanged(nameof(HasMultiplePages));
         OnPropertyChanged(nameof(PaginationVisibility));
         OnPropertyChanged(nameof(IsClockVisible));
+        OnPropertyChanged(nameof(IsVolumeVisible));
+        OnPropertyChanged(nameof(IsMediaVisible));
     }
 
     protected void OnPropertyChanged([CallerMemberName] string? name = null)
@@ -2390,6 +2566,17 @@ internal static class NativeMethods
             dpiY = 96;
             return false;
         }
+    }
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool GetCursorPos(out POINT lpPoint);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct POINT
+    {
+        public int X;
+        public int Y;
     }
 
     [StructLayout(LayoutKind.Sequential)]

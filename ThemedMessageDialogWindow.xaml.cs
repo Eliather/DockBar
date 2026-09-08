@@ -13,6 +13,10 @@ namespace DockBar;
 
 public partial class ThemedMessageDialogWindow : Window, INotifyPropertyChanged
 {
+    private readonly System.Windows.Threading.DispatcherTimer? _countdownTimer;
+    private int _remainingSeconds;
+    private readonly string? _countdownFormat;
+
     public string DialogTitle { get; }
     public string DialogMessage { get; }
     public string DialogGlyph { get; }
@@ -23,6 +27,12 @@ public partial class ThemedMessageDialogWindow : Window, INotifyPropertyChanged
     public bool ShowNoButton { get; }
     public bool ShowCancelButton { get; }
 
+    public bool HasCountdown => _remainingSeconds > 0;
+    public int RemainingSeconds => _remainingSeconds;
+    public string CountdownText => string.Format(
+        _countdownFormat ?? LocalizationService.Get("Settings_ApplyCountdownText"),
+        _remainingSeconds);
+
     public MessageBoxResult Result { get; private set; } = MessageBoxResult.None;
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -31,10 +41,25 @@ public partial class ThemedMessageDialogWindow : Window, INotifyPropertyChanged
         string message,
         string title,
         MessageBoxButton button = MessageBoxButton.OK,
-        MessageBoxImage image = MessageBoxImage.None)
+        MessageBoxImage image = MessageBoxImage.None,
+        int countdownSeconds = 0,
+        string? countdownFormat = null)
     {
         DialogTitle = !string.IsNullOrWhiteSpace(title) ? title : "DockBar";
         DialogMessage = message ?? string.Empty;
+        _remainingSeconds = countdownSeconds;
+        _countdownFormat = countdownFormat;
+
+        if (countdownSeconds > 0)
+        {
+            _countdownTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
+            _countdownTimer.Tick += CountdownTimer_Tick;
+            _countdownTimer.Start();
+            Closed += (_, _) => _countdownTimer.Stop();
+        }
 
         // Glyph & Color based on Image type
         switch (image)
@@ -91,6 +116,23 @@ public partial class ThemedMessageDialogWindow : Window, INotifyPropertyChanged
         };
     }
 
+    private void CountdownTimer_Tick(object? sender, EventArgs e)
+    {
+        _remainingSeconds--;
+        OnPropertyChanged(nameof(RemainingSeconds));
+        OnPropertyChanged(nameof(CountdownText));
+
+        if (_remainingSeconds <= 0)
+        {
+            _countdownTimer?.Stop();
+            if (Result == MessageBoxResult.None)
+            {
+                Result = MessageBoxResult.No;
+            }
+            Close();
+        }
+    }
+
     private void Header_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
@@ -103,6 +145,7 @@ public partial class ThemedMessageDialogWindow : Window, INotifyPropertyChanged
     {
         if (e.Key == Key.Escape)
         {
+            _countdownTimer?.Stop();
             if (ShowCancelButton)
             {
                 Result = MessageBoxResult.Cancel;
@@ -123,26 +166,40 @@ public partial class ThemedMessageDialogWindow : Window, INotifyPropertyChanged
 
     private void BtnOk_Click(object sender, RoutedEventArgs e)
     {
+        _countdownTimer?.Stop();
         Result = MessageBoxResult.OK;
         Close();
     }
 
     private void BtnYes_Click(object sender, RoutedEventArgs e)
     {
+        _countdownTimer?.Stop();
         Result = MessageBoxResult.Yes;
         Close();
     }
 
     private void BtnNo_Click(object sender, RoutedEventArgs e)
     {
+        _countdownTimer?.Stop();
         Result = MessageBoxResult.No;
         Close();
     }
 
     private void BtnCancel_Click(object sender, RoutedEventArgs e)
     {
+        _countdownTimer?.Stop();
         Result = MessageBoxResult.Cancel;
         Close();
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        _countdownTimer?.Stop();
+        if (Result == MessageBoxResult.None && HasCountdown)
+        {
+            Result = MessageBoxResult.No;
+        }
+        base.OnClosed(e);
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
@@ -188,4 +245,41 @@ public static class ThemedMessageBox
         dlg.ShowDialog();
         return dlg.Result;
     }
+
+    public static MessageBoxResult ShowCountdown(
+        Window? owner,
+        string message,
+        string title,
+        int countdownSeconds = 5,
+        string? countdownFormat = null,
+        MessageBoxImage icon = MessageBoxImage.Question)
+    {
+        if (System.Windows.Application.Current?.Dispatcher?.CheckAccess() == false)
+        {
+            return System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                ShowCountdown(owner, message, title, countdownSeconds, countdownFormat, icon));
+        }
+
+        var dlg = new ThemedMessageDialogWindow(
+            message: message,
+            title: title,
+            button: MessageBoxButton.YesNo,
+            image: icon,
+            countdownSeconds: countdownSeconds,
+            countdownFormat: countdownFormat);
+
+        if (owner != null && owner.IsVisible && owner.WindowState != WindowState.Minimized)
+        {
+            dlg.Owner = owner;
+            dlg.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        }
+        else
+        {
+            dlg.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        }
+
+        dlg.ShowDialog();
+        return dlg.Result;
+    }
 }
+

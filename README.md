@@ -1,5 +1,5 @@
 # DockBar
-DockBar es una barra lateral de accesos directos estilo dock para Windows desarrollada en C# y WPF. La versión `1.8.2` introduce un nuevo sistema de pestañas en el panel de Ajustes (Configuración básica y Experimental), un widget de reloj en tiempo real para aprovechar el espacio libre de la barra al estilo de Windows y un sistema de guardado experimental desacoplado y seguro contra corrupciones.
+DockBar es una barra lateral de accesos directos estilo dock para Windows desarrollada en C# y WPF. La versión `1.8.3` introduce nuevos widgets experimentales (controlador de volumen con conmutación dinámica y controlador multimedia inteligente con marquesina animada), calibración precisa de la zona de activación de borde en píxeles, un botón de Aplicar con diálogo de confirmación temporizado de 5 segundos, barras de desplazamiento modernas y mejoras visuales y ergonómicas.
 
 <img width="256" height="256" alt="Dock" src="https://github.com/user-attachments/assets/eb6fd915-77f7-4298-b41b-90a7d14f41d1" />
 
@@ -16,29 +16,36 @@ DockBar proporciona una barra lateral compacta y moderna para Windows con soport
 El proyecto está diseñado bajo cinco prioridades esenciales:
 
 - **Efecto Glass y estética unificada en toda la aplicación**: Composición por hardware DWM (`WindowChrome GlassFrameThickness="-1"`) extendida a todas las ventanas secundarias (Ajustes, Agregar Enlace, Apps Instaladas, Actualizaciones, Renombrar, etc.), respetando la opacidad, color de fondo y efecto Glass elegidos por el usuario.
-- **Pestañas y Funciones Experimentales**: Organización clara en el menú de Ajustes entre la configuración básica y las funciones experimentales en desarrollo, como el reloj en tiempo real.
+- **Pestañas y Funciones Experimentales**: Organización clara en el menú de Ajustes entre la configuración básica y las funciones experimentales en desarrollo (reloj digital, control de volumen dinámico y reproductor multimedia inteligente).
 - **Paleta de Énfasis / Acento Secundaria**: Personalización para botones principales (como *Guardar*), deslizadores (sliders), switches, cajas de selección y resaltados interactivos.
 - **Selector de Color Dual HSV y HEX**: El lienzo interactivo de saturación/brillo, el deslizador de tono y la entrada hexadecimal pueden utilizarse tanto para el fondo del dock como para el color de énfasis de los botones.
 - **Instancia única y rendimiento nativo**: Enumeración instantánea de aplicaciones y juegos mediante APIs nativas Win32 Shell COM (< 5 ms de tiempo de respuesta) sin subprocesos lentos ni dependencias pesadas.
 
 ---
 
-## Novedades en la versión 1.8.2
-- **Pestañas en el Menú de Ajustes**:
-  - Navegación segmentada en la parte superior de la ventana de Ajustes con dos vistas: **Configuración básica** (tamaño, auto-ocultamiento, colores y Glass) y **Experimental** (funciones avanzadas y en desarrollo).
-- **Reloj en Tiempo Real en la Barra (Dock)**:
-  - Aprovecha el espacio libre que queda en las barras donde no cabe otro programa para mostrar la hora y fecha continua como en Windows.
-  - Ubicado de forma ergonómica sobre la paginación y los botones de acción del dock.
-  - Personalizable con formato 24 horas (ej. `14:25`) o 12 horas con AM/PM (ej. `02:25 PM`).
-  - Opción de mostrar segundos en tiempo real (`:45`) y fecha debajo de la hora.
-  - Tooltip con fecha completa al pasar el cursor por encima.
-- **Slider de Tamaño de Fuente para el Reloj**:
-  - Deslizador y caja numérica (10 a 36 px) para graduar con exactitud el tamaño del reloj.
-  - Vista previa en tiempo real en la pestaña Experimental que refleja el tamaño, colores y tipografía del dock.
-  - Ajuste dinámico del espacio de los accesos directos para evitar solapamientos.
-- **Sistema de Guardado Experimental Aislado y Seguro**:
-  - Las opciones experimentales se serializan en un bloque desacoplado `Experimental: { ... }` en `shortcuts.json`.
-  - Rescate defensivo automático contra corrupciones de archivo para proteger siempre los accesos directos del usuario.
+## Novedades en la versión 1.8.3
+- **Controlador de Volumen Dinámico (Experimental)**:
+  - Widget integrado en el dock con deslizador fluido, indicador numérico de porcentaje (`0-100%`) y botón de silencio/reactivación con iconos según el nivel.
+  - Ajuste rápido mediante la rueda del ratón (`MouseWheel`) sobre el panel (+-2%).
+  - **Conmutación en caliente de dispositivos (`IMMNotificationClient`)**: Detecta automáticamente si cambias entre auriculares inalámbricos (ej. Logitech G733) y parlantes/altavoces (Realtek), reconectando el control de volumen sin reiniciar la aplicación.
+  - Tooltip informativo con el nombre amigable del dispositivo activo y porcentaje.
+  - Clic derecho en el control de volumen para abrir al instante la configuración de sonido de Windows (`ms-settings:sound`).
+- **Controlador Multimedia Inteligente (Experimental)**:
+  - Widget compacto en el dock conectado a Windows System Media Transport Controls (compatible con Spotify, navegadores Chrome/Edge, reproductores de música y video).
+  - Botones interactivos de **Reproducir / Pausar** y **Siguiente Pista**.
+  - **Marquesina animada en tiempo real (`MarqueeTextBlock`)**: Si el nombre de la canción o el artista es largo, el texto se desplaza suavemente de forma continua para que siempre puedas leer la información de reproducción completa.
+- **Calibración de la Zona de Activación de Borde (Trigger / Hotspot)**:
+  - Nuevo deslizador de píxeles (1 a 12 px) ubicado en *Configuración básica* debajo del auto-ocultamiento.
+  - Permite personalizar qué tan pegado al extremo izquierdo o derecho de la pantalla debe estar el puntero para desplegar la barra.
+- **Botón de Aplicar y Diálogo de Confirmación con Temporizador**:
+  - Nuevo botón **Aplicar** en la ventana de Ajustes para probar los cambios en vivo.
+  - Al aplicar o guardar, se despliega una ventana de confirmación interactiva con una cuenta regresiva de **5 segundos**: si el usuario no presiona "Guardar cambios", los ajustes previos se restauran automáticamente.
+- **Scrollbar Moderno en Ajustes > Experimental**:
+  - Reemplazo completo de las barras de desplazamiento nativas clásicas con flechas cuadradas por un riel minimalista oscuro con thumb tipo píldora redondeada y resaltado dinámico de acento, replicando la estética del modo edición.
+- **Correcciones Ergonómicas y de Diseño**:
+  - Corrección de desbordamiento horizontal y alineación en pantallas al situar la barra en el lateral derecho durante el modo edición.
+  - Inversión de dirección del deslizador vertical de edición para una navegación vertical más intuitiva.
+  - La ventana de Ajustes ahora siempre se abre centrada en la pantalla y restaura el estado de auto-ocultamiento del dock inmediatamente al cerrarse.
 
 ---
 
@@ -119,7 +126,9 @@ Ejemplo de estructura `shortcuts.json`:
 - [ThemeService.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/Services/ThemeService.cs): Motor centralizado de temas dinámicos y composición DWM Glass por hardware.
 - [StoreAppPickerWindow.xaml.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/StoreAppPickerWindow.xaml.cs): Selector de aplicaciones UWP y de la tienda Windows.
 - [AddLinkWindow.xaml.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/AddLinkWindow.xaml.cs): Diálogo para añadir ejecutables, carpetas, URLs web o comandos de sistema.
-- [TrayMenuWindow.xaml.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/TrayMenuWindow.xaml.cs): Menú flotante del área de notificación.
+- [AudioService.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/Services/AudioService.cs): Servicio nativo Windows CoreAudio con conmutación dinámica de endpoints (`IMMNotificationClient`) y control de volumen del sistema.
+- [MediaService.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/Services/MediaService.cs): Integración con SystemMediaTransportControls para detección y control de pistas en Spotify, navegadores y reproductores.
+- [MarqueeTextBlock.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/Controls/MarqueeTextBlock.cs): Control de texto con animación de desplazamiento continuo (marquesina) para títulos dinámicos en el dock.
 - [UpdateWindow.xaml.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/UpdateWindow.xaml.cs): Diálogo de comprobación e instalación de actualizaciones.
 
 ---

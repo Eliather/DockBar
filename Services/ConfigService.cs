@@ -106,6 +106,12 @@ public static class ConfigService
                             config.Experimental.ShowClockSeconds = scs.GetBoolean();
                         if (root.TryGetProperty("ShowClockDate", out var scd) && (scd.ValueKind == JsonValueKind.True || scd.ValueKind == JsonValueKind.False))
                             config.Experimental.ShowClockDate = scd.GetBoolean();
+                        if (root.TryGetProperty("EdgeTriggerPx", out var etp) && etp.TryGetDouble(out var px))
+                            config.Experimental.EdgeTriggerPx = px;
+                        if (root.TryGetProperty("ShowVolumeControl", out var svc) && (svc.ValueKind == JsonValueKind.True || svc.ValueKind == JsonValueKind.False))
+                            config.Experimental.ShowVolumeControl = svc.GetBoolean();
+                        if (root.TryGetProperty("ShowMediaControl", out var smc) && (smc.ValueKind == JsonValueKind.True || smc.ValueKind == JsonValueKind.False))
+                            config.Experimental.ShowMediaControl = smc.GetBoolean();
                     }
                 }
             }
@@ -171,6 +177,15 @@ public static class ConfigService
         else
         {
             config.Experimental.ClockFontSize = Math.Clamp(config.Experimental.ClockFontSize, 10, 36);
+        }
+
+        if (config.Experimental.EdgeTriggerPx <= 0)
+        {
+            config.Experimental.EdgeTriggerPx = 8;
+        }
+        else
+        {
+            config.Experimental.EdgeTriggerPx = Math.Clamp(config.Experimental.EdgeTriggerPx, 1, 30);
         }
 
         return config;

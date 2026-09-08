@@ -1,3 +1,60 @@
+# DockBar 1.8.3 Release Notes
+
+DockBar `v1.8.3` expande los widgets experimentales con un **controlador de volumen dinámico en caliente** y un **reproductor multimedia inteligente con marquesina animada**, añade **calibración en píxeles del borde de activación** en configuración básica, introduce el botón **Aplicar con confirmación temporizada de 5 segundos**, moderniza el diseño de las barras de desplazamiento y soluciona problemas ergonómicos en el modo edición.
+
+---
+
+## ✨ Novedades y Mejoras Principales (v1.8.3)
+
+### 1. 🔊 Controlador de Volumen Dinámico (Experimental)
+- **Control fluido y directo en el Dock**:
+  - Deslizador horizontal moderno integrado en la barra con porcentaje numérico (`0% - 100%`) e icono de altavoz interactivo.
+  - **4 estados de icono**: Silenciado/0%, bajo (<35%), medio (<70%) y alto (>=70%).
+  - **Ajuste rápido con rueda del ratón**: Gira la rueda del mouse sobre el panel de volumen para subir o bajar el volumen en saltos de 2%.
+- **Conmutación en caliente de dispositivos (`IMMNotificationClient`)**:
+  - Escucha notificaciones del subsistema CoreAudio de Windows: si conectas o desconectas auriculares inalámbricos (ej. Logitech G733) o alternas con los altavoces de la PC, DockBar se enlaza automáticamente en caliente al nuevo dispositivo sin reiniciar la app.
+  - Prioridad sobre el rol `eConsole` con fallback a `eMultimedia` para respetar siempre la selección del menú de sonido de la barra de tareas de Windows 11/10.
+  - **Identificación en Tooltip**: Colocar el cursor sobre el panel de volumen muestra el nombre del dispositivo activo (ej. `Altavoces (G733 Gaming Headset) • 54% (Silenciar)`).
+  - **Acceso rápido**: Hacer clic derecho en el panel de volumen abre directamente la configuración de sonido de Windows (`ms-settings:sound`).
+
+### 2. 🎵 Controlador Multimedia Inteligente (Experimental)
+- **Integración con System Media Transport Controls**:
+  - Compatible con Spotify, navegadores web (Chrome, Edge, Firefox, Brave) y reproductores multimedia del sistema.
+  - Botones táctiles de **Reproducir / Pausar** y **Siguiente Pista**.
+- **Marquesina Animada en Vivo (`MarqueeTextBlock`)**:
+  - Si el título de la canción o el nombre del artista excede el ancho del dock, el texto se desplaza suavemente de manera continua para que siempre puedas leer toda la información de lo que estás escuchando.
+
+### 3. 🎯 Calibración del Borde de Activación (Trigger / Hotspot)
+- **Ajuste fino en Configuración Básica**:
+  - Ubicado intuitivamente debajo de la opción de auto-ocultamiento.
+  - Deslizador de 1 a 12 píxeles con caja numérica para calibrar qué tan cerca del borde izquierdo o derecho de la pantalla debe situarse el puntero para desplegar la barra lateral.
+
+### 4. ⏱️ Botón de Aplicar y Diálogo Temporizado de 5 Segundos
+- **Previsualización segura de cambios**:
+  - Nuevo botón **Aplicar** en la ventana de Ajustes para probar temas, opacidad y opciones sin cerrar la ventana.
+  - Al aplicar o guardar cambios, se presenta un diálogo de confirmación con un contador visual en cuenta regresiva de **5 segundos**.
+  - Si el usuario no confirma presionando "Guardar cambios", los ajustes previos se restauran automáticamente.
+
+### 5. 🎨 Barras de Desplazamiento Modernas
+- **Cero elementos Windows 95**:
+  - Creación de `ModernScrollBarStyle` y `ModernScrollViewerStyle`, eliminando por completo los botones grises con flechas cuadradas.
+  - Riel minimalista de 4-6 px con esquinas redondeadas en color de fondo y thumb tipo cápsula redondeada que resalta con el color de acento al pasar el cursor o arrastrar, replicando el diseño del modo edición.
+
+### 6. 🛠️ Correcciones Ergonómicas y Estabilidad
+- **Modo Edición en lateral derecho**: Se corrigió el cálculo de márgenes y alineación horizontal que provocaba que la lista de accesos directos se desbordara de la pantalla cuando el dock estaba posicionado a la derecha.
+- **Inversión de scroll en edición**: La dirección del deslizador vertical se ajustó para un desplazamiento ergonómico estándar.
+- **Ventana de Ajustes**: Ahora se inicializa siempre en el centro de la pantalla y reactiva de inmediato el auto-ocultamiento del dock al cerrarse.
+- **Soporte Multi-Idioma (Ruso y Chino Simplificado)**: Se incorporó la localización integral al ruso (`ru-RU`) y al chino simplificado (`zh-CN`) en todos los componentes de la aplicación (Dock, Ajustes, Selector de Apps, Menú del sistema, Diálogos y Actualizaciones), manteniendo una cadena de fallback robusta donde cualquier otro idioma no cubierto utiliza el inglés como estándar global.
+
+---
+
+## 📦 Archivos del Release / Downloads
+- **Instalador clásico / Classic Installer**: `DockBarSetup.exe` (v1.8.3).
+- **Paquete MSIX / MSIX Package**: `DockBar.msix` (v1.8.3.0).
+- **Portable ZIP (x64)**: `DockBar-win-x64-v1.8.3.zip`.
+
+---
+
 # DockBar 1.8.2 Release Notes
 
 DockBar `v1.8.2` introduce un nuevo sistema de pestañas en el panel de Ajustes (Configuración básica y Experimental), un widget de reloj en tiempo real para aprovechar el espacio libre de la barra al estilo de Windows y un sistema de guardado experimental desacoplado y seguro contra corrupciones.

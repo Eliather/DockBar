@@ -36,7 +36,7 @@ public sealed class EdgeHotspotWindow : Window
 
     public void ShowOnEdge(Rect bounds, DockSide side, double thickness)
     {
-        var hotspotWidth = Math.Max(8, thickness);
+        var hotspotWidth = Math.Max(1, thickness);
         Width = hotspotWidth;
         Height = Math.Max(1, bounds.Height);
         Left = side == DockSide.Left

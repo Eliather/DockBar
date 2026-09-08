@@ -206,11 +206,18 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         }
     }
 
+    private DockConfig _baselineConfig;
+
+    public Action<DockConfig>? OnApplyPreview { get; set; }
+    public Action<DockConfig>? OnRevertPreview { get; set; }
+    public Action<DockConfig>? OnSaveCommitted { get; set; }
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public SettingsWindow(DockConfig config)
     {
         Config = config;
+        _baselineConfig = config.Clone();
         InitializeComponent();
         DataContext = this;
         SourceInitialized += (_, _) =>
@@ -253,6 +260,11 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
     private void ClockFontSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         OnPropertyChanged(nameof(PreviewClockDateFontSize));
+        OnPropertyChanged(nameof(Config));
+    }
+
+    private void EdgeTriggerSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
         OnPropertyChanged(nameof(Config));
     }
 
@@ -386,6 +398,9 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         Config.ClockFormat24H = true;
         Config.ShowClockSeconds = false;
         Config.ShowClockDate = true;
+        Config.EdgeTriggerPx = 8;
+        Config.ShowVolumeControl = false;
+        Config.ShowMediaControl = false;
         _pendingR = Config.BackgroundR;
         _pendingG = Config.BackgroundG;
         _pendingB = Config.BackgroundB;
@@ -464,18 +479,75 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         }
     }
 
+    private void CommitPendingColor()
+    {
+        Config.BackgroundR = _pendingR;
+        Config.BackgroundG = _pendingG;
+        Config.BackgroundB = _pendingB;
+    }
+
+    public void RefreshFromConfig()
+    {
+        _pendingR = Config.BackgroundR;
+        _pendingG = Config.BackgroundG;
+        _pendingB = Config.BackgroundB;
+        SyncHsvToActiveTarget();
+        UpdatePreviewBrush();
+        UpdateTextBrush();
+        ThemeService.Apply(Config);
+        OnPropertyChanged(nameof(Config));
+        OnPropertyChanged(nameof(Hue));
+        OnPropertyChanged(nameof(HexLabelText));
+        OnPropertyChanged(nameof(ColorPickerTitle));
+        OnPropertyChanged(nameof(ActiveColorBrush));
+        OnPropertyChanged(nameof(AccentPreviewBrush));
+        OnPropertyChanged(nameof(PreviewClockTime));
+        OnPropertyChanged(nameof(PreviewClockDate));
+        OnPropertyChanged(nameof(PreviewClockDateFontSize));
+    }
+
     private void Cancel_Click(object sender, RoutedEventArgs e)
     {
+        Config.CopyFrom(_baselineConfig);
         DialogResult = false;
         Close();
     }
 
+    private void Apply_Click(object sender, RoutedEventArgs e)
+    {
+        CommitPendingColor();
+        ThemeService.Apply(Config);
+
+        OnApplyPreview?.Invoke(Config.Clone());
+
+        var title = LocalizationService.Get("Settings_ApplyConfirmTitle");
+        var msg = LocalizationService.Get("Settings_ApplyConfirmMessage");
+        var countdownFmt = LocalizationService.Get("Settings_ApplyCountdownText");
+
+        var result = ThemedMessageBox.ShowCountdown(
+            owner: this,
+            message: msg,
+            title: title,
+            countdownSeconds: 5,
+            countdownFormat: countdownFmt,
+            icon: MessageBoxImage.Question);
+
+        if (result == MessageBoxResult.Yes)
+        {
+            _baselineConfig = Config.Clone();
+            OnSaveCommitted?.Invoke(Config.Clone());
+        }
+        else
+        {
+            Config.CopyFrom(_baselineConfig);
+            RefreshFromConfig();
+            OnRevertPreview?.Invoke(_baselineConfig.Clone());
+        }
+    }
+
     private void Save_Click(object sender, RoutedEventArgs e)
     {
-        // Commit pending color
-        Config.BackgroundR = _pendingR;
-        Config.BackgroundG = _pendingG;
-        Config.BackgroundB = _pendingB;
+        CommitPendingColor();
         ThemeService.Apply(Config);
         DialogResult = true;
         Close();

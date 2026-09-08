@@ -2,12 +2,13 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:DockBar"
+        xmlns:controls="clr-namespace:DockBar.Controls"
         Title="{local:Loc Key=Settings_Title}"
         Width="1120"
         Height="680"
         MinWidth="1040"
         MinHeight="640"
-        WindowStartupLocation="CenterOwner"
+        WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
@@ -25,6 +26,8 @@
     </WindowChrome.WindowChrome>
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource ModernScrollBarStyle}"/>
+        <Style TargetType="{x:Type ScrollViewer}" BasedOn="{StaticResource ModernScrollViewerStyle}"/>
         <Style x:Key="SettingsSurfaceStyle" TargetType="Border" BasedOn="{StaticResource DialogSurfaceStyle}">
             <Setter Property="Padding" Value="12"/>
             <Setter Property="CornerRadius" Value="6"/>
@@ -49,6 +52,7 @@
         <Style x:Key="SettingsSectionBodyStyle" TargetType="TextBlock" BasedOn="{StaticResource DialogSectionBodyStyle}">
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Margin" Value="0,3,0,8"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
         <Style x:Key="SettingsLabelStyle" TargetType="TextBlock" BasedOn="{StaticResource DialogLabelStyle}">
             <Setter Property="FontSize" Value="11.5"/>
@@ -70,6 +74,95 @@
             <Setter Property="Padding" Value="12,6"/>
             <Setter Property="MinHeight" Value="30"/>
             <Setter Property="FontSize" Value="11.5"/>
+        </Style>
+
+        <!-- Modern Fluent Slider Style for Experimental Panels -->
+        <Style x:Key="ModernSliderStyle" TargetType="Slider">
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="IsMoveToPointEnabled" Value="True"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid Height="32" SnapsToDevicePixels="True">
+                            <Border Height="4"
+                                    CornerRadius="2"
+                                    Background="{DynamicResource AppInputBrush}"
+                                    BorderBrush="{DynamicResource AppBorderBrush}"
+                                    BorderThickness="1"
+                                    VerticalAlignment="Center"/>
+                            <Track x:Name="PART_Track" VerticalAlignment="Center">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Focusable="False" OverridesDefaultStyle="True">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Height="4"
+                                                        CornerRadius="2"
+                                                        Background="{DynamicResource AppAccentBrush}"
+                                                        VerticalAlignment="Center"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Width="20" Height="20" Cursor="Hand">
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Grid Width="20" Height="20" SnapsToDevicePixels="True">
+                                                    <Ellipse x:Name="thumbGlow"
+                                                             Width="20" Height="20"
+                                                             Fill="{DynamicResource AppAccentBrush}"
+                                                             Opacity="0.25"
+                                                             Visibility="Collapsed"/>
+                                                    <Ellipse x:Name="thumbCircle"
+                                                             Width="16" Height="16"
+                                                             Fill="#FFFFFF"
+                                                             Stroke="{DynamicResource AppAccentBrush}"
+                                                             StrokeThickness="2.5"
+                                                             HorizontalAlignment="Center"
+                                                             VerticalAlignment="Center">
+                                                        <Ellipse.Effect>
+                                                            <DropShadowEffect Color="#000000"
+                                                                              BlurRadius="5"
+                                                                              ShadowDepth="1"
+                                                                              Opacity="0.35"/>
+                                                        </Ellipse.Effect>
+                                                    </Ellipse>
+                                                </Grid>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="thumbGlow" Property="Visibility" Value="Visible"/>
+                                                        <Setter TargetName="thumbCircle" Property="Width" Value="18"/>
+                                                        <Setter TargetName="thumbCircle" Property="Height" Value="18"/>
+                                                        <Setter TargetName="thumbCircle" Property="StrokeThickness" Value="3"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsDragging" Value="True">
+                                                        <Setter TargetName="thumbGlow" Property="Visibility" Value="Visible"/>
+                                                        <Setter TargetName="thumbGlow" Property="Opacity" Value="0.45"/>
+                                                        <Setter TargetName="thumbCircle" Property="Fill" Value="{DynamicResource AppAccentBrush}"/>
+                                                        <Setter TargetName="thumbCircle" Property="Stroke" Value="#FFFFFF"/>
+                                                        <Setter TargetName="thumbCircle" Property="StrokeThickness" Value="2"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Focusable="False" OverridesDefaultStyle="True">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Background="Transparent" Height="4"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </Window.Resources>
 
@@ -232,6 +325,8 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
@@ -300,7 +395,63 @@
                                  Tag="50|800"/>
                     </Grid>
 
-                    <CheckBox Grid.Row="6"
+                    <TextBlock Grid.Row="6"
+                               Text="{local:Loc Key=Settings_TriggerThickness}"
+                               Style="{StaticResource SettingsLabelStyle}"/>
+                    <Grid Grid.Row="7"
+                          Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Slider x:Name="EdgeTriggerSlider"
+                                Grid.Column="0"
+                                Style="{StaticResource ModernSliderStyle}"
+                                Minimum="1"
+                                Maximum="30"
+                                Value="{Binding Config.EdgeTriggerPx, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                ValueChanged="EdgeTriggerSlider_ValueChanged"/>
+                        <Border Grid.Column="1"
+                                MinWidth="64"
+                                Height="30"
+                                Margin="8,0,0,0"
+                                Background="#18FFFFFF"
+                                BorderBrush="{DynamicResource AppBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                VerticalAlignment="Center">
+                            <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0"
+                                         MinWidth="24"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         Foreground="{DynamicResource AppTextBrush}"
+                                         FontWeight="SemiBold"
+                                         FontSize="12.5"
+                                         HorizontalContentAlignment="Right"
+                                         VerticalContentAlignment="Center"
+                                         Text="{Binding Config.EdgeTriggerPx, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=F0}"
+                                         PreviewTextInput="NumericTextBox_PreviewTextInput"
+                                         LostFocus="NumericTextBox_LostFocus"
+                                         DataObject.Pasting="NumericTextBox_Pasting"
+                                         Tag="1|30"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="px"
+                                           Margin="4,0,4,0"
+                                           Foreground="{DynamicResource AppTextMutedBrush}"
+                                           FontSize="11"
+                                           FontWeight="Medium"
+                                           VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <CheckBox Grid.Row="8"
                               Content="{local:Loc Key=Settings_AutoStart}"
                               Style="{StaticResource DialogCheckBoxStyle}"
                               VerticalAlignment="Bottom"
@@ -706,120 +857,191 @@
                 <ColumnDefinition Width="500"/>
                 <ColumnDefinition Width="22"/>
                 <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- Columna Izquierda: Tarjetas de opciones experimentales -->
-            <StackPanel Grid.Column="0">
-                <!-- Banner de advertencia / intro experimental -->
-                <Border Style="{StaticResource SettingsCardStyle}"
-                        Margin="0,0,0,12">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Border Width="40" Height="40"
-                                CornerRadius="8"
-                                Background="{DynamicResource AppAccentSoftBrush}"
-                                BorderBrush="{DynamicResource AppAccentBrush}"
-                                BorderThickness="1"
-                                Margin="0,0,14,0"
-                                VerticalAlignment="Center">
-                            <TextBlock Text="🧪"
-                                       FontSize="20"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"/>
-                        </Border>
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock Text="{local:Loc Key=Settings_ExperimentalBanner}"
-                                       Style="{StaticResource SettingsSectionTitleStyle}"/>
-                            <TextBlock Text="{local:Loc Key=Settings_ExperimentalHint}"
-                                       Style="{StaticResource SettingsSectionBodyStyle}"
-                                       Margin="0,2,0,0"/>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-
-                <!-- Tarjeta Reloj en Tiempo Real -->
-                <Border Style="{StaticResource SettingsCardStyle}">
-                    <StackPanel>
-                        <TextBlock Text="{local:Loc Key=Settings_ClockSection}"
-                                   Style="{StaticResource SettingsSectionTitleStyle}"/>
-                        <TextBlock Text="{local:Loc Key=Settings_ClockSectionHint}"
-                                   Style="{StaticResource SettingsSectionBodyStyle}"/>
-
-                        <CheckBox Content="{local:Loc Key=Settings_ShowClock}"
-                                  Style="{StaticResource DialogCheckBoxStyle}"
-                                  IsChecked="{Binding Config.ShowClock, Mode=TwoWay}"
-                                  Checked="ExperimentalOption_Changed"
-                                  Unchecked="ExperimentalOption_Changed"
-                                  Margin="0,4,0,12"
-                                  FontWeight="SemiBold"/>
-
-                        <!-- Sub-opciones de formato (habilitadas si ShowClock está activo) -->
-                        <Border Style="{StaticResource SettingsInsetCardStyle}"
-                                Padding="12,10"
-                                IsEnabled="{Binding Config.ShowClock}">
-                            <StackPanel>
-                                <TextBlock Text="{local:Loc Key=Settings_AppearanceHint}"
-                                           Style="{StaticResource SettingsLabelStyle}"
-                                           Margin="0,0,0,8"/>
-
-                                <CheckBox Content="{local:Loc Key=Settings_Clock24H}"
-                                          Style="{StaticResource DialogCheckBoxStyle}"
-                                          IsChecked="{Binding Config.ClockFormat24H, Mode=TwoWay}"
-                                          Checked="ExperimentalOption_Changed"
-                                          Unchecked="ExperimentalOption_Changed"
-                                          Margin="0,2,0,8"/>
-
-                                <CheckBox Content="{local:Loc Key=Settings_ClockSeconds}"
-                                          Style="{StaticResource DialogCheckBoxStyle}"
-                                          IsChecked="{Binding Config.ShowClockSeconds, Mode=TwoWay}"
-                                          Checked="ExperimentalOption_Changed"
-                                          Unchecked="ExperimentalOption_Changed"
-                                          Margin="0,0,0,8"/>
-
-                                <CheckBox Content="{local:Loc Key=Settings_ClockDate}"
-                                          Style="{StaticResource DialogCheckBoxStyle}"
-                                          IsChecked="{Binding Config.ShowClockDate, Mode=TwoWay}"
-                                          Checked="ExperimentalOption_Changed"
-                                          Unchecked="ExperimentalOption_Changed"
-                                          Margin="0,0,0,8"/>
-
-                                <TextBlock Text="{local:Loc Key=Settings_ClockFontSize}"
-                                           Style="{StaticResource SettingsLabelStyle}"
-                                           Margin="0,4,0,4"/>
-                                <Grid Margin="0,0,0,4">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <Slider x:Name="ClockFontSlider"
-                                            Grid.Column="0"
-                                            Style="{StaticResource DialogSliderStyle}"
-                                            Minimum="10"
-                                            Maximum="36"
-                                            Value="{Binding Config.ClockFontSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                            ValueChanged="ClockFontSlider_ValueChanged"/>
-                                    <TextBox Grid.Column="1"
-                                             MinWidth="78"
-                                             Margin="8,0,0,0"
-                                             Style="{StaticResource SettingsTextBoxStyle}"
-                                             HorizontalContentAlignment="Center"
-                                             Text="{Binding Config.ClockFontSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=F0}"
-                                             PreviewTextInput="NumericTextBox_PreviewTextInput"
-                                             LostFocus="NumericTextBox_LostFocus"
-                                             DataObject.Pasting="NumericTextBox_Pasting"
-                                             Tag="10|36"/>
-                                </Grid>
+            </Grid.ColumnDefinitions>            <!-- Columna Izquierda: Tarjetas de opciones experimentales -->
+            <ScrollViewer Grid.Column="0"
+                          Style="{StaticResource ModernScrollViewerStyle}"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Focusable="False"
+                          Padding="0,0,10,0">
+                <StackPanel>
+                    <!-- Banner de advertencia / intro experimental -->
+                    <Border Style="{StaticResource SettingsCardStyle}"
+                            Margin="0,0,0,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Width="40" Height="40"
+                                    CornerRadius="8"
+                                    Background="{DynamicResource AppAccentSoftBrush}"
+                                    BorderBrush="{DynamicResource AppAccentBrush}"
+                                    BorderThickness="1"
+                                    Margin="0,0,14,0"
+                                    VerticalAlignment="Center">
+                                <TextBlock Text="🧪"
+                                           FontSize="20"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="{local:Loc Key=Settings_ExperimentalBanner}"
+                                           Style="{StaticResource SettingsSectionTitleStyle}"/>
+                                <TextBlock Text="{local:Loc Key=Settings_ExperimentalHint}"
+                                           Style="{StaticResource SettingsSectionBodyStyle}"
+                                           Margin="0,2,0,0"/>
                             </StackPanel>
-                        </Border>
-                    </StackPanel>
-                </Border>
-            </StackPanel>
+                        </Grid>
+                    </Border>
 
-            <!-- Columna Derecha: Vista previa en vivo del Reloj en el Dock -->
+
+                    <!-- Tarjeta 2: Controlador de volumen -->
+                    <Border Style="{StaticResource SettingsCardStyle}"
+                            Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Text="{local:Loc Key=Settings_VolumeSection}"
+                                       Style="{StaticResource SettingsSectionTitleStyle}"/>
+                            <TextBlock Text="{local:Loc Key=Settings_VolumeSectionHint}"
+                                       Style="{StaticResource SettingsSectionBodyStyle}"/>
+
+                            <CheckBox Content="{local:Loc Key=Settings_ShowVolume}"
+                                      Style="{StaticResource DialogCheckBoxStyle}"
+                                      IsChecked="{Binding Config.ShowVolumeControl, Mode=TwoWay}"
+                                      Checked="ExperimentalOption_Changed"
+                                      Unchecked="ExperimentalOption_Changed"
+                                      Margin="0,6,0,4"
+                                      FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Tarjeta 3: Controlador multimedia inteligente -->
+                    <Border Style="{StaticResource SettingsCardStyle}"
+                            Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Text="{local:Loc Key=Settings_MediaSection}"
+                                       Style="{StaticResource SettingsSectionTitleStyle}"/>
+                            <TextBlock Text="{local:Loc Key=Settings_MediaSectionHint}"
+                                       Style="{StaticResource SettingsSectionBodyStyle}"/>
+
+                            <CheckBox Content="{local:Loc Key=Settings_ShowMedia}"
+                                      Style="{StaticResource DialogCheckBoxStyle}"
+                                      IsChecked="{Binding Config.ShowMediaControl, Mode=TwoWay}"
+                                      Checked="ExperimentalOption_Changed"
+                                      Unchecked="ExperimentalOption_Changed"
+                                      Margin="0,6,0,4"
+                                      FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Tarjeta 4: Reloj en Tiempo Real -->
+                    <Border Style="{StaticResource SettingsCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="{local:Loc Key=Settings_ClockSection}"
+                                       Style="{StaticResource SettingsSectionTitleStyle}"/>
+                            <TextBlock Text="{local:Loc Key=Settings_ClockSectionHint}"
+                                       Style="{StaticResource SettingsSectionBodyStyle}"/>
+
+                            <CheckBox Content="{local:Loc Key=Settings_ShowClock}"
+                                      Style="{StaticResource DialogCheckBoxStyle}"
+                                      IsChecked="{Binding Config.ShowClock, Mode=TwoWay}"
+                                      Checked="ExperimentalOption_Changed"
+                                      Unchecked="ExperimentalOption_Changed"
+                                      Margin="0,4,0,12"
+                                      FontWeight="SemiBold"/>
+
+                            <!-- Sub-opciones de formato (habilitadas si ShowClock está activo) -->
+                            <Border Style="{StaticResource SettingsInsetCardStyle}"
+                                    Padding="12,10"
+                                    IsEnabled="{Binding Config.ShowClock}">
+                                <StackPanel>
+                                    <TextBlock Text="{local:Loc Key=Settings_AppearanceHint}"
+                                               Style="{StaticResource SettingsLabelStyle}"
+                                               Margin="0,0,0,8"/>
+
+                                    <CheckBox Content="{local:Loc Key=Settings_Clock24H}"
+                                              Style="{StaticResource DialogCheckBoxStyle}"
+                                              IsChecked="{Binding Config.ClockFormat24H, Mode=TwoWay}"
+                                              Checked="ExperimentalOption_Changed"
+                                              Unchecked="ExperimentalOption_Changed"
+                                              Margin="0,2,0,8"/>
+
+                                    <CheckBox Content="{local:Loc Key=Settings_ClockSeconds}"
+                                              Style="{StaticResource DialogCheckBoxStyle}"
+                                              IsChecked="{Binding Config.ShowClockSeconds, Mode=TwoWay}"
+                                              Checked="ExperimentalOption_Changed"
+                                              Unchecked="ExperimentalOption_Changed"
+                                              Margin="0,0,0,8"/>
+
+                                    <CheckBox Content="{local:Loc Key=Settings_ClockDate}"
+                                              Style="{StaticResource DialogCheckBoxStyle}"
+                                              IsChecked="{Binding Config.ShowClockDate, Mode=TwoWay}"
+                                              Checked="ExperimentalOption_Changed"
+                                              Unchecked="ExperimentalOption_Changed"
+                                              Margin="0,0,0,8"/>
+
+                                    <TextBlock Text="{local:Loc Key=Settings_ClockFontSize}"
+                                               Style="{StaticResource SettingsLabelStyle}"
+                                               Margin="0,4,0,4"/>
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Slider x:Name="ClockFontSlider"
+                                                Grid.Column="0"
+                                                Style="{StaticResource ModernSliderStyle}"
+                                                Minimum="10"
+                                                Maximum="36"
+                                                Value="{Binding Config.ClockFontSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                ValueChanged="ClockFontSlider_ValueChanged"/>
+                                        <Border Grid.Column="1"
+                                                MinWidth="64"
+                                                Height="30"
+                                                Margin="12,0,0,0"
+                                                Background="#18FFFFFF"
+                                                BorderBrush="{DynamicResource AppBorderBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="8"
+                                                VerticalAlignment="Center">
+                                            <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBox Grid.Column="0"
+                                                         MinWidth="24"
+                                                         Background="Transparent"
+                                                         BorderThickness="0"
+                                                         Foreground="{DynamicResource AppTextBrush}"
+                                                         FontWeight="SemiBold"
+                                                         FontSize="12.5"
+                                                         HorizontalContentAlignment="Right"
+                                                         VerticalContentAlignment="Center"
+                                                         Text="{Binding Config.ClockFontSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=F0}"
+                                                         PreviewTextInput="NumericTextBox_PreviewTextInput"
+                                                         LostFocus="NumericTextBox_LostFocus"
+                                                         DataObject.Pasting="NumericTextBox_Pasting"
+                                                         Tag="10|36"/>
+                                                <TextBlock Grid.Column="1"
+                                                           Text="pt"
+                                                           Margin="4,0,4,0"
+                                                           Foreground="{DynamicResource AppTextMutedBrush}"
+                                                           FontSize="11"
+                                                           FontWeight="Medium"
+                                                           VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Columna Derecha: Vista previa en vivo del Reloj y Widgets en el Dock -->
             <Border Grid.Column="2"
                     Style="{StaticResource SettingsCardStyle}">
                 <Grid>
@@ -878,31 +1100,74 @@
                                                    VerticalAlignment="Center"/>
                                     </Border>
 
-                                    <!-- Vista previa en tiempo real del Reloj -->
-                                    <Border Grid.Row="2"
-                                            Margin="0,0,0,10"
-                                            Padding="8,5"
-                                            CornerRadius="6"
-                                            Background="#14FFFFFF"
-                                            HorizontalAlignment="Center"
-                                            Visibility="{Binding Config.ShowClock, Converter={StaticResource BoolToVisibilityConverter}}">
-                                        <StackPanel HorizontalAlignment="Center">
-                                            <TextBlock Text="{Binding PreviewClockTime}"
-                                                       Foreground="{Binding TextBrush}"
-                                                       FontWeight="SemiBold"
-                                                       FontSize="{Binding Config.ClockFontSize}"
-                                                       TextAlignment="Center"
-                                                       HorizontalAlignment="Center"/>
-                                            <TextBlock Text="{Binding PreviewClockDate}"
-                                                       Foreground="{Binding TextBrush}"
-                                                       FontSize="{Binding PreviewClockDateFontSize}"
-                                                       Opacity="0.82"
-                                                       TextAlignment="Center"
-                                                       HorizontalAlignment="Center"
-                                                       Margin="0,1,0,0"
-                                                       Visibility="{Binding Config.ShowClockDate, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                        </StackPanel>
-                                    </Border>
+                                    <!-- Vista previa en tiempo real de Widgets Experimentales -->
+                                    <StackPanel Grid.Row="2" Orientation="Vertical" HorizontalAlignment="Stretch" Margin="0,0,0,8">
+                                        <!-- Vista previa del Reloj -->
+                                        <Border Margin="0,0,0,6"
+                                                Padding="8,4"
+                                                CornerRadius="6"
+                                                Background="#14FFFFFF"
+                                                HorizontalAlignment="Center"
+                                                Visibility="{Binding Config.ShowClock, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <StackPanel HorizontalAlignment="Center">
+                                                <TextBlock Text="{Binding PreviewClockTime}"
+                                                           Foreground="{Binding TextBrush}"
+                                                           FontWeight="SemiBold"
+                                                           FontSize="{Binding Config.ClockFontSize}"
+                                                           TextAlignment="Center"
+                                                           HorizontalAlignment="Center"/>
+                                                <TextBlock Text="{Binding PreviewClockDate}"
+                                                           Foreground="{Binding TextBrush}"
+                                                           FontSize="{Binding PreviewClockDateFontSize}"
+                                                           Opacity="0.82"
+                                                           TextAlignment="Center"
+                                                           HorizontalAlignment="Center"
+                                                           Margin="0,1,0,0"
+                                                           Visibility="{Binding Config.ShowClockDate, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- Vista previa de Multimedia -->
+                                        <Border Margin="0,0,0,6"
+                                                Padding="6,4"
+                                                CornerRadius="6"
+                                                Background="#14FFFFFF"
+                                                HorizontalAlignment="Stretch"
+                                                Visibility="{Binding Config.ShowMediaControl, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <StackPanel Orientation="Vertical" HorizontalAlignment="Stretch">
+                                                <TextBlock Text="Song Title • Artist"
+                                                           Foreground="{Binding TextBrush}"
+                                                           FontSize="10"
+                                                           FontWeight="SemiBold"
+                                                           TextAlignment="Center"
+                                                           Margin="0,0,0,3"/>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                    <Border Width="16" Height="16" CornerRadius="3" Background="#18FFFFFF" Margin="2,0"/>
+                                                    <Border Width="18" Height="18" CornerRadius="3" Background="#25FFFFFF" Margin="2,0"/>
+                                                    <Border Width="16" Height="16" CornerRadius="3" Background="#18FFFFFF" Margin="2,0"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- Vista previa de Volumen -->
+                                        <Border Margin="0,0,0,2"
+                                                Padding="6,4"
+                                                CornerRadius="6"
+                                                Background="#14FFFFFF"
+                                                HorizontalAlignment="Stretch"
+                                                Visibility="{Binding Config.ShowVolumeControl, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0" Width="14" Height="14" CornerRadius="2" Background="#20FFFFFF"/>
+                                                <Border Grid.Column="1" Height="4" CornerRadius="2" Background="{DynamicResource AppAccentBrush}" Margin="4,0"/>
+                                                <TextBlock Grid.Column="2" Text="75%" Foreground="{Binding TextBrush}" FontSize="9" FontWeight="SemiBold"/>
+                                            </Grid>
+                                        </Border>
+                                    </StackPanel>
 
                                     <!-- Botones de acción inferiores simulados -->
                                     <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,4">
@@ -952,6 +1217,10 @@
                             Style="{StaticResource SettingsSecondaryButtonStyle}"
                             Margin="0,0,8,0"
                             IsCancel="True"/>
+                    <Button Content="{local:Loc Key=Common_Apply}"
+                            Style="{StaticResource SettingsSecondaryButtonStyle}"
+                            Margin="0,0,8,0"
+                            Click="Apply_Click"/>
                     <Button Content="{local:Loc Key=Common_Save}"
                             Style="{StaticResource SettingsPrimaryButtonStyle}"
                             IsDefault="True"
