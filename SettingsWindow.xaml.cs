@@ -1,12 +1,25 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using DockBar.Models;
 using DockBar.Services;
+using Brush = System.Windows.Media.Brush;
+using Brushes = System.Windows.Media.Brushes;
+using Color = System.Windows.Media.Color;
+using Orientation = System.Windows.Controls.Orientation;
+using Button = System.Windows.Controls.Button;
+using Cursors = System.Windows.Input.Cursors;
+using Point = System.Windows.Point;
+using MouseEventArgs = System.Windows.Input.MouseEventArgs;
+using MouseButtonEventArgs = System.Windows.Input.MouseButtonEventArgs;
 
 namespace DockBar;
 
@@ -28,27 +41,67 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
     private double _sat = 1.0;
     private double _val = 1.0;
     private bool _isEditingBackground = true;
-    private bool _isBasicTabSelected = true;
+    private int _selectedTab = 0; // 0 = Basic, 1 = Clock, 2 = Media, 3 = Experimental
     private readonly System.Windows.Threading.DispatcherTimer _previewClockTimer;
 
     public bool IsBasicTabSelected
     {
-        get => _isBasicTabSelected;
+        get => _selectedTab == 0;
         set
         {
-            if (_isBasicTabSelected != value)
+            if (value && _selectedTab != 0)
             {
-                _isBasicTabSelected = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(IsExperimentalTabSelected));
+                _selectedTab = 0;
+                NotifyTabsChanged();
+            }
+        }
+    }
+
+    public bool IsClockTabSelected
+    {
+        get => _selectedTab == 1;
+        set
+        {
+            if (value && _selectedTab != 1)
+            {
+                _selectedTab = 1;
+                NotifyTabsChanged();
+            }
+        }
+    }
+
+    public bool IsMediaTabSelected
+    {
+        get => _selectedTab == 2;
+        set
+        {
+            if (value && _selectedTab != 2)
+            {
+                _selectedTab = 2;
+                NotifyTabsChanged();
             }
         }
     }
 
     public bool IsExperimentalTabSelected
     {
-        get => !_isBasicTabSelected;
-        set => IsBasicTabSelected = !value;
+        get => _selectedTab == 3;
+        set
+        {
+            if (value && _selectedTab != 3)
+            {
+                _selectedTab = 3;
+                NotifyTabsChanged();
+            }
+        }
+    }
+
+    private void NotifyTabsChanged()
+    {
+        OnPropertyChanged(nameof(IsBasicTabSelected));
+        OnPropertyChanged(nameof(IsClockTabSelected));
+        OnPropertyChanged(nameof(IsMediaTabSelected));
+        OnPropertyChanged(nameof(IsExperimentalTabSelected));
     }
 
     public string PreviewClockTime
@@ -211,13 +264,34 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
     public Action<DockConfig>? OnApplyPreview { get; set; }
     public Action<DockConfig>? OnRevertPreview { get; set; }
     public Action<DockConfig>? OnSaveCommitted { get; set; }
+    public ObservableCollection<GpuDevice> GpuDevices => GpuService.Instance.Devices;
+    public bool HasDetectedGpus => GpuService.Instance.HasGpus;
+    public bool HasMultipleGpus => GpuService.Instance.DeviceCount > 1;
+    public string PreviewCpuLabel => Config.ShowHardwareModelNames ? MainWindow.DetectedCpuName : "CPU";
+
+    public string PreviewGpuLabel => Config.ShowHardwareModelNames
+        ? (GpuService.Instance.Devices.Count > 0 ? GpuService.Instance.Devices[0].ShortModelName : "GPU")
+        : "GPU";
+
+    public string GpuHeaderLabel => GpuService.Instance.DeviceCount > 1
+        ? $"{LocalizationService.Get("Settings_DetectedGpus")} ({GpuService.Instance.DeviceCount})"
+        : LocalizationService.Get("Settings_DetectedGpuSingle");
 
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    private void HardwareNamesOption_Changed(object sender, RoutedEventArgs e)
+    {
+        OnPropertyChanged(nameof(PreviewCpuLabel));
+        OnPropertyChanged(nameof(PreviewGpuLabel));
+        OnPropertyChanged(nameof(Config));
+        OnApplyPreview?.Invoke(Config);
+    }
 
     public SettingsWindow(DockConfig config)
     {
         Config = config;
         _baselineConfig = config.Clone();
+        GpuService.Instance.Initialize();
         InitializeComponent();
         DataContext = this;
         SourceInitialized += (_, _) =>
@@ -247,15 +321,26 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         };
         _previewClockTimer.Start();
         Closed += (_, _) => _previewClockTimer.Stop();
+        Loaded += (_, _) => ApplyWidgetOrderToPreview();
     }
 
-    private void ExperimentalOption_Changed(object sender, RoutedEventArgs e)
+    public void ApplyWidgetOrderToPreview()
+    {
+        ClockPreviewControl?.ApplyWidgetOrderToPreview();
+        MediaPreviewControl?.ApplyWidgetOrderToPreview();
+        ExperimentalPreviewControl?.ApplyWidgetOrderToPreview();
+    }
+
+    private void SettingOption_Changed(object sender, RoutedEventArgs e)
     {
         OnPropertyChanged(nameof(PreviewClockTime));
         OnPropertyChanged(nameof(PreviewClockDate));
         OnPropertyChanged(nameof(PreviewClockDateFontSize));
         OnPropertyChanged(nameof(Config));
+        ApplyWidgetOrderToPreview();
     }
+
+    private void ExperimentalOption_Changed(object sender, RoutedEventArgs e) => SettingOption_Changed(sender, e);
 
     private void ClockFontSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
@@ -401,6 +486,12 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         Config.EdgeTriggerPx = 8;
         Config.ShowVolumeControl = false;
         Config.ShowMediaControl = false;
+        Config.ShowMediaSeekBar = false;
+        Config.ShowResourceMonitor = false;
+        Config.ShowHardwareModelNames = false;
+        Config.ShowCaffeine = false;
+        Config.WidgetOrder = new() { "Clock", "Media", "Volume", "Resource", "Caffeine" };
+        ApplyWidgetOrderToPreview();
         _pendingR = Config.BackgroundR;
         _pendingG = Config.BackgroundG;
         _pendingB = Config.BackgroundB;

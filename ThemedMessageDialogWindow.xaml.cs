@@ -106,8 +106,8 @@ public partial class ThemedMessageDialogWindow : Window, INotifyPropertyChanged
                 break;
         }
 
-        InitializeComponent();
         DataContext = this;
+        InitializeComponent();
 
         SourceInitialized += (_, _) =>
         {

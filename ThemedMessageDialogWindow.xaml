@@ -26,7 +26,7 @@
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
     </Window.Resources>
 
-    <Border Background="{DynamicResource AppCanvasBrush}"
+    <Border Background="{DynamicResource AppSurfaceBrush}"
             BorderBrush="{DynamicResource AppBorderStrongBrush}"
             BorderThickness="1"
             CornerRadius="6"

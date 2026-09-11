@@ -1,5 +1,5 @@
 # DockBar
-DockBar es una barra lateral de accesos directos estilo dock para Windows desarrollada en C# y WPF. La versión `1.8.3` introduce nuevos widgets experimentales (controlador de volumen con conmutación dinámica y controlador multimedia inteligente con marquesina animada), calibración precisa de la zona de activación de borde en píxeles, un botón de Aplicar con diálogo de confirmación temporizado de 5 segundos, barras de desplazamiento modernas y mejoras visuales y ergonómicas.
+DockBar es una barra lateral de accesos directos estilo dock para Windows desarrollada en C# y WPF. La versión `1.8.4` introduce la barra de búsqueda y progreso multimedia interactiva (Seek Bar) con diseño ultra-compacto, monitor de recursos con soporte avanzado Multi-GPU (NVIDIA, AMD e Intel), modo Cafeína (Keep-Awake) para evitar la suspensión del equipo, previsualización en vivo en el diálogo de Ajustes y localización completa en 4 idiomas.
 
 <img width="256" height="256" alt="Dock" src="https://github.com/user-attachments/assets/eb6fd915-77f7-4298-b41b-90a7d14f41d1" />
 
@@ -16,10 +16,32 @@ DockBar proporciona una barra lateral compacta y moderna para Windows con soport
 El proyecto está diseñado bajo cinco prioridades esenciales:
 
 - **Efecto Glass y estética unificada en toda la aplicación**: Composición por hardware DWM (`WindowChrome GlassFrameThickness="-1"`) extendida a todas las ventanas secundarias (Ajustes, Agregar Enlace, Apps Instaladas, Actualizaciones, Renombrar, etc.), respetando la opacidad, color de fondo y efecto Glass elegidos por el usuario.
-- **Pestañas y Funciones Experimentales**: Organización clara en el menú de Ajustes entre la configuración básica y las funciones experimentales en desarrollo (reloj digital, control de volumen dinámico y reproductor multimedia inteligente).
+- **Pestañas de Configuración por Categorías**: Organización modular en el menú de Ajustes dividida en categorías independientes: **Básica**, **Reloj**, **Multimedia** y funciones **Experimentales** (monitor de recursos, Multi-GPU, modo Cafeína y organizador de widgets), con almacenamiento desacoplado en el archivo de configuración.
 - **Paleta de Énfasis / Acento Secundaria**: Personalización para botones principales (como *Guardar*), deslizadores (sliders), switches, cajas de selección y resaltados interactivos.
 - **Selector de Color Dual HSV y HEX**: El lienzo interactivo de saturación/brillo, el deslizador de tono y la entrada hexadecimal pueden utilizarse tanto para el fondo del dock como para el color de énfasis de los botones.
 - **Instancia única y rendimiento nativo**: Enumeración instantánea de aplicaciones y juegos mediante APIs nativas Win32 Shell COM (< 5 ms de tiempo de respuesta) sin subprocesos lentos ni dependencias pesadas.
+
+---
+
+## Novedades en la versión 1.8.4
+- **Barra de Progreso y Búsqueda Multimedia Interactiva (Seek Bar)**:
+  - Deslizador de reproducción para canciones, videos y podcasts directamente en el dock (compatible con Spotify, YouTube, navegadores y reproductores multimedia).
+  - Indicadores numéricos de tiempo transcurrido y duración (`0:00 / 3:45`).
+  - Previsualización fluida de tiempo al arrastrar y salto exacto al soltar el ratón sin saturar el reproductor.
+  - Ajuste rápido con la rueda del ratón (`MouseWheel`, ±5s).
+  - Estilo dedicado `MediaSeekSliderStyle`: diseño ultra-compacto de 14px con track de 4px y thumb circular de 10px con acento y sombra suave.
+  - Protección de buffer y anti-rebotes: previene reinicios a `00:00` durante la carga de streaming.
+  - Opcional y configurable con casilla de verificación en *Ajustes > Experimental*.
+- **Monitor de Recursos y Detección Multi-GPU**:
+  - Detección y monitorización integral de múltiples tarjetas gráficas (NVIDIA NVML, AMD ADLX / DXGI, Intel).
+  - Detección de nombres reales de modelos en lugar de etiquetas genéricas.
+  - Seguimiento de carga y memoria por GPU seleccionada.
+- **Modo Cafeína (Keep-Awake)**:
+  - Evita que Windows apague la pantalla o entre en reposo durante descargas, tareas largas o presentaciones.
+- **Control de Previsualización en Vivo (Dock Preview)**:
+  - Previsualización dinámica en tiempo real dentro del panel de Ajustes antes de guardar los cambios.
+- **Localización Completa**:
+  - Traducciones completas en español, inglés, ruso y chino simplificado.
 
 ---
 

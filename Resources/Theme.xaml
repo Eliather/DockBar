@@ -544,6 +544,71 @@
         </Setter>
     </Style>
 
+    <!-- Sleek Media Seek Bar Slider (Compact 14px with circular thumb) -->
+    <Style TargetType="Slider" x:Key="MediaSeekSliderStyle">
+        <Setter Property="Height" Value="14"/>
+        <Setter Property="MinHeight" Value="14"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="IsMoveToPointEnabled" Value="True"/>
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Slider">
+                    <Grid Height="14" VerticalAlignment="Center" SnapsToDevicePixels="True">
+                        <!-- Pista / Fondo no reproducido -->
+                        <Border Height="4"
+                                CornerRadius="2"
+                                Background="#35FFFFFF"
+                                VerticalAlignment="Center"/>
+                        <Track x:Name="PART_Track" VerticalAlignment="Center">
+                            <!-- Porción ya reproducida con color de acento -->
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Focusable="False" OverridesDefaultStyle="True">
+                                    <RepeatButton.Template>
+                                        <ControlTemplate TargetType="RepeatButton">
+                                            <Border Height="4"
+                                                    CornerRadius="2"
+                                                    Background="{DynamicResource AppAccentBrush}"
+                                                    VerticalAlignment="Center"/>
+                                        </ControlTemplate>
+                                    </RepeatButton.Template>
+                                </RepeatButton>
+                            </Track.DecreaseRepeatButton>
+                            <!-- Thumb circular nítido y estilizado sin recortes -->
+                            <Track.Thumb>
+                                <Thumb Width="10" Height="10" Cursor="Hand" OverridesDefaultStyle="True">
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Border Width="10" Height="10"
+                                                    CornerRadius="5"
+                                                    Background="{DynamicResource AppTextBrush}"
+                                                    BorderBrush="{DynamicResource AppAccentBrush}"
+                                                    BorderThickness="1.5">
+                                                <Border.Effect>
+                                                    <DropShadowEffect BlurRadius="3" ShadowDepth="1" Direction="270" Opacity="0.4"/>
+                                                </Border.Effect>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Track.Thumb>
+                            <!-- Restante transparente -->
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Focusable="False" OverridesDefaultStyle="True">
+                                    <RepeatButton.Template>
+                                        <ControlTemplate TargetType="RepeatButton">
+                                            <Border Background="Transparent" Height="4"/>
+                                        </ControlTemplate>
+                                    </RepeatButton.Template>
+                                </RepeatButton>
+                            </Track.IncreaseRepeatButton>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Vertical Hue Slider for Color Picker -->
     <Style TargetType="Slider" x:Key="DialogHueSliderStyle">
         <Setter Property="Width" Value="20"/>

@@ -9,3 +9,4 @@ install-cert.ps1
 .tools/
 *.msix
 .store-credentials.json
+storedisplay/

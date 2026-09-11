@@ -59,6 +59,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private bool _updateCheckRunning;
     private readonly DispatcherTimer _systemRecoveryTimer;
     private readonly DispatcherTimer _clockTimer;
+    private readonly DispatcherTimer _resourceTimer;
+    private ulong _lastIdle;
+    private ulong _lastKernel;
+    private ulong _lastUser;
+    private bool _lastSystemTimeSampled;
+    private string _ramDetailsText = string.Empty;
+    private bool _isCaffeineActive;
     private bool _reloadConfigOnRecovery;
     private int _recoveryPassesRemaining;
     private bool _itemsPerPageRefreshQueued;
@@ -75,9 +82,85 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public double ClockFontSize => _config.ClockFontSize > 0 ? _config.ClockFontSize : 18;
     public double ClockDateFontSize => Math.Max(9, Math.Round(ClockFontSize * 0.65));
 
-    // Widgets experimentales: Volumen y Multimedia
+    // Widgets experimentales: Volumen, Multimedia, Monitor de Recursos y Caffeine
     public bool IsVolumeVisible => _config.ShowVolumeControl && !IsEditMode;
     public bool IsMediaVisible => _config.ShowMediaControl && !IsEditMode;
+    public bool IsMediaSeekBarVisible => _config.ShowMediaControl && _config.ShowMediaSeekBar && !IsEditMode;
+    public double MediaPositionSeconds => MediaService.Instance.PositionSeconds;
+    public double MediaDurationSeconds => Math.Max(MediaService.Instance.DurationSeconds, 1.0);
+    private string? _scrubbingPositionText = null;
+    public string MediaPositionText => _scrubbingPositionText ?? MediaService.Instance.PositionText;
+    public string MediaDurationText => MediaService.Instance.DurationText;
+    public bool CanSeekMedia => MediaService.Instance.CanSeek && MediaService.Instance.DurationSeconds > 0;
+    public bool IsResourceMonitorVisible => _config.ShowResourceMonitor && !IsEditMode;
+    public bool IsCaffeineVisible => _config.ShowCaffeine && !IsEditMode;
+
+    private int _cpuUsagePercent;
+    public int CpuUsagePercent
+    {
+        get => _cpuUsagePercent;
+        set { if (_cpuUsagePercent != value) { _cpuUsagePercent = value; OnPropertyChanged(); } }
+    }
+
+    private string _cpuUsageText = "0%";
+    public string CpuUsageText
+    {
+        get => _cpuUsageText;
+        set { if (_cpuUsageText != value) { _cpuUsageText = value; OnPropertyChanged(); } }
+    }
+
+    private int _ramUsagePercent;
+    public int RamUsagePercent
+    {
+        get => _ramUsagePercent;
+        set { if (_ramUsagePercent != value) { _ramUsagePercent = value; OnPropertyChanged(); } }
+    }
+
+    private string _ramUsageText = "0%";
+    public string RamUsageText
+    {
+        get => _ramUsageText;
+        private set { if (_ramUsageText != value) { _ramUsageText = value; OnPropertyChanged(); } }
+    }
+
+    private string _resourceMonitorTooltip = "";
+    public string ResourceMonitorTooltip
+    {
+        get => _resourceMonitorTooltip;
+        private set { if (_resourceMonitorTooltip != value) { _resourceMonitorTooltip = value; OnPropertyChanged(); } }
+    }
+
+    public ObservableCollection<GpuDevice> GpuDevices => GpuService.Instance.Devices;
+
+    private string _cpuLabel = "CPU";
+    public string CpuLabel
+    {
+        get => _cpuLabel;
+        private set { if (_cpuLabel != value) { _cpuLabel = value; OnPropertyChanged(); } }
+    }
+
+    public bool IsCaffeineActive
+    {
+        get => _isCaffeineActive;
+        private set
+        {
+            if (_isCaffeineActive != value)
+            {
+                _isCaffeineActive = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CaffeineBrush));
+                OnPropertyChanged(nameof(CaffeineTooltip));
+            }
+        }
+    }
+
+    public System.Windows.Media.Brush CaffeineBrush => IsCaffeineActive
+        ? (TryFindResource("AppAccentBrush") as System.Windows.Media.Brush ?? System.Windows.Media.Brushes.Orange)
+        : DockTextBrush;
+
+    public string CaffeineTooltip => IsCaffeineActive
+        ? LocalizationService.Get("Dock_CaffeineActiveTooltip")
+        : LocalizationService.Get("Dock_CaffeineInactiveTooltip");
 
     public double VolumePercentValue
     {
@@ -295,6 +378,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _clockTimer = new DispatcherTimer();
         _clockTimer.Tick += (_, _) => UpdateClockDisplay();
 
+        _resourceTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _resourceTimer.Tick += (_, _) => UpdateResourceDisplay();
+        GpuService.Instance.Initialize();
+        UpdateHardwareLabels();
+        Closed += (_, _) =>
+        {
+            NativeMethods.SetThreadExecutionState(NativeMethods.EXECUTION_STATE.ES_CONTINUOUS);
+            GpuService.Instance.Dispose();
+        };
+
         _fullscreenDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
         _fullscreenDebounceTimer.Tick += (_, _) =>
         {
@@ -349,6 +442,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _config.Shortcuts ??= new();
         _dockSide = _config.DockSide;
         ApplyVisualConfig();
+        UpdateHardwareLabels();
         ReplaceShortcuts(_config.Shortcuts, forceIconRefresh);
     }
 
@@ -415,7 +509,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         UpdateBackgroundBrush();
         UpdateTextBrush();
         UpdateHideTimerInterval();
+        UpdateWidgetsOrder();
         UpdateClockState();
+        UpdateResourceMonitorState();
         UpdateItemsPerPage();
         AlignDock(!_isHidden);
         UpdateVisibleItems();
@@ -423,7 +519,227 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         UpdateEdgeHotspotState();
         OnPropertyChanged(nameof(IsVolumeVisible));
         OnPropertyChanged(nameof(IsMediaVisible));
+        OnPropertyChanged(nameof(IsMediaSeekBarVisible));
+        UpdateMediaTimelineUI();
         OnPropertyChanged(nameof(IsClockVisible));
+        OnPropertyChanged(nameof(IsResourceMonitorVisible));
+        OnPropertyChanged(nameof(IsCaffeineVisible));
+    }
+
+    private void UpdateWidgetsOrder()
+    {
+        if (ExperimentalWidgetsPanel == null || ClockPanel == null || MediaPanel == null || VolumePanel == null)
+        {
+            return;
+        }
+
+        var order = _config.Experimental?.WidgetOrder ?? new List<string> { "Clock", "Media", "Volume", "Resource", "Caffeine" };
+        var panelMap = new Dictionary<string, UIElement>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Clock"] = ClockPanel,
+            ["Media"] = MediaPanel,
+            ["Volume"] = VolumePanel
+        };
+        if (ResourcePanel != null) panelMap["Resource"] = ResourcePanel;
+        if (CaffeinePanel != null) panelMap["Caffeine"] = CaffeinePanel;
+
+        ExperimentalWidgetsPanel.Children.Clear();
+        foreach (var key in order)
+        {
+            if (panelMap.TryGetValue(key, out var element))
+            {
+                ExperimentalWidgetsPanel.Children.Add(element);
+            }
+        }
+        foreach (var kvp in panelMap)
+        {
+            if (!ExperimentalWidgetsPanel.Children.Contains(kvp.Value))
+            {
+                ExperimentalWidgetsPanel.Children.Add(kvp.Value);
+            }
+        }
+    }
+
+    private void UpdateResourceMonitorState()
+    {
+        if (_config.ShowResourceMonitor)
+        {
+            if (!_resourceTimer.IsEnabled)
+            {
+                _resourceTimer.Start();
+            }
+            UpdateResourceDisplay();
+        }
+        else
+        {
+            if (_resourceTimer.IsEnabled)
+            {
+                _resourceTimer.Stop();
+            }
+        }
+        OnPropertyChanged(nameof(IsResourceMonitorVisible));
+    }
+
+    private void UpdateResourceDisplay()
+    {
+        if (!_config.ShowResourceMonitor) return;
+
+        try
+        {
+            if (NativeMethods.GetSystemTimes(out var idleFt, out var kernelFt, out var userFt))
+            {
+                ulong idle = FileTimeToUInt64(idleFt);
+                ulong kernel = FileTimeToUInt64(kernelFt);
+                ulong user = FileTimeToUInt64(userFt);
+
+                if (_lastSystemTimeSampled)
+                {
+                    ulong idleDelta = idle - _lastIdle;
+                    ulong kernelDelta = kernel - _lastKernel;
+                    ulong userDelta = user - _lastUser;
+                    ulong totalDelta = kernelDelta + userDelta;
+
+                    if (totalDelta > 0)
+                    {
+                        double idlePct = (double)idleDelta * 100.0 / totalDelta;
+                        double cpuPct = Math.Clamp(100.0 - idlePct, 0.0, 100.0);
+                        CpuUsagePercent = (int)Math.Round(cpuPct);
+                    }
+                }
+
+                _lastIdle = idle;
+                _lastKernel = kernel;
+                _lastUser = user;
+                _lastSystemTimeSampled = true;
+            }
+
+            var mem = new NativeMethods.MEMORYSTATUSEX();
+            if (NativeMethods.GlobalMemoryStatusEx(mem))
+            {
+                RamUsagePercent = (int)mem.dwMemoryLoad;
+                double usedGb = (mem.ullTotalPhys - mem.ullAvailPhys) / (1024.0 * 1024.0 * 1024.0);
+                double totalGb = mem.ullTotalPhys / (1024.0 * 1024.0 * 1024.0);
+                _ramDetailsText = $"{usedGb:F1} / {totalGb:F1} GB";
+            }
+
+            CpuUsageText = $"{CpuUsagePercent}%";
+            RamUsageText = $"{RamUsagePercent}%";
+            _ = GpuService.Instance.UpdateUsageAsync();
+
+            var sb = new System.Text.StringBuilder();
+            sb.Append(LocalizationService.Get("Dock_ResourceMonitorTooltip"));
+            sb.Append($"\nCPU: {CpuUsagePercent}%");
+            sb.Append($"\nRAM: {RamUsagePercent}% ({_ramDetailsText})");
+            foreach (var gpu in GpuDevices)
+            {
+                sb.Append($"\n{gpu.Label}: {gpu.UsagePercent}% - {gpu.Name} ({gpu.DedicatedVramText} VRAM)");
+            }
+            ResourceMonitorTooltip = sb.ToString();
+        }
+        catch { }
+    }
+
+    private static string? _detectedCpuName;
+    public static string DetectedCpuName
+    {
+        get
+        {
+            if (_detectedCpuName != null) return _detectedCpuName;
+            try
+            {
+                var raw = Microsoft.Win32.Registry.GetValue(
+                    @"HKEY_LOCAL_MACHINE\HARDWARE\DESCRIPTION\System\CentralProcessor\0",
+                    "ProcessorNameString", null) as string;
+                _detectedCpuName = CleanCpuName(raw);
+            }
+            catch
+            {
+                _detectedCpuName = "CPU";
+            }
+            return _detectedCpuName;
+        }
+    }
+
+    public static string CleanCpuName(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return "CPU";
+        string clean = raw
+            .Replace("(R)", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("(TM)", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("Processor", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("CPU", "", StringComparison.OrdinalIgnoreCase);
+
+        // Strip "with Radeon Graphics", "w/ Radeon Graphics", "with Radeon Vega Graphics", etc. (AMD APUs)
+        clean = System.Text.RegularExpressions.Regex.Replace(clean, @"\s+(with|w\/)\s+Radeon.*", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        // Strip core counts like "8-Core", "6-Core", "16-Core", "Dual-Core", "Quad-Core" (typical on AMD)
+        clean = System.Text.RegularExpressions.Regex.Replace(clean, @"\s+\d+-Core.*", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        clean = System.Text.RegularExpressions.Regex.Replace(clean, @"\s+(Dual|Triple|Quad|Hexa|Octa)-Core.*", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        // Strip Intel Gen prefix
+        clean = System.Text.RegularExpressions.Regex.Replace(clean, @"^\s*\d+(th|st|nd|rd)\s+Gen\s+", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        // Strip leading brand name if redundant
+        clean = clean.Replace("Intel ", "", StringComparison.OrdinalIgnoreCase)
+                     .Replace("AMD ", "", StringComparison.OrdinalIgnoreCase);
+
+        clean = System.Text.RegularExpressions.Regex.Replace(clean, @"\s+", " ").Trim();
+
+        // Shorten Intel Core designations
+        clean = clean.Replace("Core 5 ", "i5 ", StringComparison.OrdinalIgnoreCase)
+                     .Replace("Core 7 ", "i7 ", StringComparison.OrdinalIgnoreCase)
+                     .Replace("Core 3 ", "i3 ", StringComparison.OrdinalIgnoreCase)
+                     .Replace("Core 9 ", "i9 ", StringComparison.OrdinalIgnoreCase)
+                     .Replace("Core i", "i", StringComparison.OrdinalIgnoreCase);
+
+        return string.IsNullOrEmpty(clean) ? "CPU" : clean;
+    }
+
+    public void UpdateHardwareLabels()
+    {
+        CpuLabel = _config.ShowHardwareModelNames ? DetectedCpuName : "CPU";
+
+        var gpus = GpuDevices;
+        for (int i = 0; i < gpus.Count; i++)
+        {
+            gpus[i].UpdateLabel(_config.ShowHardwareModelNames);
+        }
+    }
+
+    private static ulong FileTimeToUInt64(System.Runtime.InteropServices.ComTypes.FILETIME ft)
+    {
+        return ((ulong)(uint)ft.dwHighDateTime << 32) | (uint)ft.dwLowDateTime;
+    }
+
+    private void ResourcePanel_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "taskmgr.exe",
+                UseShellExecute = true
+            });
+        }
+        catch { }
+    }
+
+    private void CaffeinePanel_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        ToggleCaffeine();
+    }
+
+    public void ToggleCaffeine()
+    {
+        IsCaffeineActive = !IsCaffeineActive;
+        if (IsCaffeineActive)
+        {
+            NativeMethods.SetThreadExecutionState(NativeMethods.EXECUTION_STATE.ES_CONTINUOUS | NativeMethods.EXECUTION_STATE.ES_DISPLAY_REQUIRED | NativeMethods.EXECUTION_STATE.ES_SYSTEM_REQUIRED);
+        }
+        else
+        {
+            NativeMethods.SetThreadExecutionState(NativeMethods.EXECUTION_STATE.ES_CONTINUOUS);
+        }
     }
 
     private void UpdateClockState()
@@ -553,6 +869,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         AudioService.Instance.VolumeChanged += AudioService_VolumeChanged;
         MediaService.Instance.MediaStateChanged += MediaService_MediaStateChanged;
+        MediaService.Instance.TimelineChanged += MediaService_TimelineChanged;
+
+        SetupMediaSeekSlider();
+        _ = RefreshInitialMediaStateAsync();
     }
 
     private void VolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -617,10 +937,142 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _ = MediaService.Instance.SkipPreviousAsync();
     }
 
+    private bool _isUserSeekingMedia = false;
+    private bool _isUpdatingSliderFromService = false;
+
+    private void SetupMediaSeekSlider()
+    {
+        if (MediaSeekSlider == null) return;
+
+        MediaSeekSlider.AddHandler(System.Windows.Controls.Primitives.Thumb.DragStartedEvent, new System.Windows.Controls.Primitives.DragStartedEventHandler((s, e) =>
+        {
+            _isUserSeekingMedia = true;
+        }));
+
+        MediaSeekSlider.AddHandler(System.Windows.Controls.Primitives.Thumb.DragCompletedEvent, new System.Windows.Controls.Primitives.DragCompletedEventHandler((s, e) =>
+        {
+            FinishMediaSeeking();
+        }));
+
+        MediaSeekSlider.AddHandler(UIElement.PreviewMouseLeftButtonDownEvent, new MouseButtonEventHandler((s, e) =>
+        {
+            _isUserSeekingMedia = true;
+        }), true);
+
+        MediaSeekSlider.AddHandler(UIElement.PreviewMouseLeftButtonUpEvent, new MouseButtonEventHandler((s, e) =>
+        {
+            FinishMediaSeeking();
+        }), true);
+
+        MediaSeekSlider.LostMouseCapture += (s, e) =>
+        {
+            FinishMediaSeeking();
+        };
+    }
+
+    private async Task RefreshInitialMediaStateAsync()
+    {
+        try
+        {
+            await MediaService.Instance.RefreshCurrentSessionAsync(true);
+        }
+        catch { }
+
+        Dispatcher.Invoke(() =>
+        {
+            MediaService_MediaStateChanged(null, EventArgs.Empty);
+            UpdateMediaTimelineUI();
+        });
+    }
+
+    private void UpdateMediaTimelineUI()
+    {
+        OnPropertyChanged(nameof(MediaPositionSeconds));
+        OnPropertyChanged(nameof(MediaDurationSeconds));
+        OnPropertyChanged(nameof(MediaPositionText));
+        OnPropertyChanged(nameof(MediaDurationText));
+        OnPropertyChanged(nameof(CanSeekMedia));
+
+        if (MediaSeekSlider != null && !_isUserSeekingMedia)
+        {
+            _isUpdatingSliderFromService = true;
+            try
+            {
+                if (MediaService.Instance.DurationSeconds > 0)
+                {
+                    MediaSeekSlider.Minimum = 0;
+                    double max = MediaService.Instance.DurationSeconds;
+                    MediaSeekSlider.Maximum = max;
+                    double pos = Math.Clamp(MediaService.Instance.PositionSeconds, 0, max);
+                    MediaSeekSlider.Value = pos;
+                    MediaSeekSlider.IsEnabled = CanSeekMedia;
+                }
+                else
+                {
+                    MediaSeekSlider.Minimum = 0;
+                    MediaSeekSlider.Maximum = 100;
+                    MediaSeekSlider.Value = 0;
+                    MediaSeekSlider.IsEnabled = false;
+                }
+            }
+            finally
+            {
+                _isUpdatingSliderFromService = false;
+            }
+        }
+    }
+
     private void MediaService_MediaStateChanged(object? sender, EventArgs e)
     {
         OnPropertyChanged(nameof(MediaTrackText));
         OnPropertyChanged(nameof(MediaPlayPauseIconData));
+        UpdateMediaTimelineUI();
+    }
+
+    private void MediaService_TimelineChanged(object? sender, EventArgs e)
+    {
+        if (_isUserSeekingMedia) return;
+
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (_isUserSeekingMedia) return;
+            UpdateMediaTimelineUI();
+        });
+    }
+
+    private void MediaSeekSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_isUpdatingSliderFromService) return;
+
+        if (_isUserSeekingMedia)
+        {
+            _scrubbingPositionText = MediaService.FormatTime(TimeSpan.FromSeconds(e.NewValue));
+            OnPropertyChanged(nameof(MediaPositionText));
+        }
+    }
+
+    private void MediaSeekSlider_MouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        e.Handled = true;
+        if (!CanSeekMedia) return;
+        double delta = e.Delta > 0 ? 5.0 : -5.0;
+        double newPos = Math.Clamp(MediaService.Instance.PositionSeconds + delta, 0, MediaService.Instance.DurationSeconds);
+        _ = MediaService.Instance.SeekAsync(newPos);
+    }
+
+    private void FinishMediaSeeking()
+    {
+        if (_isUserSeekingMedia)
+        {
+            _isUserSeekingMedia = false;
+            _scrubbingPositionText = null;
+            if (MediaSeekSlider != null)
+            {
+                double targetSec = MediaSeekSlider.Value;
+                _ = MediaService.Instance.SeekAsync(targetSec);
+            }
+            OnPropertyChanged(nameof(MediaPositionText));
+        }
     }
 
     private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -2302,7 +2754,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             var perItem = Math.Max(IconSize + fallbackItemVerticalChrome, 1);
             var clockChrome = _config.ShowClock ? 48.0 : 0.0;
             var volumeChrome = _config.ShowVolumeControl ? 36.0 : 0.0;
-            var mediaChrome = _config.ShowMediaControl ? 64.0 : 0.0;
+            var mediaChrome = _config.ShowMediaControl ? (_config.ShowMediaSeekBar ? 86.0 : 64.0) : 0.0;
             var usableHeight = Math.Max(1, monitorHeight - fallbackChromeWithoutPagination - clockChrome - volumeChrome - mediaChrome);
             var count = Math.Max(1, (int)Math.Floor(usableHeight / perItem));
 
@@ -2616,5 +3068,44 @@ internal static class NativeMethods
         [MarshalAs(UnmanagedType.Bool)]
         public bool fTransitionOnMaximized;
     }
+
+    [Flags]
+    public enum EXECUTION_STATE : uint
+    {
+        ES_AWAYMODE_REQUIRED = 0x00000040,
+        ES_CONTINUOUS = 0x80000000,
+        ES_DISPLAY_REQUIRED = 0x00000002,
+        ES_SYSTEM_REQUIRED = 0x00000001
+    }
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    public static extern EXECUTION_STATE SetThreadExecutionState(EXECUTION_STATE esFlags);
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+    public class MEMORYSTATUSEX
+    {
+        public uint dwLength;
+        public uint dwMemoryLoad;
+        public ulong ullTotalPhys;
+        public ulong ullAvailPhys;
+        public ulong ullTotalPageFile;
+        public ulong ullAvailPageFile;
+        public ulong ullTotalVirtual;
+        public ulong ullAvailVirtual;
+        public ulong ullAvailExtendedVirtual;
+
+        public MEMORYSTATUSEX()
+        {
+            dwLength = (uint)Marshal.SizeOf(typeof(MEMORYSTATUSEX));
+        }
+    }
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool GlobalMemoryStatusEx([In, Out] MEMORYSTATUSEX lpBuffer);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool GetSystemTimes(out System.Runtime.InteropServices.ComTypes.FILETIME lpIdleTime, out System.Runtime.InteropServices.ComTypes.FILETIME lpKernelTime, out System.Runtime.InteropServices.ComTypes.FILETIME lpUserTime);
 }
 

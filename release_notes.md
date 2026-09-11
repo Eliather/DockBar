@@ -1,3 +1,53 @@
+# DockBar 1.8.4 Release Notes
+
+DockBar `v1.8.4` introduce la **Barra de Progreso y Búsqueda Multimedia Interactiva (Seek Bar)** en el widget multimedia con soporte de salto, rueda de ratón y diseño circular sin recortes; añade **soporte Multi-GPU y monitorización avanzada de hardware** para NVIDIA, AMD e Intel con detección de nombres de modelos; incorpora el **Modo Cafeína (Keep-Awake)** para evitar la suspensión del equipo; integra un **Control de Previsualización en Tiempo Real** en el panel de Ajustes; y amplía la localización en todos los idiomas.
+
+---
+
+## ✨ Novedades y Mejoras Principales (v1.8.4)
+
+### 1. 🎵 Barra de Progreso y Búsqueda Multimedia (Media Seek Bar)
+- **Deslizador interactivo para audio y video**:
+  - Permite avanzar o retroceder la reproducción directamente desde el dock para canciones, podcasts y videos (Spotify, YouTube, Edge, Chrome, reproductores del sistema).
+  - Etiquetas numéricas de tiempo transcurrido y duración total (`0:00 / 3:45`) con tipografía nítida y semi-negrita.
+  - **Búsqueda fluida (Scrubbing)**: Arrastra el cursor con previsualización en tiempo real del tiempo y salto exacto al nuevo punto únicamente al soltar el ratón, evitando saturar el reproductor.
+  - **Ajuste fino con rueda de ratón**: Gira la rueda del mouse sobre la barra para avanzar o retroceder en saltos de ±5 segundos.
+  - **Diseño Ultra-Compacto (`MediaSeekSliderStyle`)**: Altura de 14px, pista delgada de 4px con relleno de acento y cursor circular de 10px con sombra suave, eliminando cualquier recorte visual.
+  - **Filtro Anti-Rebote y Protección de Buffer**: Previene el reinicio a `00:00` y conserva la duración real cuando navegadores web o plataformas de streaming envían datos transitorios de búfer.
+  - Opcional: Se activa o desactiva con un checkbox en *Ajustes > Multimedia*.
+
+### 2. 🎮 Monitor de Recursos y Soporte Multi-GPU
+- **Detección y Monitoreo Multi-GPU**:
+  - Detección exhaustiva de hardware gráfico (NVIDIA NVML, AMD ADLX / DXGI, Intel, GPUs integradas y discretas).
+  - Selección dinámica de GPU para monitorizar en tiempo real el uso de carga gráfica y memoria.
+  - Detección y presentación del nombre real del hardware (ej. "RTX 4070", "Radeon RX 7800 XT", "Intel Iris Xe") en lugar de etiquetas genéricas.
+
+### 3. ☕ Modo Cafeína (Keep-Awake)
+- **Prevención de suspensión con un solo clic**:
+  - Previene que Windows active el salvapantallas, apague la pantalla o entre en suspensión (`ES_DISPLAY_REQUIRED | ES_SYSTEM_REQUIRED`) mientras realizas tareas largas, renders o descargas.
+  - Activación o desactivación instantánea desde el dock.
+
+### 4. 🪟 Control de Previsualización en Vivo en Ajustes (Dock Preview)
+- Previsualización en vivo integrada en el diálogo de Ajustes que refleja instantáneamente tus cambios en el tamaño de iconos, colores, opacidad y posición de la barra antes de guardarlos.
+
+### 5. 📑 Categorías de Configuración Dedicadas (Reloj y Multimedia)
+- **Separación modular de ajustes**:
+  - **Reloj** y **Multimedia** cuentan ahora con sus propias categorías de configuración exclusivas e independientes de las opciones experimentales.
+  - Estructuración limpia en el archivo de guardado (`shortcuts.json`) con esquemas dedicados (`Clock` y `Media`) y migración automática y transparente desde versiones anteriores.
+
+### 6. 🌐 Localización Completa (i18n)
+- Traducción completa de todas las nuevas opciones al **Español**, **Inglés**, **Ruso** y **Chino Simplificado** con fallback automático a inglés.
+- Añadí bugs que arreglaré en futuras versiones.
+
+---
+
+## 📦 Archivos del Release / Downloads
+- **Instalador clásico / Classic Installer**: `DockBarSetup.exe` (v1.8.4).
+- **Paquete MSIX / MSIX Package**: `DockBar.msix` (v1.8.4.0).
+- **Portable ZIP (x64)**: `DockBar-win-x64-v1.8.4.zip`.
+
+---
+
 # DockBar 1.8.3 Release Notes
 
 DockBar `v1.8.3` expande los widgets experimentales con un **controlador de volumen dinámico en caliente** y un **reproductor multimedia inteligente con marquesina animada**, añade **calibración en píxeles del borde de activación** en configuración básica, introduce el botón **Aplicar con confirmación temporizada de 5 segundos**, moderniza el diseño de las barras de desplazamiento y soluciona problemas ergonómicos en el modo edición.

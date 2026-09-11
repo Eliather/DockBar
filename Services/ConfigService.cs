@@ -85,33 +85,84 @@ public static class ConfigService
 
             config ??= CreateDefault();
 
-            // Migración segura si los campos experimentales se guardaron previamente en la raíz
+            // Migración segura: soporta configs antiguas donde Clock y Media estaban en Experimental o en la raíz
             try
             {
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
                 if (root.ValueKind == JsonValueKind.Object)
                 {
+                    config.Clock ??= new();
+                    config.Media ??= new();
                     config.Experimental ??= new();
 
-                    if (!root.TryGetProperty("Experimental", out _) && !root.TryGetProperty("experimental", out _))
+                    bool hasClockSection = root.TryGetProperty("Clock", out _) || root.TryGetProperty("clock", out _);
+                    bool hasMediaSection = root.TryGetProperty("Media", out _) || root.TryGetProperty("media", out _);
+                    bool hasExperimentalSection = root.TryGetProperty("Experimental", out var expElem) || root.TryGetProperty("experimental", out expElem);
+
+                    // 1. Migrar desde Experimental antiguo si no existían secciones dedicadas
+                    if (hasExperimentalSection && expElem.ValueKind == JsonValueKind.Object)
+                    {
+                        if (!hasClockSection)
+                        {
+                            if (expElem.TryGetProperty("ShowClock", out var sc) && (sc.ValueKind == JsonValueKind.True || sc.ValueKind == JsonValueKind.False))
+                                config.Clock.ShowClock = sc.GetBoolean();
+                            if (expElem.TryGetProperty("ClockFontSize", out var cfs) && cfs.TryGetDouble(out var fs))
+                                config.Clock.ClockFontSize = fs;
+                            if (expElem.TryGetProperty("ClockFormat24H", out var cf24) && (cf24.ValueKind == JsonValueKind.True || cf24.ValueKind == JsonValueKind.False))
+                                config.Clock.ClockFormat24H = cf24.GetBoolean();
+                            if (expElem.TryGetProperty("ShowClockSeconds", out var scs) && (scs.ValueKind == JsonValueKind.True || scs.ValueKind == JsonValueKind.False))
+                                config.Clock.ShowClockSeconds = scs.GetBoolean();
+                            if (expElem.TryGetProperty("ShowClockDate", out var scd) && (scd.ValueKind == JsonValueKind.True || scd.ValueKind == JsonValueKind.False))
+                                config.Clock.ShowClockDate = scd.GetBoolean();
+                        }
+
+                        if (!hasMediaSection)
+                        {
+                            if (expElem.TryGetProperty("ShowVolumeControl", out var svc) && (svc.ValueKind == JsonValueKind.True || svc.ValueKind == JsonValueKind.False))
+                                config.Media.ShowVolumeControl = svc.GetBoolean();
+                            if (expElem.TryGetProperty("ShowMediaControl", out var smc) && (smc.ValueKind == JsonValueKind.True || smc.ValueKind == JsonValueKind.False))
+                                config.Media.ShowMediaControl = smc.GetBoolean();
+                            if (expElem.TryGetProperty("ShowMediaSeekBar", out var smsb) && (smsb.ValueKind == JsonValueKind.True || smsb.ValueKind == JsonValueKind.False))
+                                config.Media.ShowMediaSeekBar = smsb.GetBoolean();
+                        }
+                    }
+
+                    // 2. Migrar desde la raíz (versiones muy tempranas previas a secciones)
+                    if (!hasClockSection && !hasExperimentalSection)
                     {
                         if (root.TryGetProperty("ShowClock", out var sc) && (sc.ValueKind == JsonValueKind.True || sc.ValueKind == JsonValueKind.False))
-                            config.Experimental.ShowClock = sc.GetBoolean();
+                            config.Clock.ShowClock = sc.GetBoolean();
                         if (root.TryGetProperty("ClockFontSize", out var cfs) && cfs.TryGetDouble(out var fs))
-                            config.Experimental.ClockFontSize = fs;
+                            config.Clock.ClockFontSize = fs;
                         if (root.TryGetProperty("ClockFormat24H", out var cf24) && (cf24.ValueKind == JsonValueKind.True || cf24.ValueKind == JsonValueKind.False))
-                            config.Experimental.ClockFormat24H = cf24.GetBoolean();
+                            config.Clock.ClockFormat24H = cf24.GetBoolean();
                         if (root.TryGetProperty("ShowClockSeconds", out var scs) && (scs.ValueKind == JsonValueKind.True || scs.ValueKind == JsonValueKind.False))
-                            config.Experimental.ShowClockSeconds = scs.GetBoolean();
+                            config.Clock.ShowClockSeconds = scs.GetBoolean();
                         if (root.TryGetProperty("ShowClockDate", out var scd) && (scd.ValueKind == JsonValueKind.True || scd.ValueKind == JsonValueKind.False))
-                            config.Experimental.ShowClockDate = scd.GetBoolean();
+                            config.Clock.ShowClockDate = scd.GetBoolean();
+                    }
+
+                    if (!hasMediaSection && !hasExperimentalSection)
+                    {
+                        if (root.TryGetProperty("ShowVolumeControl", out var svc) && (svc.ValueKind == JsonValueKind.True || svc.ValueKind == JsonValueKind.False))
+                            config.Media.ShowVolumeControl = svc.GetBoolean();
+                        if (root.TryGetProperty("ShowMediaControl", out var smc) && (smc.ValueKind == JsonValueKind.True || smc.ValueKind == JsonValueKind.False))
+                            config.Media.ShowMediaControl = smc.GetBoolean();
+                        if (root.TryGetProperty("ShowMediaSeekBar", out var smsb) && (smsb.ValueKind == JsonValueKind.True || smsb.ValueKind == JsonValueKind.False))
+                            config.Media.ShowMediaSeekBar = smsb.GetBoolean();
+                    }
+
+                    if (!hasExperimentalSection)
+                    {
                         if (root.TryGetProperty("EdgeTriggerPx", out var etp) && etp.TryGetDouble(out var px))
                             config.Experimental.EdgeTriggerPx = px;
-                        if (root.TryGetProperty("ShowVolumeControl", out var svc) && (svc.ValueKind == JsonValueKind.True || svc.ValueKind == JsonValueKind.False))
-                            config.Experimental.ShowVolumeControl = svc.GetBoolean();
-                        if (root.TryGetProperty("ShowMediaControl", out var smc) && (smc.ValueKind == JsonValueKind.True || smc.ValueKind == JsonValueKind.False))
-                            config.Experimental.ShowMediaControl = smc.GetBoolean();
+                        if (root.TryGetProperty("ShowResourceMonitor", out var srm) && (srm.ValueKind == JsonValueKind.True || srm.ValueKind == JsonValueKind.False))
+                            config.Experimental.ShowResourceMonitor = srm.GetBoolean();
+                        if (root.TryGetProperty("ShowHardwareModelNames", out var shm) && (shm.ValueKind == JsonValueKind.True || shm.ValueKind == JsonValueKind.False))
+                            config.Experimental.ShowHardwareModelNames = shm.GetBoolean();
+                        if (root.TryGetProperty("ShowCaffeine", out var scaf) && (scaf.ValueKind == JsonValueKind.True || scaf.ValueKind == JsonValueKind.False))
+                            config.Experimental.ShowCaffeine = scaf.GetBoolean();
                     }
                 }
             }
@@ -169,16 +220,19 @@ public static class ConfigService
             config.BackgroundOpacity = GlassOpacity;
         }
 
-        config.Experimental ??= new();
-        if (config.Experimental.ClockFontSize <= 0)
+        config.Clock ??= new();
+        if (config.Clock.ClockFontSize <= 0)
         {
-            config.Experimental.ClockFontSize = 18;
+            config.Clock.ClockFontSize = 18;
         }
         else
         {
-            config.Experimental.ClockFontSize = Math.Clamp(config.Experimental.ClockFontSize, 10, 36);
+            config.Clock.ClockFontSize = Math.Clamp(config.Clock.ClockFontSize, 10, 36);
         }
 
+        config.Media ??= new();
+
+        config.Experimental ??= new();
         if (config.Experimental.EdgeTriggerPx <= 0)
         {
             config.Experimental.EdgeTriggerPx = 8;
@@ -187,6 +241,22 @@ public static class ConfigService
         {
             config.Experimental.EdgeTriggerPx = Math.Clamp(config.Experimental.EdgeTriggerPx, 1, 30);
         }
+
+        config.Experimental.WidgetOrder ??= new();
+        var validWidgets = new[] { "Clock", "Media", "Volume", "Resource", "Caffeine" };
+        var sanitizedOrder = config.Experimental.WidgetOrder
+            .Where(w => validWidgets.Contains(w, StringComparer.OrdinalIgnoreCase))
+            .Select(w => validWidgets.First(v => string.Equals(v, w, StringComparison.OrdinalIgnoreCase)))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        foreach (var v in validWidgets)
+        {
+            if (!sanitizedOrder.Contains(v, StringComparer.OrdinalIgnoreCase))
+            {
+                sanitizedOrder.Add(v);
+            }
+        }
+        config.Experimental.WidgetOrder = sanitizedOrder;
 
         return config;
     }

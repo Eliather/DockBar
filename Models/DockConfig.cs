@@ -1,18 +1,33 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Serialization;
 
 namespace DockBar.Models;
 
-public class ExperimentalConfig
+public class ClockConfig
 {
     public bool ShowClock { get; set; } = false;
     public double ClockFontSize { get; set; } = 18;
     public bool ClockFormat24H { get; set; } = true;
     public bool ShowClockSeconds { get; set; } = false;
     public bool ShowClockDate { get; set; } = true;
-    public double EdgeTriggerPx { get; set; } = 8;
+}
+
+public class MediaConfig
+{
     public bool ShowVolumeControl { get; set; } = false;
     public bool ShowMediaControl { get; set; } = false;
+    public bool ShowMediaSeekBar { get; set; } = false;
+}
+
+public class ExperimentalConfig
+{
+    public double EdgeTriggerPx { get; set; } = 8;
+    public bool ShowResourceMonitor { get; set; } = false;
+    public bool ShowHardwareModelNames { get; set; } = false;
+    public bool ShowCaffeine { get; set; } = false;
+    public List<string> WidgetOrder { get; set; } = new() { "Clock", "Media", "Volume", "Resource", "Caffeine" };
 }
 
 public class DockConfig
@@ -36,43 +51,66 @@ public class DockConfig
     public bool AutoStartEnabled { get; set; } = false;
     public bool AutoStartPrompted { get; set; } = false;
 
-    // Sección aislada de configuraciones experimentales
+    // Categorías de configuración dedicadas
+    public ClockConfig Clock { get; set; } = new();
+    public MediaConfig Media { get; set; } = new();
     public ExperimentalConfig Experimental { get; set; } = new();
 
-    // Propiedades puente para enlaces directos en XAML y lógica interna
+    // Propiedades puente para enlaces directos en XAML y compatibilidad transparente
     [JsonIgnore]
     public bool ShowClock
     {
-        get => Experimental.ShowClock;
-        set => Experimental.ShowClock = value;
+        get => Clock.ShowClock;
+        set => Clock.ShowClock = value;
     }
 
     [JsonIgnore]
     public double ClockFontSize
     {
-        get => Experimental.ClockFontSize;
-        set => Experimental.ClockFontSize = value;
+        get => Clock.ClockFontSize;
+        set => Clock.ClockFontSize = value;
     }
 
     [JsonIgnore]
     public bool ClockFormat24H
     {
-        get => Experimental.ClockFormat24H;
-        set => Experimental.ClockFormat24H = value;
+        get => Clock.ClockFormat24H;
+        set => Clock.ClockFormat24H = value;
     }
 
     [JsonIgnore]
     public bool ShowClockSeconds
     {
-        get => Experimental.ShowClockSeconds;
-        set => Experimental.ShowClockSeconds = value;
+        get => Clock.ShowClockSeconds;
+        set => Clock.ShowClockSeconds = value;
     }
 
     [JsonIgnore]
     public bool ShowClockDate
     {
-        get => Experimental.ShowClockDate;
-        set => Experimental.ShowClockDate = value;
+        get => Clock.ShowClockDate;
+        set => Clock.ShowClockDate = value;
+    }
+
+    [JsonIgnore]
+    public bool ShowVolumeControl
+    {
+        get => Media.ShowVolumeControl;
+        set => Media.ShowVolumeControl = value;
+    }
+
+    [JsonIgnore]
+    public bool ShowMediaControl
+    {
+        get => Media.ShowMediaControl;
+        set => Media.ShowMediaControl = value;
+    }
+
+    [JsonIgnore]
+    public bool ShowMediaSeekBar
+    {
+        get => Media.ShowMediaSeekBar;
+        set => Media.ShowMediaSeekBar = value;
     }
 
     [JsonIgnore]
@@ -83,17 +121,31 @@ public class DockConfig
     }
 
     [JsonIgnore]
-    public bool ShowVolumeControl
+    public bool ShowResourceMonitor
     {
-        get => Experimental.ShowVolumeControl;
-        set => Experimental.ShowVolumeControl = value;
+        get => Experimental.ShowResourceMonitor;
+        set => Experimental.ShowResourceMonitor = value;
     }
 
     [JsonIgnore]
-    public bool ShowMediaControl
+    public bool ShowHardwareModelNames
     {
-        get => Experimental.ShowMediaControl;
-        set => Experimental.ShowMediaControl = value;
+        get => Experimental.ShowHardwareModelNames;
+        set => Experimental.ShowHardwareModelNames = value;
+    }
+
+    [JsonIgnore]
+    public bool ShowCaffeine
+    {
+        get => Experimental.ShowCaffeine;
+        set => Experimental.ShowCaffeine = value;
+    }
+
+    [JsonIgnore]
+    public List<string> WidgetOrder
+    {
+        get => Experimental.WidgetOrder;
+        set => Experimental.WidgetOrder = value;
     }
 
     public DockConfig Clone()
@@ -118,16 +170,27 @@ public class DockConfig
             EnableTextShadow = EnableTextShadow,
             AutoStartEnabled = AutoStartEnabled,
             AutoStartPrompted = AutoStartPrompted,
-            Experimental = new ExperimentalConfig
+            Clock = new ClockConfig
             {
                 ShowClock = ShowClock,
                 ClockFontSize = ClockFontSize,
                 ClockFormat24H = ClockFormat24H,
                 ShowClockSeconds = ShowClockSeconds,
-                ShowClockDate = ShowClockDate,
-                EdgeTriggerPx = EdgeTriggerPx,
+                ShowClockDate = ShowClockDate
+            },
+            Media = new MediaConfig
+            {
                 ShowVolumeControl = ShowVolumeControl,
-                ShowMediaControl = ShowMediaControl
+                ShowMediaControl = ShowMediaControl,
+                ShowMediaSeekBar = ShowMediaSeekBar
+            },
+            Experimental = new ExperimentalConfig
+            {
+                EdgeTriggerPx = EdgeTriggerPx,
+                ShowResourceMonitor = ShowResourceMonitor,
+                ShowHardwareModelNames = ShowHardwareModelNames,
+                ShowCaffeine = ShowCaffeine,
+                WidgetOrder = WidgetOrder != null ? new List<string>(WidgetOrder) : new() { "Clock", "Media", "Volume", "Resource", "Caffeine" }
             },
             Shortcuts = shortcuts.Select(s => new ShortcutItem
             {
@@ -158,14 +221,22 @@ public class DockConfig
         EnableTextShadow = source.EnableTextShadow;
         AutoStartEnabled = source.AutoStartEnabled;
         AutoStartPrompted = source.AutoStartPrompted;
+
         ShowClock = source.ShowClock;
         ClockFontSize = source.ClockFontSize;
         ClockFormat24H = source.ClockFormat24H;
         ShowClockSeconds = source.ShowClockSeconds;
         ShowClockDate = source.ShowClockDate;
-        EdgeTriggerPx = source.EdgeTriggerPx;
+
         ShowVolumeControl = source.ShowVolumeControl;
         ShowMediaControl = source.ShowMediaControl;
+        ShowMediaSeekBar = source.ShowMediaSeekBar;
+
+        EdgeTriggerPx = source.EdgeTriggerPx;
+        ShowResourceMonitor = source.ShowResourceMonitor;
+        ShowHardwareModelNames = source.ShowHardwareModelNames;
+        ShowCaffeine = source.ShowCaffeine;
+        WidgetOrder = source.WidgetOrder != null ? new List<string>(source.WidgetOrder) : new() { "Clock", "Media", "Volume", "Resource", "Caffeine" };
 
         if (source.Shortcuts != null)
         {
@@ -179,4 +250,3 @@ public class DockConfig
         }
     }
 }
-

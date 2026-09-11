@@ -18,9 +18,12 @@ param(
     [string]$AppId = "9NKG6MK32732",
     [string]$PackagePath = "DockBar.msix",
     [string]$CredentialsPath = ".store-credentials.json",
+    [string]$ListingPath = "store_listing.md",
     [string]$TenantId,
     [string]$ClientId,
     [string]$ClientSecret,
+    [switch]$BuildFirst,
+    [switch]$SkipListingUpdate,
     [switch]$SkipCommit
 )
 
@@ -35,11 +38,24 @@ Write-Host "   DockBar - Publicacion Directa a Microsoft Store (API)   " -Foregr
 Write-Host "==========================================================" -ForegroundColor Cyan
 
 # ---------------------------------------------------------
+# 0. Compilar ejecutables y empaquetar si se solicita
+# ---------------------------------------------------------
+if ($BuildFirst) {
+    Write-Host "Compilando ejecutables y generando paquete MSIX (build-msix.ps1)..." -ForegroundColor Cyan
+    & (Join-Path $repoRoot "build-msix.ps1")
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "ERROR: Fallo la creacion del paquete MSIX." -ForegroundColor Red
+        exit $LASTEXITCODE
+    }
+    Write-Host ""
+}
+
+# ---------------------------------------------------------
 # 1. Validar el paquete local
 # ---------------------------------------------------------
 if (-not (Test-Path $PackagePath)) {
     Write-Host "ERROR: No se encontro el archivo de paquete: $PackagePath" -ForegroundColor Red
-    Write-Host "Por favor ejecuta primero .\build-msix.ps1 para generarlo." -ForegroundColor Yellow
+    Write-Host "Por favor ejecuta primero .\build-msix.ps1 para generarlo (o usa .\publish-store.ps1 -BuildFirst)." -ForegroundColor Yellow
     exit 1
 }
 
@@ -210,7 +226,77 @@ try {
 }
 
 # ---------------------------------------------------------
-# 6. Actualizar Datos de la Submission con el Paquete
+# Funcion para parsear store_listing.md (Espanol e Ingles)
+# ---------------------------------------------------------
+function Get-StoreListingData {
+    param(
+        [string]$Path = "store_listing.md"
+    )
+
+    if (-not (Test-Path $Path)) {
+        Write-Host "   Aviso: No se encontro el archivo de listing: $Path" -ForegroundColor Yellow
+        return $null
+    }
+
+    $lines = Get-Content $Path -Encoding UTF8
+    $lang = ""
+    $sec = 0
+    $inCode = $false
+    $esNotes = New-Object System.Collections.ArrayList
+    $esFeat  = New-Object System.Collections.ArrayList
+    $enNotes = New-Object System.Collections.ArrayList
+    $enFeat  = New-Object System.Collections.ArrayList
+
+    foreach ($line in $lines) {
+        if ($line -like "*##*Espa*ol*") { $lang = "es"; $sec = 0; continue }
+        if ($line -like "*##*Ingl*s*" -or $line -like "*##*English*") { $lang = "en"; $sec = 0; continue }
+        if ($line -like "*##*Campos*") { $lang = ""; $sec = 0; continue }
+
+        if ($lang -and ($line -like "*### 2.*" -or $line -like "*###*Novedades*" -or $line -like "*###*What*new*")) { $sec = 2; continue }
+        if ($lang -and ($line -like "*### 3.*" -or $line -like "*###*Caracter*sticas*" -or $line -like "*###*Features*")) { $sec = 3; continue }
+        if ($lang -and $line -like "*### *") { $sec = 0; continue }
+
+        if ($line.Trim().StartsWith("```")) {
+            $inCode = -not $inCode
+            continue
+        }
+
+        if ($inCode -and $sec -eq 2) {
+            $trimmed = $line.Trim()
+            if ($trimmed) {
+                if ($lang -eq "es") { [void]$esNotes.Add($trimmed) } else { [void]$enNotes.Add($trimmed) }
+            }
+        }
+
+        if ($inCode -and $sec -eq 3) {
+            $trimmed = $line.Trim()
+            if ($trimmed) {
+                $val = $trimmed
+                if ($trimmed.StartsWith("- ")) {
+                    $val = $trimmed.Substring(2).Trim()
+                }
+                if ($val) {
+                    if ($lang -eq "es") { [void]$esFeat.Add($val) } else { [void]$enFeat.Add($val) }
+                }
+            }
+        }
+    }
+
+    $nl = [Environment]::NewLine
+    return @{
+        Es = @{
+            ReleaseNotes = ($esNotes -join $nl)
+            Features     = @($esFeat)
+        }
+        En = @{
+            ReleaseNotes = ($enNotes -join $nl)
+            Features     = @($enFeat)
+        }
+    }
+}
+
+# ---------------------------------------------------------
+# 6. Actualizar Datos de la Submission con el Paquete y Listing
 # ---------------------------------------------------------
 Write-Host "4. Actualizando metadatos del paquete en la submission..." -ForegroundColor Cyan
 
@@ -225,8 +311,61 @@ $newPackage = @{
 # Reemplazar la lista de paquetes con el nuevo paquete
 $submission.applicationPackages = @($newPackage)
 
+# ---------------------------------------------------------
+# 6.1 Actualizar Caracteristicas y Novedades de la Ficha (Listings)
+#     (Conserva intactas las capturas/imagenes subidas manualmente)
+# ---------------------------------------------------------
+if (-not $SkipListingUpdate) {
+    $resolvedListingPath = Join-Path $repoRoot $ListingPath
+    if (Test-Path $resolvedListingPath) {
+        Write-Host "   Actualizando caracteristicas y novedades desde $ListingPath..." -ForegroundColor Cyan
+        $listingData = Get-StoreListingData -Path $resolvedListingPath
+        
+        if ($listingData -and $submission.listings) {
+            foreach ($listingProp in $submission.listings.PSObject.Properties) {
+                $localeKey = $listingProp.Name
+                $listingObj = $listingProp.Value
+                if (-not $listingObj) { continue }
+
+                # baseListing contiene los datos descriptivos en Partner Center
+                $targetListing = $listingObj
+                if ($listingObj.baseListing) {
+                    $targetListing = $listingObj.baseListing
+                }
+
+                $isSpanish = $localeKey.ToLower().StartsWith("es")
+                $selectedData = $listingData.En
+                $langLabel = "Ingles"
+                if ($isSpanish) {
+                    $selectedData = $listingData.Es
+                    $langLabel = "Espanol"
+                }
+
+                if ($selectedData.Features -and $selectedData.Features.Count -gt 0) {
+                    $targetListing.features = @($selectedData.Features)
+                }
+
+                if ($selectedData.ReleaseNotes) {
+                    $targetListing.releaseNotes = $selectedData.ReleaseNotes
+                }
+
+                # IMPORTANTE: No se toca $targetListing.images para preservar las imagenes
+                # subidas manualmente en el portal de Partner Center.
+
+                Write-Host "   - Idioma [$localeKey] ($langLabel): $($selectedData.Features.Count) caracteristicas, novedades actualizadas." -ForegroundColor Green
+            }
+
+            Write-Host "   Fichas de idioma actualizadas sin alterar imagenes existentes." -ForegroundColor Green
+        } else {
+            Write-Host "   Aviso: No se encontraron listings en la submission para actualizar." -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "   Aviso: No se encontro el archivo $ListingPath. Se omiten textos de ficha." -ForegroundColor Yellow
+    }
+}
+
 $updateSubUrl = "$apiBase/$AppId/submissions/$submissionId"
-$jsonPayload = $submission | ConvertTo-Json -Depth 10
+$jsonPayload = $submission | ConvertTo-Json -Depth 15
 
 try {
     $updatedSubmission = Invoke-RestMethod -Uri $updateSubUrl -Method Put -Headers $headers -Body ([System.Text.Encoding]::UTF8.GetBytes($jsonPayload)) -ContentType "application/json; charset=utf-8"
