@@ -4,6 +4,7 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using DockBar.Services;
 using WinForms = System.Windows.Forms;
@@ -73,6 +74,15 @@ public partial class App : System.Windows.Application
             _window = new MainWindow();
             _window.Show();
             CreateTrayIcon();
+
+            // Precalienta la caché de apps en segundo plano, sin bloquear el arranque.
+            // Para cuando el usuario haga clic en "+", GetInstalledApps() ya va a
+            // devolver todo desde _cachedApps sin re-enumerar shell:AppsFolder.
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(1000);
+                StoreAppService.GetInstalledApps();
+            });
         }
         catch (Exception ex)
         {

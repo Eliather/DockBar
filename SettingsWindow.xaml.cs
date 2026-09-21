@@ -487,10 +487,12 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         Config.ShowVolumeControl = false;
         Config.ShowMediaControl = false;
         Config.ShowMediaSeekBar = false;
+        Config.ShowMediaThumbnail = false;
+        Config.MediaThumbnailOnly = false;
         Config.ShowResourceMonitor = false;
         Config.ShowHardwareModelNames = false;
         Config.ShowCaffeine = false;
-        Config.WidgetOrder = new() { "Clock", "Media", "Volume", "Resource", "Caffeine" };
+        Config.WidgetOrder = new() { "Clock", "Media", "Volume", "Resource", "Caffeine", "Pagination" };
         ApplyWidgetOrderToPreview();
         _pendingR = Config.BackgroundR;
         _pendingG = Config.BackgroundG;

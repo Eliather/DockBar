@@ -1,8 +1,11 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Windows.Media.Control;
 
@@ -37,14 +40,17 @@ public sealed class MediaService : IDisposable
     public bool IsPlaying { get; private set; }
     public bool HasMedia { get; private set; }
     public string SourceAppId { get; private set; } = "";
+    public ImageSource? Thumbnail { get; private set; }
+    public bool HasThumbnail => Thumbnail != null;
+    public bool IsVideo { get; private set; }
 
     public TimeSpan Position { get; private set; } = TimeSpan.Zero;
     public TimeSpan Duration { get; private set; } = TimeSpan.Zero;
     public double PositionSeconds => Position.TotalSeconds;
     public double DurationSeconds => Duration.TotalSeconds;
     public string PositionText => FormatTime(Position);
-    public string DurationText => Duration > TimeSpan.Zero ? FormatTime(Duration) : "--:--";
-    public bool CanSeek => _canSeek;
+    public string DurationText => Duration > TimeSpan.Zero && Duration < TimeSpan.FromHours(24) && Duration != TimeSpan.MaxValue ? FormatTime(Duration) : "--:--";
+    public bool CanSeek => _canSeek && Duration > TimeSpan.Zero && Duration < TimeSpan.FromHours(24) && Duration != TimeSpan.MaxValue;
 
     private TimeSpan _basePosition = TimeSpan.Zero;
     private TimeSpan _endTime = TimeSpan.Zero;
@@ -69,6 +75,30 @@ public sealed class MediaService : IDisposable
         _ = InitializeAsync();
     }
 
+    private bool _pollingEnabled = true;
+
+    public void SetPollingEnabled(bool enabled)
+    {
+        _pollingEnabled = enabled;
+        var app = System.Windows.Application.Current;
+        if (app == null) return;
+
+        if (!app.Dispatcher.CheckAccess())
+        {
+            app.Dispatcher.BeginInvoke(new Action(() => SetPollingEnabled(enabled)));
+            return;
+        }
+
+        if (enabled)
+        {
+            if (!_pollTimer.IsEnabled) _pollTimer.Start();
+        }
+        else
+        {
+            if (_pollTimer.IsEnabled) _pollTimer.Stop();
+        }
+    }
+
     private async Task InitializeAsync()
     {
         try
@@ -85,7 +115,10 @@ public sealed class MediaService : IDisposable
             System.Diagnostics.Debug.WriteLine($"[MediaService] WinRT SMTC Init failed: {ex.Message}");
         }
 
-        _pollTimer.Start();
+        if (_pollingEnabled)
+        {
+            _pollTimer.Start();
+        }
     }
 
     private async void Manager_CurrentSessionChanged(GlobalSystemMediaTransportControlsSessionManager sender, CurrentSessionChangedEventArgs args)
@@ -116,9 +149,46 @@ public sealed class MediaService : IDisposable
         try
         {
             var sessions = _manager.GetSessions();
-            // Si hay alguna sesión reproduciendo activamente, le damos prioridad sobre la última seleccionada por Windows
-            var playingSession = sessions?.FirstOrDefault(s => s.GetPlaybackInfo()?.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing);
-            var session = playingSession ?? _manager.GetCurrentSession() ?? sessions?.FirstOrDefault();
+            GlobalSystemMediaTransportControlsSession? session = null;
+
+            if (sessions != null)
+            {
+                // 1. Buscamos primero alguna sesión en reproducción activa que NO sea una preview
+                foreach (var s in sessions)
+                {
+                    if (s.GetPlaybackInfo()?.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing)
+                    {
+                        if (!await IsPreviewSessionAsync(s))
+                        {
+                            session = s;
+                            break;
+                        }
+                    }
+                }
+
+                // 2. Si no hay sesión activa (o todas eran previews), probamos GetCurrentSession() si no es preview
+                if (session == null)
+                {
+                    var current = _manager.GetCurrentSession();
+                    if (current != null && !await IsPreviewSessionAsync(current))
+                    {
+                        session = current;
+                    }
+                }
+
+                // 3. Fallback: cualquier otra sesión existente que no sea preview
+                if (session == null)
+                {
+                    foreach (var s in sessions)
+                    {
+                        if (!await IsPreviewSessionAsync(s))
+                        {
+                            session = s;
+                            break;
+                        }
+                    }
+                }
+            }
 
             bool isDifferentSession = _currentSession == null || session == null ||
                                       !ReferenceEquals(_currentSession, session) ||
@@ -135,6 +205,63 @@ public sealed class MediaService : IDisposable
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[MediaService] Refresh error: {ex.Message}");
+        }
+    }
+
+    private static bool IsBrowserApp(string? appId)
+    {
+        if (string.IsNullOrWhiteSpace(appId)) return false;
+        string lower = appId.ToLowerInvariant();
+        return lower.Contains("chrome") ||
+               lower.Contains("edge") ||
+               lower.Contains("firefox") ||
+               lower.Contains("brave") ||
+               lower.Contains("opera") ||
+               lower.Contains("vivaldi") ||
+               lower.Contains("arc") ||
+               lower.Contains("zen") ||
+               lower.Contains("waterfox") ||
+               lower.Contains("yandex");
+    }
+
+    private async Task<bool> IsPreviewSessionAsync(GlobalSystemMediaTransportControlsSession? session)
+    {
+        if (session == null) return false;
+
+        try
+        {
+            string appId = session.SourceAppUserModelId ?? "";
+            if (!IsBrowserApp(appId)) return false;
+
+            var timeline = session.GetTimelineProperties();
+            bool isInfiniteDuration = timeline != null &&
+                (timeline.EndTime >= TimeSpan.FromHours(24) || timeline.EndTime == TimeSpan.MaxValue);
+            bool isZeroDuration = timeline == null || timeline.EndTime <= TimeSpan.Zero;
+
+            // Si tiene duración finita y válida (> 0 y < 24h), no es una preview con duración infinita
+            if (!isInfiniteDuration && !isZeroDuration)
+            {
+                return false;
+            }
+
+            var props = await session.TryGetMediaPropertiesAsync();
+            if (props != null)
+            {
+                // Si tiene artista (como el canal de YouTube en un video o stream real), es legítimo
+                if (!string.IsNullOrWhiteSpace(props.Artist))
+                {
+                    return false;
+                }
+
+                // En navegador, sin artista y con duración infinita o nula => Es una preview de video
+                return true;
+            }
+
+            return isInfiniteDuration;
+        }
+        catch
+        {
+            return false;
         }
     }
 
@@ -185,6 +312,8 @@ public sealed class MediaService : IDisposable
         string newArtist = "";
         bool newIsPlaying = false;
         string newAppId = "";
+        ImageSource? newThumbnail = null;
+        bool newIsVideo = false;
 
         if (_currentSession != null)
         {
@@ -217,27 +346,71 @@ public sealed class MediaService : IDisposable
                 }
 
                 var timeline = _currentSession.GetTimelineProperties();
-                if (timeline != null)
+
+                // Detección de previews de video (por ej. hover en YouTube en navegadores).
+                // Se caracterizan por: ser de un navegador, no tener artista (el canal solo se asigna al abrir el video)
+                // y tener duración infinita (TimeSpan.MaxValue / >= 24h) o no especificada.
+                bool isBrowser = IsBrowserApp(newAppId);
+                bool isInfiniteDuration = (timeline != null && (timeline.EndTime >= TimeSpan.FromHours(24) || timeline.EndTime == TimeSpan.MaxValue)) ||
+                                          (_endTime >= TimeSpan.FromHours(24) || _endTime == TimeSpan.MaxValue);
+                bool isZeroDuration = (timeline == null || timeline.EndTime <= TimeSpan.Zero) && (_endTime <= TimeSpan.Zero || _endTime >= TimeSpan.FromHours(24));
+                bool isPreview = isBrowser && string.IsNullOrWhiteSpace(newArtist) && (isInfiniteDuration || isZeroDuration);
+
+                if (isPreview)
+                {
+                    newTitle = "";
+                    newArtist = "";
+                    newIsPlaying = false;
+                    newThumbnail = null;
+                    newIsVideo = false;
+                    _basePosition = TimeSpan.Zero;
+                    _endTime = TimeSpan.Zero;
+                    Position = TimeSpan.Zero;
+                    Duration = TimeSpan.Zero;
+                    _canSeek = false;
+
+                    // Desconectamos para no quedar anclados al preview y buscamos otra sesión válida si existe
+                    DetachSessionEvents();
+                    _currentSession = null;
+                    _ = RefreshCurrentSessionAsync(false);
+                }
+                else
+                {
+                    if (trackChanged || Thumbnail == null)
+                    {
+                        var (thumb, isVid) = await LoadThumbnailAsync(mediaProperties);
+                        newThumbnail = thumb;
+                        newIsVideo = isVid;
+                    }
+                    else
+                    {
+                        newThumbnail = Thumbnail;
+                        newIsVideo = IsVideo;
+                    }
+
+                    if (timeline != null)
                 {
                     bool recentlySeeked = (DateTimeOffset.UtcNow - _lastSeekTime).TotalSeconds < 2.5;
 
-                    // Preserve existing duration if GSMTC temporarily reports zero during buffering/ads
-                    if (timeline.EndTime > TimeSpan.Zero)
+                    // Preserve existing duration if GSMTC temporarily reports zero during buffering/ads,
+                    // pero filtramos duraciones infinitas o anómalas
+                    if (timeline.EndTime > TimeSpan.Zero && timeline.EndTime < TimeSpan.FromHours(24) && timeline.EndTime != TimeSpan.MaxValue)
                     {
                         _endTime = timeline.EndTime;
                         Duration = _endTime;
                     }
-                    else if (timeline.MaxSeekTime > TimeSpan.Zero)
+                    else if (timeline.MaxSeekTime > TimeSpan.Zero && timeline.MaxSeekTime < TimeSpan.FromHours(24) && timeline.MaxSeekTime != TimeSpan.MaxValue)
                     {
                         _endTime = timeline.MaxSeekTime;
                         Duration = _endTime;
                     }
-                    else if (_endTime > TimeSpan.Zero)
+                    else if (_endTime > TimeSpan.Zero && _endTime < TimeSpan.FromHours(24) && _endTime != TimeSpan.MaxValue)
                     {
                         Duration = _endTime;
                     }
                     else
                     {
+                        _endTime = TimeSpan.Zero;
                         Duration = TimeSpan.Zero;
                     }
 
@@ -274,13 +447,18 @@ public sealed class MediaService : IDisposable
                         }
                     }
 
-                    _canSeek = Duration > TimeSpan.FromSeconds(1);
+                    _canSeek = Duration > TimeSpan.FromSeconds(1) && Duration < TimeSpan.FromHours(24);
                 }
                 else
                 {
-                    if (_endTime > TimeSpan.Zero)
+                    if (_endTime > TimeSpan.Zero && _endTime < TimeSpan.FromHours(24) && _endTime != TimeSpan.MaxValue)
                     {
                         Duration = _endTime;
+                    }
+                    else
+                    {
+                        _endTime = TimeSpan.Zero;
+                        Duration = TimeSpan.Zero;
                     }
 
                     if (newIsPlaying)
@@ -295,11 +473,14 @@ public sealed class MediaService : IDisposable
                     {
                         Position = _basePosition;
                     }
+
+                    _canSeek = Duration > TimeSpan.FromSeconds(1) && Duration < TimeSpan.FromHours(24);
+                }
                 }
 
                 // Si cambió de pista o está reproduciendo pero aún no se tiene la duración (común en YouTube/Spotify al inicio),
                 // programamos reintentos rápidos para obtener la duración tan pronto esté lista
-                if (newIsPlaying && Duration == TimeSpan.Zero)
+                if (!isPreview && newIsPlaying && Duration == TimeSpan.Zero)
                 {
                     _ = ScheduleTimelineRetryAsync();
                 }
@@ -344,7 +525,9 @@ public sealed class MediaService : IDisposable
                             FullTrackText != fullText ||
                             IsPlaying != newIsPlaying ||
                             HasMedia != hasMedia ||
-                            SourceAppId != newAppId;
+                            SourceAppId != newAppId ||
+                            !ReferenceEquals(Thumbnail, newThumbnail) ||
+                            IsVideo != newIsVideo;
 
         Title = newTitle;
         Artist = newArtist;
@@ -352,6 +535,8 @@ public sealed class MediaService : IDisposable
         IsPlaying = newIsPlaying;
         HasMedia = hasMedia;
         SourceAppId = newAppId;
+        Thumbnail = newThumbnail;
+        IsVideo = newIsVideo;
 
         if (IsPlaying && HasMedia)
         {
@@ -375,14 +560,14 @@ public sealed class MediaService : IDisposable
         foreach (var delay in delays)
         {
             await Task.Delay(delay);
-            if (_disposed || !IsPlaying || Duration > TimeSpan.Zero) return;
+            if (_disposed || !IsPlaying || (Duration > TimeSpan.Zero && Duration < TimeSpan.FromHours(24))) return;
 
             try
             {
                 if (_currentSession != null)
                 {
                     var tl = _currentSession.GetTimelineProperties();
-                    if (tl != null && tl.EndTime > TimeSpan.Zero)
+                    if (tl != null && tl.EndTime > TimeSpan.Zero && tl.EndTime < TimeSpan.FromHours(24) && tl.EndTime != TimeSpan.MaxValue)
                     {
                         await UpdatePropertiesFromCurrentSessionAsync();
                         return;
@@ -441,7 +626,7 @@ public sealed class MediaService : IDisposable
 
     public async Task<bool> SeekAsync(double seconds)
     {
-        if (_currentSession == null || seconds < 0) return false;
+        if (_currentSession == null || seconds < 0 || !_canSeek || Duration <= TimeSpan.Zero) return false;
 
         try
         {
@@ -469,6 +654,10 @@ public sealed class MediaService : IDisposable
     public static string FormatTime(TimeSpan time)
     {
         if (time < TimeSpan.Zero) time = TimeSpan.Zero;
+        if (time >= TimeSpan.FromHours(24) || time == TimeSpan.MaxValue)
+        {
+            return "--:--";
+        }
         if (time.TotalHours >= 1)
         {
             return $"{(int)time.TotalHours}:{time.Minutes:D2}:{time.Seconds:D2}";
@@ -548,6 +737,39 @@ public sealed class MediaService : IDisposable
             keybd_event(vkCode, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
         }
         catch { }
+    }
+
+    private static async Task<(ImageSource? Image, bool IsVideo)> LoadThumbnailAsync(GlobalSystemMediaTransportControlsSessionMediaProperties? props)
+    {
+        if (props?.Thumbnail == null) return (null, false);
+
+        try
+        {
+            using var ras = await props.Thumbnail.OpenReadAsync();
+            if (ras == null || ras.Size == 0) return (null, false);
+
+            using var stream = System.IO.WindowsRuntimeStreamExtensions.AsStreamForRead(ras);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            ms.Position = 0;
+
+            var bmp = new BitmapImage();
+            bmp.BeginInit();
+            bmp.CacheOption = BitmapCacheOption.OnLoad;
+            bmp.StreamSource = ms;
+            bmp.EndInit();
+            bmp.Freeze();
+
+            bool isVideo = props.PlaybackType == Windows.Media.MediaPlaybackType.Video ||
+                           (bmp.PixelWidth > 0 && bmp.PixelHeight > 0 && (double)bmp.PixelWidth / bmp.PixelHeight > 1.25);
+
+            return (bmp, isVideo);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MediaService] Failed to load thumbnail: {ex.Message}");
+            return (null, false);
+        }
     }
 
     private void RaiseMediaStateChanged()

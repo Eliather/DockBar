@@ -1053,7 +1053,32 @@
                                           Margin="0,2,0,2"/>
                                 <TextBlock Text="{local:Loc Key=Settings_ShowMediaSeekBarDesc}"
                                            Style="{StaticResource SettingsSectionBodyStyle}"
-                                           Margin="0,0,0,4" FontSize="11" Opacity="0.75"/>
+                                           Margin="0,0,0,8" FontSize="11" Opacity="0.75"/>
+
+                                <!-- Opción para mostrar carátula / miniatura -->
+                                <CheckBox Content="{local:Loc Key=Settings_ShowMediaThumbnail}"
+                                          Style="{StaticResource DialogCheckBoxStyle}"
+                                          IsChecked="{Binding Config.ShowMediaThumbnail, Mode=TwoWay}"
+                                          Checked="ExperimentalOption_Changed"
+                                          Unchecked="ExperimentalOption_Changed"
+                                          Margin="0,2,0,2"/>
+                                <TextBlock Text="{local:Loc Key=Settings_ShowMediaThumbnailDesc}"
+                                           Style="{StaticResource SettingsSectionBodyStyle}"
+                                           Margin="0,0,0,6" FontSize="11" Opacity="0.75"/>
+
+                                <!-- Opción para modo solo miniatura -->
+                                <StackPanel Margin="20,0,0,4"
+                                            Visibility="{Binding Config.ShowMediaThumbnail, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <CheckBox Content="{local:Loc Key=Settings_MediaThumbnailOnly}"
+                                              Style="{StaticResource DialogCheckBoxStyle}"
+                                              IsChecked="{Binding Config.MediaThumbnailOnly, Mode=TwoWay}"
+                                              Checked="ExperimentalOption_Changed"
+                                              Unchecked="ExperimentalOption_Changed"
+                                              Margin="0,2,0,2"/>
+                                    <TextBlock Text="{local:Loc Key=Settings_MediaThumbnailOnlyDesc}"
+                                               Style="{StaticResource SettingsSectionBodyStyle}"
+                                               Margin="0,0,0,4" FontSize="11" Opacity="0.75"/>
+                                </StackPanel>
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -1160,7 +1185,7 @@
                     </Border>
 
                     <!-- Tarjeta: Modo Caffeine (Mantener pantalla activa) -->
-                    <Border Style="{StaticResource SettingsCardStyle}">
+                    <Border Style="{StaticResource SettingsCardStyle}" Margin="0,0,0,14">
                         <StackPanel>
                             <TextBlock Text="{local:Loc Key=Settings_ShowCaffeine}"
                                        Style="{StaticResource SettingsSectionTitleStyle}"/>
@@ -1170,6 +1195,24 @@
                             <CheckBox Content="{local:Loc Key=Settings_ShowCaffeine}"
                                       Style="{StaticResource DialogCheckBoxStyle}"
                                       IsChecked="{Binding Config.ShowCaffeine, Mode=TwoWay}"
+                                      Checked="ExperimentalOption_Changed"
+                                      Unchecked="ExperimentalOption_Changed"
+                                      Margin="0,4,0,4"
+                                      FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Tarjeta: Slider de paginación (Experimental) -->
+                    <Border Style="{StaticResource SettingsCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="{local:Loc Key=Settings_UseSliderPagination}"
+                                       Style="{StaticResource SettingsSectionTitleStyle}"/>
+                            <TextBlock Text="{local:Loc Key=Settings_UseSliderPaginationDesc}"
+                                       Style="{StaticResource SettingsSectionBodyStyle}"/>
+
+                            <CheckBox Content="{local:Loc Key=Settings_UseSliderPagination}"
+                                      Style="{StaticResource DialogCheckBoxStyle}"
+                                      IsChecked="{Binding Config.UseSliderPagination, Mode=TwoWay}"
                                       Checked="ExperimentalOption_Changed"
                                       Unchecked="ExperimentalOption_Changed"
                                       Margin="0,4,0,4"

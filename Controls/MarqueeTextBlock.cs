@@ -16,6 +16,26 @@ namespace DockBar.Controls;
 
 public class MarqueeTextBlock : FrameworkElement
 {
+    private static readonly SolidColorBrush ShadowBrush;
+    private static readonly LinearGradientBrush EdgeFadingMask;
+
+    static MarqueeTextBlock()
+    {
+        ShadowBrush = new SolidColorBrush(Color.FromArgb(160, 0, 0, 0));
+        ShadowBrush.Freeze();
+
+        EdgeFadingMask = new LinearGradientBrush
+        {
+            StartPoint = new Point(0, 0),
+            EndPoint = new Point(1, 0)
+        };
+        EdgeFadingMask.GradientStops.Add(new GradientStop(Colors.Transparent, 0.0));
+        EdgeFadingMask.GradientStops.Add(new GradientStop(Colors.Black, 0.04));
+        EdgeFadingMask.GradientStops.Add(new GradientStop(Colors.Black, 0.96));
+        EdgeFadingMask.GradientStops.Add(new GradientStop(Colors.Transparent, 1.0));
+        EdgeFadingMask.Freeze();
+    }
+
     public static readonly DependencyProperty TextProperty =
         DependencyProperty.Register(
             nameof(Text),
@@ -28,7 +48,7 @@ public class MarqueeTextBlock : FrameworkElement
             nameof(Foreground),
             typeof(Brush),
             typeof(MarqueeTextBlock),
-            new FrameworkPropertyMetadata(Brushes.White, FrameworkPropertyMetadataOptions.AffectsRender));
+            new FrameworkPropertyMetadata(Brushes.White, FrameworkPropertyMetadataOptions.AffectsRender, OnForegroundChanged));
 
     public static readonly DependencyProperty FontSizeProperty =
         DependencyProperty.Register(
@@ -84,6 +104,8 @@ public class MarqueeTextBlock : FrameworkElement
     private Storyboard? _storyboard;
     private double _textWidth;
     private double _textHeight;
+    private FormattedText? _cachedFt;
+    private FormattedText? _cachedShadowFt;
 
     public MarqueeTextBlock()
     {
@@ -97,12 +119,29 @@ public class MarqueeTextBlock : FrameworkElement
     {
         if (d is MarqueeTextBlock control)
         {
+            control.InvalidateFormattedText();
             control.UpdateMarquee();
         }
     }
 
-    private FormattedText CreateFormattedText()
+    private static void OnForegroundChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
+        if (d is MarqueeTextBlock control)
+        {
+            control.InvalidateFormattedText();
+        }
+    }
+
+    private void InvalidateFormattedText()
+    {
+        _cachedFt = null;
+        _cachedShadowFt = null;
+    }
+
+    private FormattedText GetOrCreateFormattedText()
+    {
+        if (_cachedFt != null) return _cachedFt;
+
         var text = string.IsNullOrEmpty(Text) ? " " : Text;
         var typeface = new Typeface(
             new FontFamily("Segoe UI, Inter, Arial"),
@@ -112,7 +151,7 @@ public class MarqueeTextBlock : FrameworkElement
 
         var pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
 
-        return new FormattedText(
+        _cachedFt = new FormattedText(
             text,
             CultureInfo.CurrentCulture,
             System.Windows.FlowDirection.LeftToRight,
@@ -120,13 +159,25 @@ public class MarqueeTextBlock : FrameworkElement
             Math.Max(8, FontSize),
             Foreground ?? Brushes.White,
             pixelsPerDip);
+
+        _textWidth = _cachedFt.Width;
+        _textHeight = _cachedFt.Height;
+
+        _cachedShadowFt = new FormattedText(
+            text,
+            CultureInfo.CurrentCulture,
+            System.Windows.FlowDirection.LeftToRight,
+            typeface,
+            Math.Max(8, FontSize),
+            ShadowBrush,
+            pixelsPerDip);
+
+        return _cachedFt;
     }
 
     protected override Size MeasureOverride(Size availableSize)
     {
-        var ft = CreateFormattedText();
-        _textWidth = ft.Width;
-        _textHeight = ft.Height;
+        var ft = GetOrCreateFormattedText();
         var desiredWidth = double.IsPositiveInfinity(availableSize.Width) ? _textWidth : availableSize.Width;
         return new Size(desiredWidth, Math.Max(_textHeight + 2, FontSize + 4));
     }
@@ -141,10 +192,7 @@ public class MarqueeTextBlock : FrameworkElement
             return;
         }
 
-        var ft = CreateFormattedText();
-        _textWidth = ft.Width;
-        _textHeight = ft.Height;
-
+        var ft = GetOrCreateFormattedText();
         var availableWidth = ActualWidth;
 
         if (_textWidth <= availableWidth)
@@ -199,23 +247,8 @@ public class MarqueeTextBlock : FrameworkElement
         _storyboard.Children.Add(animation);
         _storyboard.Begin();
 
-        // Aplicar máscara sutil con desvanecimiento en los bordes para un aspecto premium
-        ApplyEdgeFadingMask();
-    }
-
-    private void ApplyEdgeFadingMask()
-    {
-        var mask = new LinearGradientBrush
-        {
-            StartPoint = new Point(0, 0),
-            EndPoint = new Point(1, 0)
-        };
-        mask.GradientStops.Add(new GradientStop(Colors.Transparent, 0.0));
-        mask.GradientStops.Add(new GradientStop(Colors.Black, 0.04));
-        mask.GradientStops.Add(new GradientStop(Colors.Black, 0.96));
-        mask.GradientStops.Add(new GradientStop(Colors.Transparent, 1.0));
-        mask.Freeze();
-        OpacityMask = mask;
+        // Aplicar máscara estática congelada con desvanecimiento en los bordes
+        OpacityMask = EdgeFadingMask;
     }
 
     private void StopAnimation()
@@ -234,9 +267,10 @@ public class MarqueeTextBlock : FrameworkElement
 
         if (string.IsNullOrEmpty(Text)) return;
 
-        var ft = CreateFormattedText();
-        double x;
+        var ft = GetOrCreateFormattedText();
+        if (ft == null) return;
 
+        double x;
         if (_textWidth <= ActualWidth)
         {
             // Centrado si cabe
@@ -250,12 +284,11 @@ public class MarqueeTextBlock : FrameworkElement
 
         var y = Math.Max(0, (ActualHeight - ft.Height) / 2.0);
 
-        // Sombra de texto sutil para legibilidad
-        var shadowBrush = new SolidColorBrush(Color.FromArgb(160, 0, 0, 0));
-        shadowBrush.Freeze();
-        var shadowFt = CreateFormattedText();
-        shadowFt.SetForegroundBrush(shadowBrush);
-        drawingContext.DrawText(shadowFt, new Point(x + 1, y + 1));
+        // Sombra de texto sutil para legibilidad (sin alocaciones en runtime)
+        if (_cachedShadowFt != null)
+        {
+            drawingContext.DrawText(_cachedShadowFt, new Point(x + 1, y + 1));
+        }
 
         // Texto principal
         drawingContext.DrawText(ft, new Point(x, y));

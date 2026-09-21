@@ -323,30 +323,48 @@ public static class IconService
             }
 
             var iidImageList = new Guid("46EB5926-582E-4017-9FDF-E8998DAA0950"); // IImageList
-            if (SHGetImageList((int)SHIL.Jumbo, ref iidImageList, out var imageList) != 0)
+            IImageList? imageList = null;
+            try
             {
-                // fallback to extra large if jumbo not available
-                SHGetImageList((int)SHIL.ExtraLarge, ref iidImageList, out imageList);
-            }
+                if (SHGetImageList((int)SHIL.Jumbo, ref iidImageList, out imageList) != 0)
+                {
+                    // fallback to extra large if jumbo not available
+                    SHGetImageList((int)SHIL.ExtraLarge, ref iidImageList, out imageList);
+                }
 
-            if (imageList == null)
+                if (imageList == null)
+                {
+                    return null;
+                }
+
+                const int ILD_TRANSPARENT = 0x1;
+                imageList.GetIcon(shinfo.iIcon, ILD_TRANSPARENT, out var hicon);
+                if (hicon == IntPtr.Zero)
+                {
+                    return null;
+                }
+
+                var source = Imaging.CreateBitmapSourceFromHIcon(
+                    hicon,
+                    Int32Rect.Empty,
+                    BitmapSizeOptions.FromWidthAndHeight(256, 256));
+                DestroyIcon(hicon);
+                return source;
+            }
+            finally
             {
-                return null;
+                if (imageList != null)
+                {
+                    try
+                    {
+                        Marshal.ReleaseComObject(imageList);
+                    }
+                    catch
+                    {
+                        // Ignore COM release errors
+                    }
+                }
             }
-
-            const int ILD_TRANSPARENT = 0x1;
-            imageList.GetIcon(shinfo.iIcon, ILD_TRANSPARENT, out var hicon);
-            if (hicon == IntPtr.Zero)
-            {
-                return null;
-            }
-
-            var source = Imaging.CreateBitmapSourceFromHIcon(
-                hicon,
-                Int32Rect.Empty,
-                BitmapSizeOptions.FromWidthAndHeight(256, 256));
-            DestroyIcon(hicon);
-            return source;
         }
         catch (Exception ex)
         {

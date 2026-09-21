@@ -19,6 +19,8 @@ public class MediaConfig
     public bool ShowVolumeControl { get; set; } = false;
     public bool ShowMediaControl { get; set; } = false;
     public bool ShowMediaSeekBar { get; set; } = false;
+    public bool ShowMediaThumbnail { get; set; } = false;
+    public bool MediaThumbnailOnly { get; set; } = false;
 }
 
 public class ExperimentalConfig
@@ -27,7 +29,8 @@ public class ExperimentalConfig
     public bool ShowResourceMonitor { get; set; } = false;
     public bool ShowHardwareModelNames { get; set; } = false;
     public bool ShowCaffeine { get; set; } = false;
-    public List<string> WidgetOrder { get; set; } = new() { "Clock", "Media", "Volume", "Resource", "Caffeine" };
+    public bool UseSliderPagination { get; set; } = false;
+    public List<string> WidgetOrder { get; set; } = new() { "Clock", "Media", "Volume", "Resource", "Caffeine", "Pagination" };
 }
 
 public class DockConfig
@@ -114,6 +117,20 @@ public class DockConfig
     }
 
     [JsonIgnore]
+    public bool ShowMediaThumbnail
+    {
+        get => Media.ShowMediaThumbnail;
+        set => Media.ShowMediaThumbnail = value;
+    }
+
+    [JsonIgnore]
+    public bool MediaThumbnailOnly
+    {
+        get => Media.MediaThumbnailOnly;
+        set => Media.MediaThumbnailOnly = value;
+    }
+
+    [JsonIgnore]
     public double EdgeTriggerPx
     {
         get => Experimental.EdgeTriggerPx;
@@ -139,6 +156,13 @@ public class DockConfig
     {
         get => Experimental.ShowCaffeine;
         set => Experimental.ShowCaffeine = value;
+    }
+
+    [JsonIgnore]
+    public bool UseSliderPagination
+    {
+        get => Experimental.UseSliderPagination;
+        set => Experimental.UseSliderPagination = value;
     }
 
     [JsonIgnore]
@@ -182,7 +206,9 @@ public class DockConfig
             {
                 ShowVolumeControl = ShowVolumeControl,
                 ShowMediaControl = ShowMediaControl,
-                ShowMediaSeekBar = ShowMediaSeekBar
+                ShowMediaSeekBar = ShowMediaSeekBar,
+                ShowMediaThumbnail = ShowMediaThumbnail,
+                MediaThumbnailOnly = MediaThumbnailOnly
             },
             Experimental = new ExperimentalConfig
             {
@@ -190,7 +216,8 @@ public class DockConfig
                 ShowResourceMonitor = ShowResourceMonitor,
                 ShowHardwareModelNames = ShowHardwareModelNames,
                 ShowCaffeine = ShowCaffeine,
-                WidgetOrder = WidgetOrder != null ? new List<string>(WidgetOrder) : new() { "Clock", "Media", "Volume", "Resource", "Caffeine" }
+                UseSliderPagination = UseSliderPagination,
+                WidgetOrder = WidgetOrder != null ? new List<string>(WidgetOrder) : new() { "Clock", "Media", "Volume", "Resource", "Caffeine", "Pagination" }
             },
             Shortcuts = shortcuts.Select(s => new ShortcutItem
             {
@@ -231,12 +258,15 @@ public class DockConfig
         ShowVolumeControl = source.ShowVolumeControl;
         ShowMediaControl = source.ShowMediaControl;
         ShowMediaSeekBar = source.ShowMediaSeekBar;
+        ShowMediaThumbnail = source.ShowMediaThumbnail;
+        MediaThumbnailOnly = source.MediaThumbnailOnly;
 
         EdgeTriggerPx = source.EdgeTriggerPx;
         ShowResourceMonitor = source.ShowResourceMonitor;
         ShowHardwareModelNames = source.ShowHardwareModelNames;
         ShowCaffeine = source.ShowCaffeine;
-        WidgetOrder = source.WidgetOrder != null ? new List<string>(source.WidgetOrder) : new() { "Clock", "Media", "Volume", "Resource", "Caffeine" };
+        UseSliderPagination = source.UseSliderPagination;
+        WidgetOrder = source.WidgetOrder != null ? new List<string>(source.WidgetOrder) : new() { "Clock", "Media", "Volume", "Resource", "Caffeine", "Pagination" };
 
         if (source.Shortcuts != null)
         {

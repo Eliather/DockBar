@@ -85,7 +85,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     // Widgets experimentales: Volumen, Multimedia, Monitor de Recursos y Caffeine
     public bool IsVolumeVisible => _config.ShowVolumeControl && !IsEditMode;
     public bool IsMediaVisible => _config.ShowMediaControl && !IsEditMode;
-    public bool IsMediaSeekBarVisible => _config.ShowMediaControl && _config.ShowMediaSeekBar && !IsEditMode;
+    public bool IsMediaSeekBarVisible => _config.ShowMediaControl && _config.ShowMediaSeekBar && (!_config.MediaThumbnailOnly || !HasMediaThumbnail) && !IsEditMode;
+    public ImageSource? MediaThumbnail => MediaService.Instance.Thumbnail;
+    public bool HasMediaThumbnail => _config.ShowMediaThumbnail && MediaService.Instance.HasThumbnail;
+    public Visibility MediaThumbnailVisibility => HasMediaThumbnail && !IsEditMode ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility MediaTitleVisibility => (!_config.MediaThumbnailOnly || !HasMediaThumbnail) && !IsEditMode ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility MediaControlsVisibility => (!_config.MediaThumbnailOnly || !HasMediaThumbnail) && !IsEditMode ? Visibility.Visible : Visibility.Collapsed;
+    public string MediaThumbnailTooltip => MediaService.Instance.HasMedia
+        ? $"{MediaService.Instance.FullTrackText}\n{LocalizationService.Get("Dock_MediaPlayPause")}"
+        : LocalizationService.Get("Dock_MediaPlayPause");
     public double MediaPositionSeconds => MediaService.Instance.PositionSeconds;
     public double MediaDurationSeconds => Math.Max(MediaService.Instance.DurationSeconds, 1.0);
     private string? _scrubbingPositionText = null;
@@ -230,6 +238,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public bool HasMultiplePages => Shortcuts.Count > _itemsPerPage;
 
     public Visibility PaginationVisibility => !IsEditMode && HasMultiplePages ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility ButtonPaginationVisibility => !IsEditMode && HasMultiplePages && !_config.UseSliderPagination ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility SliderPaginationVisibility => !IsEditMode && HasMultiplePages && _config.UseSliderPagination ? Visibility.Visible : Visibility.Collapsed;
 
     public SolidColorBrush DockBackgroundBrush
     {
@@ -469,18 +479,34 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void ReplaceShortcuts(System.Collections.Generic.IEnumerable<ShortcutItem>? shortcuts, bool forceIconRefresh = true)
     {
         Shortcuts.Clear();
+        var list = (shortcuts ?? Enumerable.Empty<ShortcutItem>()).ToList();
 
-        foreach (var item in shortcuts ?? Enumerable.Empty<ShortcutItem>())
+        foreach (var item in list)
         {
-            if (forceIconRefresh || item.Icon == null)
-            {
-                item.Icon = ResolveIcon(item);
-            }
-
             Shortcuts.Add(item);
         }
 
         UpdateVisibleItems();
+
+        // Resolución asíncrona de íconos en segundo plano para arranque instantáneo y sin bloqueos de UI
+        _ = Task.Run(() =>
+        {
+            foreach (var item in list)
+            {
+                if (forceIconRefresh || item.Icon == null)
+                {
+                    var resolved = ResolveIcon(item);
+                    if (resolved != null)
+                    {
+                        if (resolved is Freezable freezable && freezable.CanFreeze && !freezable.IsFrozen)
+                        {
+                            freezable.Freeze();
+                        }
+                        item.Icon = resolved;
+                    }
+                }
+            }
+        });
     }
 
     private void HandleAutoStartPrompt()
@@ -520,10 +546,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         OnPropertyChanged(nameof(IsVolumeVisible));
         OnPropertyChanged(nameof(IsMediaVisible));
         OnPropertyChanged(nameof(IsMediaSeekBarVisible));
+        OnPropertyChanged(nameof(MediaThumbnail));
+        OnPropertyChanged(nameof(HasMediaThumbnail));
+        OnPropertyChanged(nameof(MediaThumbnailVisibility));
+        OnPropertyChanged(nameof(MediaTitleVisibility));
+        OnPropertyChanged(nameof(MediaControlsVisibility));
+        OnPropertyChanged(nameof(MediaThumbnailTooltip));
         UpdateMediaTimelineUI();
         OnPropertyChanged(nameof(IsClockVisible));
         OnPropertyChanged(nameof(IsResourceMonitorVisible));
         OnPropertyChanged(nameof(IsCaffeineVisible));
+        OnPropertyChanged(nameof(ButtonPaginationVisibility));
+        OnPropertyChanged(nameof(SliderPaginationVisibility));
+        MediaService.Instance.SetPollingEnabled(_config.ShowMediaControl);
     }
 
     private void UpdateWidgetsOrder()
@@ -533,7 +568,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
-        var order = _config.Experimental?.WidgetOrder ?? new List<string> { "Clock", "Media", "Volume", "Resource", "Caffeine" };
+        var order = _config.Experimental?.WidgetOrder ?? new List<string> { "Clock", "Media", "Volume", "Resource", "Caffeine", "Pagination" };
         var panelMap = new Dictionary<string, UIElement>(StringComparer.OrdinalIgnoreCase)
         {
             ["Clock"] = ClockPanel,
@@ -542,6 +577,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         };
         if (ResourcePanel != null) panelMap["Resource"] = ResourcePanel;
         if (CaffeinePanel != null) panelMap["Caffeine"] = CaffeinePanel;
+        if (DockPaginationGrid != null) panelMap["Pagination"] = DockPaginationGrid;
 
         ExperimentalWidgetsPanel.Children.Clear();
         foreach (var key in order)
@@ -562,7 +598,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void UpdateResourceMonitorState()
     {
-        if (_config.ShowResourceMonitor)
+        if (_config.ShowResourceMonitor && !_isHidden && !_fullscreenActive)
         {
             if (!_resourceTimer.IsEnabled)
             {
@@ -627,12 +663,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             _ = GpuService.Instance.UpdateUsageAsync();
 
             var sb = new System.Text.StringBuilder();
-            sb.Append(LocalizationService.Get("Dock_ResourceMonitorTooltip"));
-            sb.Append($"\nCPU: {CpuUsagePercent}%");
-            sb.Append($"\nRAM: {RamUsagePercent}% ({_ramDetailsText})");
+            sb.AppendLine(LocalizationService.Get("Dock_ResourceMonitorTooltip"));
+            sb.AppendLine();
+            sb.Append($"• CPU: {CpuUsagePercent}%");
+            if (!string.IsNullOrWhiteSpace(DetectedCpuName) && DetectedCpuName != "CPU")
+            {
+                sb.Append($" ({DetectedCpuName})");
+            }
+            sb.Append($"\n• RAM: {RamUsagePercent}% ({_ramDetailsText})");
             foreach (var gpu in GpuDevices)
             {
-                sb.Append($"\n{gpu.Label}: {gpu.UsagePercent}% - {gpu.Name} ({gpu.DedicatedVramText} VRAM)");
+                sb.Append($"\n• {gpu.Label}: {gpu.UsagePercent}% — {gpu.Name} ({gpu.DedicatedVramText} VRAM)");
             }
             ResourceMonitorTooltip = sb.ToString();
         }
@@ -744,7 +785,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void UpdateClockState()
     {
-        if (_config.ShowClock)
+        if (_config.ShowClock && !_isHidden && !_fullscreenActive)
         {
             _clockTimer.Interval = _config.ShowClockSeconds
                 ? TimeSpan.FromMilliseconds(500)
@@ -766,6 +807,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         OnPropertyChanged(nameof(IsClockDateVisible));
         OnPropertyChanged(nameof(ClockFontSize));
         OnPropertyChanged(nameof(ClockDateFontSize));
+    }
+
+    private void PauseBackgroundMonitors()
+    {
+        if (_resourceTimer.IsEnabled) _resourceTimer.Stop();
+        if (_clockTimer.IsEnabled) _clockTimer.Stop();
+    }
+
+    private void ResumeBackgroundMonitors()
+    {
+        if (_isHidden || _fullscreenActive) return;
+        UpdateClockState();
+        UpdateResourceMonitorState();
     }
 
     private void UpdateClockDisplay()
@@ -872,6 +926,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         MediaService.Instance.TimelineChanged += MediaService_TimelineChanged;
 
         SetupMediaSeekSlider();
+        SetupPageSlider();
         _ = RefreshInitialMediaStateAsync();
     }
 
@@ -935,6 +990,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void MediaPrev_Click(object sender, RoutedEventArgs e)
     {
         _ = MediaService.Instance.SkipPreviousAsync();
+    }
+
+    private void MediaThumbnail_Click(object sender, MouseButtonEventArgs e)
+    {
+        _ = MediaService.Instance.TogglePlayPauseAsync();
     }
 
     private bool _isUserSeekingMedia = false;
@@ -1026,6 +1086,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         OnPropertyChanged(nameof(MediaTrackText));
         OnPropertyChanged(nameof(MediaPlayPauseIconData));
+        OnPropertyChanged(nameof(MediaThumbnail));
+        OnPropertyChanged(nameof(HasMediaThumbnail));
+        OnPropertyChanged(nameof(MediaThumbnailVisibility));
+        OnPropertyChanged(nameof(MediaTitleVisibility));
+        OnPropertyChanged(nameof(MediaControlsVisibility));
+        OnPropertyChanged(nameof(IsMediaSeekBarVisible));
+        OnPropertyChanged(nameof(MediaThumbnailTooltip));
         UpdateMediaTimelineUI();
     }
 
@@ -1526,6 +1593,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         _isHidden = false;
+        ResumeBackgroundMonitors();
         UpdateEdgeHotspotState();
         AnimateLeft(Left, GetShownLeft(GetMonitorBounds()));
     }
@@ -1543,6 +1611,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         _isHidden = true;
+        PauseBackgroundMonitors();
         AnimateLeft(Left, GetHiddenLeft(GetMonitorBounds()));
     }
 
@@ -2456,6 +2525,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _edgeHotspot = null;
         _systemRecoveryTimer.Stop();
         _configReloadTimer.Stop();
+        _clockTimer.Stop();
+        _resourceTimer.Stop();
+        _hideTimer.Stop();
+        _fullscreenDebounceTimer.Stop();
         DisposeConfigWatcher();
         UnregisterSystemEventHandlers();
         UnhookForegroundWatcher();
@@ -2475,6 +2548,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
             var myHwnd = new WindowInteropHelper(this).Handle;
             if (hwnd == myHwnd)
+            {
+                return;
+            }
+
+            // Filtrar: solo procesar si la ventana que cambió de posición/tamaño es la activa en primer plano
+            var foreground = NativeMethods.GetForegroundWindow();
+            if (hwnd != foreground)
             {
                 return;
             }
@@ -2664,6 +2744,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _fullscreenActive = active;
         if (_fullscreenActive)
         {
+            PauseBackgroundMonitors();
             Visibility = Visibility.Collapsed;
             Topmost = false;
             UpdateEdgeHotspotState();
@@ -2676,6 +2757,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             EnsureTopmost();
             ApplyGlassEffect();
             UpdateEdgeHotspotState();
+            ResumeBackgroundMonitors();
         }
     }
 
@@ -2690,13 +2772,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void UpdateVisibleItems()
     {
+        var totalPages = Math.Max(1, (int)Math.Ceiling(Shortcuts.Count / (double)_itemsPerPage));
         if (IsEditMode)
         {
             VisibleShortcuts.Clear();
         }
         else
         {
-            var totalPages = Math.Max(1, (int)Math.Ceiling(Shortcuts.Count / (double)_itemsPerPage));
             if (_currentPage >= totalPages)
             {
                 _currentPage = totalPages - 1;
@@ -2709,10 +2791,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 VisibleShortcuts.Add(item);
             }
             OnPropertyChanged(nameof(PageInfo));
+            SyncPageSlider(totalPages);
         }
 
         OnPropertyChanged(nameof(HasMultiplePages));
         OnPropertyChanged(nameof(PaginationVisibility));
+        OnPropertyChanged(nameof(ButtonPaginationVisibility));
+        OnPropertyChanged(nameof(SliderPaginationVisibility));
         QueueItemsPerPageRefresh();
     }
     public string PageInfo => $"{LocalizationService.Get("Common_Page")} {_currentPage + 1}/{Math.Max(1, (int)Math.Ceiling(Shortcuts.Count / (double)_itemsPerPage))}";
@@ -2737,6 +2822,119 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         UpdateVisibleItems();
     }
 
+    // ponytail: Slider pagination experimental logic - direct calculation in real time
+    private bool _isUserDraggingPageSlider = false;
+    private bool _isUpdatingPageSliderInternal = false;
+
+    public static int CalculatePageFromPosition(double value, int totalPages)
+    {
+        if (totalPages <= 1) return 0;
+        int page = (int)Math.Round(value);
+        if (page < 0) return 0;
+        if (page >= totalPages) return totalPages - 1;
+        return page;
+    }
+
+    private void SetupPageSlider()
+    {
+        if (PageSlider == null) return;
+
+        PageSlider.AddHandler(System.Windows.Controls.Primitives.Thumb.DragStartedEvent, new System.Windows.Controls.Primitives.DragStartedEventHandler((s, e) =>
+        {
+            _isUserDraggingPageSlider = true;
+        }));
+
+        PageSlider.AddHandler(System.Windows.Controls.Primitives.Thumb.DragCompletedEvent, new System.Windows.Controls.Primitives.DragCompletedEventHandler((s, e) =>
+        {
+            FinishPageSliderDrag();
+        }));
+
+        PageSlider.AddHandler(UIElement.PreviewMouseLeftButtonDownEvent, new MouseButtonEventHandler((s, e) =>
+        {
+            _isUserDraggingPageSlider = true;
+        }), true);
+
+        PageSlider.AddHandler(UIElement.PreviewMouseLeftButtonUpEvent, new MouseButtonEventHandler((s, e) =>
+        {
+            FinishPageSliderDrag();
+        }), true);
+
+        PageSlider.LostMouseCapture += (s, e) =>
+        {
+            FinishPageSliderDrag();
+        };
+    }
+
+    private void FinishPageSliderDrag()
+    {
+        if (!_isUserDraggingPageSlider) return;
+        _isUserDraggingPageSlider = false;
+
+        var totalPages = Math.Max(1, (int)Math.Ceiling(Shortcuts.Count / (double)_itemsPerPage));
+        SyncPageSlider(totalPages);
+    }
+
+    private void SyncPageSlider(int totalPages)
+    {
+        if (PageSlider == null || _isUserDraggingPageSlider) return;
+
+        _isUpdatingPageSliderInternal = true;
+        try
+        {
+            PageSlider.Minimum = 0;
+            PageSlider.Maximum = Math.Max(1, totalPages - 1);
+            PageSlider.Value = _currentPage;
+        }
+        finally
+        {
+            _isUpdatingPageSliderInternal = false;
+        }
+    }
+
+    private void PageSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_isUpdatingPageSliderInternal || IsEditMode) return;
+
+        var totalPages = Math.Max(1, (int)Math.Ceiling(Shortcuts.Count / (double)_itemsPerPage));
+        int targetPage = CalculatePageFromPosition(e.NewValue, totalPages);
+
+        if (targetPage != _currentPage)
+        {
+            _currentPage = targetPage;
+            VisibleShortcuts.Clear();
+            foreach (var item in Shortcuts.Skip(_currentPage * _itemsPerPage).Take(_itemsPerPage))
+            {
+                VisibleShortcuts.Add(item);
+            }
+            OnPropertyChanged(nameof(PageInfo));
+        }
+    }
+
+    private void PaginationPanel_MouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (IsEditMode) return;
+        var totalPages = Math.Max(1, (int)Math.Ceiling(Shortcuts.Count / (double)_itemsPerPage));
+        if (totalPages <= 1) return;
+
+        if (e.Delta < 0)
+        {
+            if (_currentPage < totalPages - 1)
+            {
+                _currentPage++;
+                UpdateVisibleItems();
+            }
+        }
+        else if (e.Delta > 0)
+        {
+            if (_currentPage > 0)
+            {
+                _currentPage--;
+                UpdateVisibleItems();
+            }
+        }
+        e.Handled = true;
+    }
+
     private void UpdateItemsPerPage()
     {
         if (TryMeasureItemsPerPage(out var measuredCount))
@@ -2755,6 +2953,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             var clockChrome = _config.ShowClock ? 48.0 : 0.0;
             var volumeChrome = _config.ShowVolumeControl ? 36.0 : 0.0;
             var mediaChrome = _config.ShowMediaControl ? (_config.ShowMediaSeekBar ? 86.0 : 64.0) : 0.0;
+            if (_config.ShowMediaControl && _config.ShowMediaThumbnail)
+            {
+                mediaChrome += 100.0;
+            }
             var usableHeight = Math.Max(1, monitorHeight - fallbackChromeWithoutPagination - clockChrome - volumeChrome - mediaChrome);
             var count = Math.Max(1, (int)Math.Floor(usableHeight / perItem));
 
@@ -2834,6 +3036,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         UpdateVisibleItems();
         OnPropertyChanged(nameof(HasMultiplePages));
         OnPropertyChanged(nameof(PaginationVisibility));
+        OnPropertyChanged(nameof(ButtonPaginationVisibility));
+        OnPropertyChanged(nameof(SliderPaginationVisibility));
         OnPropertyChanged(nameof(IsClockVisible));
         OnPropertyChanged(nameof(IsVolumeVisible));
         OnPropertyChanged(nameof(IsMediaVisible));

@@ -121,14 +121,43 @@
             <Setter Property="Stretch" Value="Uniform"/>
         </Style>
         <Style x:Key="DockToolTipStyle" TargetType="ToolTip">
-            <Setter Property="Background" Value="{DynamicResource AppSurfaceRaisedBrush}"/>
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="HasDropShadow" Value="True"/>
+            <Setter Property="Background" Value="#F2161622"/>
             <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource AppBorderStrongBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="10,6"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="HasDropShadow" Value="True"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="MaxWidth" Value="380"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToolTip">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="16"
+                                                  ShadowDepth="4"
+                                                  Direction="270"
+                                                  Color="#000000"
+                                                  Opacity="0.55"/>
+                            </Border.Effect>
+                            <ContentPresenter TextElement.Foreground="{TemplateBinding Foreground}"
+                                              TextElement.FontSize="{TemplateBinding FontSize}"
+                                              TextElement.FontFamily="{TemplateBinding FontFamily}"
+                                              TextBlock.LineHeight="17"
+                                              TextBlock.LineStackingStrategy="BlockLineHeight"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
+        <Style TargetType="ToolTip" BasedOn="{StaticResource DockToolTipStyle}"/>
     </Window.Resources>
 
     <Border Background="{Binding DockBackgroundBrush, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -139,7 +168,6 @@
         <Grid x:Name="DockLayoutRoot" Margin="0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
@@ -426,6 +454,27 @@
                         BorderThickness="1"
                         Visibility="{Binding IsMediaVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}">
                     <StackPanel Orientation="Vertical" HorizontalAlignment="Stretch">
+                        <!-- Recuadro de Miniatura / Carátula (Cuadrado para canciones, Panorámico para videos) -->
+                        <Border x:Name="MediaThumbnailBorder"
+                                HorizontalAlignment="Center"
+                                CornerRadius="6"
+                                ClipToBounds="True"
+                                Background="#18000000"
+                                BorderBrush="#25FFFFFF"
+                                BorderThickness="1"
+                                Margin="0,0,0,4"
+                                Cursor="Hand"
+                                ToolTip="{Binding MediaThumbnailTooltip, RelativeSource={RelativeSource AncestorType=Window}}"
+                                MouseLeftButtonUp="MediaThumbnail_Click"
+                                Visibility="{Binding MediaThumbnailVisibility, RelativeSource={RelativeSource AncestorType=Window}}">
+                            <Image Source="{Binding MediaThumbnail, RelativeSource={RelativeSource AncestorType=Window}}"
+                                   Stretch="Uniform"
+                                   MaxWidth="150"
+                                   MaxHeight="120"
+                                   SnapsToDevicePixels="True"
+                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                        </Border>
+
                         <!-- Título y Artista con Marquesina en Movimiento -->
                         <controls:MarqueeTextBlock Height="18"
                                                    Text="{Binding MediaTrackText, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -433,7 +482,8 @@
                                                    FontSize="11"
                                                    FontWeight="SemiBold"
                                                    Margin="2,0,2,2"
-                                                   ToolTip="{Binding MediaTrackText, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                                   ToolTip="{Binding MediaTrackText, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                   Visibility="{Binding MediaTitleVisibility, RelativeSource={RelativeSource AncestorType=Window}}"/>
 
                         <!-- Slider horizontal de progreso y búsqueda (Opcional) -->
                         <Grid Visibility="{Binding IsMediaSeekBarVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}"
@@ -480,7 +530,9 @@
                         </Grid>
 
                         <!-- Botones de Control: Anterior, Reproducir/Pausa, Siguiente -->
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <StackPanel Orientation="Horizontal"
+                                    HorizontalAlignment="Center"
+                                    Visibility="{Binding MediaControlsVisibility, RelativeSource={RelativeSource AncestorType=Window}}">
                             <Button Style="{StaticResource BottomIconButtonStyle}"
                                     Width="26" Height="26"
                                     Click="MediaPrev_Click">
@@ -603,7 +655,10 @@
                         Cursor="Hand"
                         MouseLeftButtonUp="ResourcePanel_MouseLeftButtonUp"
                         Visibility="{Binding IsResourceMonitorVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}"
-                        ToolTip="{Binding ResourceMonitorTooltip, RelativeSource={RelativeSource AncestorType=Window}}">
+                        ToolTip="{Binding ResourceMonitorTooltip, RelativeSource={RelativeSource AncestorType=Window}}"
+                        ToolTipService.InitialShowDelay="150"
+                        ToolTipService.BetweenShowDelay="80"
+                        ToolTipService.ShowDuration="25000">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Setter Property="Background" Value="#10FFFFFF"/>
@@ -726,41 +781,69 @@
                                    VerticalAlignment="Center"/>
                     </StackPanel>
                 </Border>
+
+                <!-- Panel de Paginación (Reordenable como parte de los widgets) -->
+                <Grid x:Name="DockPaginationGrid"
+                      Margin="0,4,0,4"
+                      Visibility="{Binding PaginationVisibility}"
+                      PreviewMouseWheel="PaginationPanel_MouseWheel">
+                    <!-- Modo Clásico: Botones Anterior / Siguiente -->
+                    <StackPanel x:Name="PaginationPanel"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Center"
+                                Visibility="{Binding ButtonPaginationVisibility}">
+                        <Button Style="{StaticResource BottomIconButtonStyle}"
+                                Width="28"
+                                Height="28"
+                                Click="PrevPage_Click">
+                            <Viewbox Width="14" Height="14">
+                                <Grid Width="24" Height="24">
+                                    <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M14.5,5L8.5,12L14.5,19"/>
+                                </Grid>
+                            </Viewbox>
+                        </Button>
+                        <TextBlock Text="{Binding PageInfo}"
+                                   Margin="8,0,8,0"
+                                   VerticalAlignment="Center"
+                                   Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                        <Button Style="{StaticResource BottomIconButtonStyle}"
+                                Width="28"
+                                Height="28"
+                                Click="NextPage_Click">
+                            <Viewbox Width="14" Height="14">
+                                <Grid Width="24" Height="24">
+                                    <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M9.5,5L15.5,12L9.5,19"/>
+                                </Grid>
+                            </Viewbox>
+                        </Button>
+                    </StackPanel>
+
+                    <!-- Modo Experimental: Slider de Paginación en Tiempo Real -->
+                    <StackPanel x:Name="PaginationSliderPanel"
+                                Orientation="Vertical"
+                                HorizontalAlignment="Stretch"
+                                Margin="8,0,8,0"
+                                Visibility="{Binding SliderPaginationVisibility}">
+                        <TextBlock Text="{Binding PageInfo}"
+                                   HorizontalAlignment="Center"
+                                   FontSize="10"
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,0,3"
+                                   Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                        <Slider x:Name="PageSlider"
+                                Style="{DynamicResource MediaSeekSliderStyle}"
+                                HorizontalAlignment="Stretch"
+                                Height="14"
+                                Minimum="0"
+                                Maximum="1"
+                                IsMoveToPointEnabled="True"
+                                Focusable="False"
+                                ValueChanged="PageSlider_ValueChanged"/>
+                    </StackPanel>
+                </Grid>
             </StackPanel>
 
-            <StackPanel x:Name="PaginationPanel"
-                        Grid.Row="2"
-                        Orientation="Horizontal"
-                        HorizontalAlignment="Center"
-                        Margin="0,8,0,4"
-                        Visibility="{Binding PaginationVisibility}">
-                <Button Style="{StaticResource BottomIconButtonStyle}"
-                        Width="28"
-                        Height="28"
-                        Click="PrevPage_Click">
-                    <Viewbox Width="14" Height="14">
-                        <Grid Width="24" Height="24">
-                            <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M14.5,5L8.5,12L14.5,19"/>
-                        </Grid>
-                    </Viewbox>
-                </Button>
-                <TextBlock Text="{Binding PageInfo}"
-                           Margin="8,0,8,0"
-                           VerticalAlignment="Center"
-                           Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
-                <Button Style="{StaticResource BottomIconButtonStyle}"
-                        Width="28"
-                        Height="28"
-                        Click="NextPage_Click">
-                    <Viewbox Width="14" Height="14">
-                        <Grid Width="24" Height="24">
-                            <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M9.5,5L15.5,12L9.5,19"/>
-                        </Grid>
-                    </Viewbox>
-                </Button>
-            </StackPanel>
-
-            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,10">
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,10">
                 <Button Style="{StaticResource BottomIconButtonStyle}"
                         x:Name="AddButton"
                         Click="AddShortcutMenu_Click">

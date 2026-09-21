@@ -243,7 +243,7 @@ public static class ConfigService
         }
 
         config.Experimental.WidgetOrder ??= new();
-        var validWidgets = new[] { "Clock", "Media", "Volume", "Resource", "Caffeine" };
+        var validWidgets = new[] { "Clock", "Media", "Volume", "Resource", "Caffeine", "Pagination" };
         var sanitizedOrder = config.Experimental.WidgetOrder
             .Where(w => validWidgets.Contains(w, StringComparer.OrdinalIgnoreCase))
             .Select(w => validWidgets.First(v => string.Equals(v, w, StringComparison.OrdinalIgnoreCase)))

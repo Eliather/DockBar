@@ -1,5 +1,5 @@
 # DockBar
-DockBar es una barra lateral de accesos directos estilo dock para Windows desarrollada en C# y WPF. La versión `1.8.4` introduce la barra de búsqueda y progreso multimedia interactiva (Seek Bar) con diseño ultra-compacto, monitor de recursos con soporte avanzado Multi-GPU (NVIDIA, AMD e Intel), modo Cafeína (Keep-Awake) para evitar la suspensión del equipo, previsualización en vivo en el diálogo de Ajustes y localización completa en 4 idiomas.
+DockBar es una barra lateral de accesos directos estilo dock para Windows desarrollada en C# y WPF. La versión `1.8.6` introduce la previsualización inteligente de carátulas y miniaturas multimedia (cuadrada para música y panorámica para videos) con modo solo miniatura, y la posibilidad de reordenar libremente la paginación (flechas o slider) mediante arrastre en Ajustes.
 
 <img width="256" height="256" alt="Dock" src="https://github.com/user-attachments/assets/eb6fd915-77f7-4298-b41b-90a7d14f41d1" />
 
@@ -19,11 +19,54 @@ El proyecto está diseñado bajo cinco prioridades esenciales:
 - **Pestañas de Configuración por Categorías**: Organización modular en el menú de Ajustes dividida en categorías independientes: **Básica**, **Reloj**, **Multimedia** y funciones **Experimentales** (monitor de recursos, Multi-GPU, modo Cafeína y organizador de widgets), con almacenamiento desacoplado en el archivo de configuración.
 - **Paleta de Énfasis / Acento Secundaria**: Personalización para botones principales (como *Guardar*), deslizadores (sliders), switches, cajas de selección y resaltados interactivos.
 - **Selector de Color Dual HSV y HEX**: El lienzo interactivo de saturación/brillo, el deslizador de tono y la entrada hexadecimal pueden utilizarse tanto para el fondo del dock como para el color de énfasis de los botones.
-- **Instancia única y rendimiento nativo**: Enumeración instantánea de aplicaciones y juegos mediante APIs nativas Win32 Shell COM (< 5 ms de tiempo de respuesta) sin subprocesos lentos ni dependencias pesadas.
+- **Instancia única y rendimiento nativo**: Enumeración instantánea de aplicaciones y juegos mediante APIs nativas Win32 Shell COM y resolución paralela multihilo con precalentamiento en segundo plano y caché concurrente sin bloqueos de interfaz.
+
+---
+
+## Novedades en la versión 1.8.6
+- **Previsualización Inteligente de Miniatura / Carátula Multimedia (Smart Artwork)**:
+  - **Formato Adaptativo Cuadrado vs. Panorámico**: Detecta automáticamente si se trata de música (Spotify, Apple Music, etc.) para mostrarla en formato cuadrado (1:1), o si es video (YouTube en navegador, reproductores multimedia locales) para desplegarla en formato rectangular panorámico (16:9).
+  - **Modo Solo Miniatura**: Posibilidad de ocultar el título y los controles para un diseño hiperminimalista donde solo se aprecia la carátula activa.
+  - **Control Táctil / Clic**: Pausar y reanudar la reproducción haciendo clic directo sobre la miniatura.
+- **Paginación Reordenable (Flechas / Slider)**:
+  - Integración del panel de paginación dentro del sistema de reordenamiento por arrastre (*drag & drop*) de widgets en Ajustes.
+  - Permite mover la paginación a cualquier posición deseada dentro del Dock.
+- **Vista Previa en Vivo y Localización**:
+  - Vista previa en tiempo real en los Ajustes con simulación de miniatura y paginación, y soporte en Español, Inglés, Ruso y Chino.
+
+---
+
+## Novedades en la versión 1.8.5
+- **Rendimiento de Nivel Producción a 60 FPS (Zero GC Allocations)**:
+  - **Animación fluida sin micro-tirones**: Optimización en `MarqueeTextBlock` mediante caché de `FormattedText` y congelación de pinceles y máscaras (`ShadowBrush`, `EdgeFadingMask`), eliminando alocaciones de memoria en el recolector de basura (GC) en cada fotograma.
+  - **Ahorro de batería y CPU (Suspensión inteligente)**: Al ocultar el dock o entrar en aplicaciones a pantalla completa (juegos o videos), se suspenden de inmediato las lecturas de CPU, RAM, GPU y reloj, reactivándose al reaparecer.
+  - **Filtrado de ganchos del sistema (`WinEventHook`)**: Los eventos globales `EVENT_OBJECT_LOCATIONCHANGE` descartan ventanas secundarias fuera de foco, aligerando el chequeo de pantalla completa en más de un 95%.
+  - **Limpieza de memoria COM (`IconService`)**: Liberación determinista de punteros no administrados (`IImageList`) mediante `Marshal.ReleaseComObject`.
+  - **Resolución asíncrona de accesos directos**: Despacho de resolución de iconos en segundo plano sin congelar la interfaz al arrancar.
+  - **Sondeo GSMTC condicional**: El temporizador de sondeo de medios se desactiva si el widget multimedia no está habilitado.
+- **Carga Instantánea de Apps Instaladas (`StoreAppService`)**:
+  - **Caché en memoria persistente**: Reutilización de iconos y metadatos entre aperturas sucesivas del selector de apps (`+`).
+  - **Resolución paralela multihilo**: Extracción de iconos y rutas físicas/Steam procesadas en paralelo (`Parallel.ForEach`) con concurrencia controlada.
+  - **Precalentamiento en segundo plano**: Inicialización silenciosa de la caché 1 segundo tras el inicio del Dock.
+  - **Deduplicación temprana y AutoCrop selectivo**: Eliminación inmediata de duplicados COM y recorte de bordes aplicado solo a iconos del Shell que lo requieren.
+- **Corrección de Previews de Video en Navegadores (YouTube Hover Preview Fix)**:
+  - Resuelto el fallo donde pasar el cursor sobre miniaturas de video en YouTube u otros sitios web en Chrome, Edge o Firefox activaba el reproductor multimedia con duración infinita (`TimeSpan.MaxValue` o `256204778:48:05`).
+  - Detección y filtrado de sesiones GSMTC sin canal y con duración infinita o nula, garantizando que reproductores como Spotify mantengan la prioridad y no sean interrumpidos.
+  - Protección de formato devolviendo `"--:--"` ante cualquier duración anómala o infinita.
+- **Tooltips Modernos en Dark Mode y Corrección de Caracteres Rotos**:
+  - Reemplazo de la clásica caja blanca rectangular de Windows por tooltips con estética Dark Mode: fondo acrílico oscuro (`#F2161622`), esquinas redondeadas (`CornerRadius="8"`), borde semi-transparente y sombra difusa profunda (`BlurRadius="16"`).
+  - Corrección de la entidad literal `&#x0a;` por saltos de línea reales `\n` en todos los idiomas (Español, Inglés, Ruso y Chino).
+  - Formato estructurado en el tooltip del Monitor de Recursos con viñetas limpias (`•`), guiones (`—`), modelo de procesador detectado y tiempo de permanencia extendido a 25 segundos para lectura cómoda.
 
 ---
 
 ## Novedades en la versión 1.8.4
+- **Optimización Integral del Selector de Apps Instaladas (`StoreAppService`)**:
+  - **Apertura instantánea (0 ms)**: Precalentamiento de la caché en segundo plano al arrancar la aplicación (`App.xaml.cs`) para eliminar cualquier tiempo de espera al abrir el selector con el botón `+`.
+  - **Resolución paralela multihilo**: Separación de la enumeración COM respecto a la extracción de íconos y resolución de rutas de Steam y ejecutables Win32 en 8 hilos en paralelo.
+  - **Caché concurrente persistente entre refrescos**: Los íconos resueltos se conservan en un `ConcurrentDictionary` por `AppId`, evitando reprocesar aplicaciones ya conocidas al refrescar la lista.
+  - **Deduplicación temprana**: Descarte inmediato de entradas duplicadas reportadas por `shell:AppsFolder` mediante `HashSet<string>` para no realizar trabajo repetido.
+  - **Recorte selectivo de márgenes (`AutoCrop`)**: Optimización para ejecutar el escaneo de píxeles únicamente sobre bitmaps crudos de UWP/Shell que lo requieran, liberando a ejecutables Win32 y juegos de Steam de ese costo de CPU.
 - **Barra de Progreso y Búsqueda Multimedia Interactiva (Seek Bar)**:
   - Deslizador de reproducción para canciones, videos y podcasts directamente en el dock (compatible con Spotify, YouTube, navegadores y reproductores multimedia).
   - Indicadores numéricos de tiempo transcurrido y duración (`0:00 / 3:45`).
@@ -147,6 +190,10 @@ Ejemplo de estructura `shortcuts.json`:
 - [SettingsWindow.xaml.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/SettingsWindow.xaml.cs): Panel de personalización con selector dual HSV/HEX de fondo y énfasis, sliders y paletas de color.
 - [ThemeService.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/Services/ThemeService.cs): Motor centralizado de temas dinámicos y composición DWM Glass por hardware.
 - [StoreAppPickerWindow.xaml.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/StoreAppPickerWindow.xaml.cs): Selector de aplicaciones UWP y de la tienda Windows.
+- [StoreAppService.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/Services/StoreAppService.cs): Motor de enumeración COM nativa y resolución paralela multihilo de aplicaciones instaladas con caché concurrente y precalentamiento.
+- [ShellItemService.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/Services/ShellItemService.cs): Resolución de rutas Known Folders del shell, integración con `IShellItemImageFactory` y recorte selectivo de márgenes (`AutoCrop`).
+- [IconService.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/Services/IconService.cs): Extracción y caché en memoria de iconos en alta resolución (Jumbo/ExtraLarge 256px y extracción asociada).
+- [SteamService.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/Services/SteamService.cs): Detección automática de librerías locales de Steam, lectura de manifiestos ACF e iconos de juegos.
 - [AddLinkWindow.xaml.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/AddLinkWindow.xaml.cs): Diálogo para añadir ejecutables, carpetas, URLs web o comandos de sistema.
 - [AudioService.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/Services/AudioService.cs): Servicio nativo Windows CoreAudio con conmutación dinámica de endpoints (`IMMNotificationClient`) y control de volumen del sistema.
 - [MediaService.cs](file:///c:/Users/danie/Documents/Trabajos/Cosas/DockBar/Services/MediaService.cs): Integración con SystemMediaTransportControls para detección y control de pistas en Spotify, navegadores y reproductores.

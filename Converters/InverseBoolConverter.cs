@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Windows;
 using System.Windows.Data;
 
 namespace DockBar.Converters;
@@ -10,6 +11,10 @@ public class InverseBoolConverter : IValueConverter
     {
         if (value is bool b)
         {
+            if (targetType == typeof(Visibility))
+            {
+                return b ? Visibility.Collapsed : Visibility.Visible;
+            }
             return !b;
         }
         return System.Windows.Data.Binding.DoNothing;
@@ -19,6 +24,10 @@ public class InverseBoolConverter : IValueConverter
     {
         if (value is bool b)
         {
+            if (targetType == typeof(Visibility))
+            {
+                return b ? Visibility.Collapsed : Visibility.Visible;
+            }
             return !b;
         }
         return System.Windows.Data.Binding.DoNothing;

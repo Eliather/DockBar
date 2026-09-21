@@ -1,5 +1,5 @@
 !define APPNAME "DockBar"
-!define APPVERSION "1.8.4"
+!define APPVERSION "1.8.6"
 !define EXE_NAME "DockBar.exe"
 !define COMPANY "Eliather"
 
