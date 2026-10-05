@@ -477,6 +477,7 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
     private void PresetWin8_Click(object sender, RoutedEventArgs e)
     {
         Config.AutoHideDelaySeconds = 0;
+        Config.AlwaysShow = false;
         Config.HideAnimationMs = 200;
         Config.BackgroundR = 0;
         Config.BackgroundG = 0;

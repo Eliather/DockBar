@@ -41,6 +41,7 @@ public class DockConfig
     public double DockWidth { get; set; } = 175;
     public double IconSize { get; set; } = 40;
     public double AutoHideDelaySeconds { get; set; } = 0; // Win8-style immediate hide on leave by default
+    public bool AlwaysShow { get; set; } = false;
     public double HideAnimationMs { get; set; } = 200;
     public bool UseTransparency { get; set; } = true;
     public double BackgroundOpacity { get; set; } = 0.45;
@@ -189,6 +190,7 @@ public class DockConfig
             DockWidth = DockWidth,
             IconSize = IconSize,
             AutoHideDelaySeconds = AutoHideDelaySeconds,
+            AlwaysShow = AlwaysShow,
             HideAnimationMs = HideAnimationMs,
             UseTransparency = UseTransparency,
             BackgroundOpacity = BackgroundOpacity,
@@ -244,6 +246,7 @@ public class DockConfig
         DockWidth = source.DockWidth;
         IconSize = source.IconSize;
         AutoHideDelaySeconds = source.AutoHideDelaySeconds;
+        AlwaysShow = source.AlwaysShow;
         HideAnimationMs = source.HideAnimationMs;
         UseTransparency = source.UseTransparency;
         BackgroundOpacity = source.BackgroundOpacity;

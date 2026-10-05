@@ -339,6 +339,7 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
@@ -378,10 +379,16 @@
                                  Tag="0|10"/>
                     </Grid>
 
-                    <TextBlock Grid.Row="4"
+                    <CheckBox Grid.Row="4"
+                              Content="{local:Loc Key=Settings_AlwaysShow}"
+                              Style="{StaticResource DialogCheckBoxStyle}"
+                              Margin="0,0,0,10"
+                              IsChecked="{Binding Config.AlwaysShow, Mode=TwoWay}"/>
+
+                    <TextBlock Grid.Row="5"
                                Text="{local:Loc Key=Settings_AnimDuration}"
                                Style="{StaticResource SettingsLabelStyle}"/>
-                    <Grid Grid.Row="5"
+                    <Grid Grid.Row="6"
                           Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -407,10 +414,10 @@
                                  Tag="50|800"/>
                     </Grid>
 
-                    <TextBlock Grid.Row="6"
+                    <TextBlock Grid.Row="7"
                                Text="{local:Loc Key=Settings_TriggerThickness}"
                                Style="{StaticResource SettingsLabelStyle}"/>
-                    <Grid Grid.Row="7"
+                    <Grid Grid.Row="8"
                           Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -463,7 +470,7 @@
                         </Border>
                     </Grid>
 
-                    <CheckBox Grid.Row="8"
+                    <CheckBox Grid.Row="9"
                               Content="{local:Loc Key=Settings_AutoStart}"
                               Style="{StaticResource DialogCheckBoxStyle}"
                               VerticalAlignment="Bottom"

@@ -7,7 +7,7 @@
         Height="490"
         MinWidth="700"
         MinHeight="450"
-        WindowStartupLocation="CenterOwner"
+        WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         ResizeMode="NoResize"
         ShowInTaskbar="False"

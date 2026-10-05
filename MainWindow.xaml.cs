@@ -540,6 +540,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         UpdateClockState();
         UpdateResourceMonitorState();
         UpdateItemsPerPage();
+        if (_config.AlwaysShow && _isHidden)
+        {
+            ShowDockAnimated();
+        }
+        else if (!_config.AlwaysShow && !IsMouseOverDock())
+        {
+            StartHideTimer();
+        }
         AlignDock(!_isHidden);
         UpdateVisibleItems();
         ApplyGlassEffect();
@@ -1669,7 +1677,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void StartHideTimer()
     {
-        if (IsEditMode)
+        if (IsEditMode || _config.AlwaysShow)
         {
             return;
         }

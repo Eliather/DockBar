@@ -6,7 +6,7 @@
         Width="460"
         SizeToContent="Height"
         MinWidth="420"
-        WindowStartupLocation="CenterOwner"
+        WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
