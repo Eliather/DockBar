@@ -1,5 +1,5 @@
 # DockBar
-DockBar es una barra lateral de accesos directos estilo dock para Windows desarrollada en C# y WPF. La versión `1.8.6` introduce la previsualización inteligente de carátulas y miniaturas multimedia (cuadrada para música y panorámica para videos) con modo solo miniatura, y la posibilidad de reordenar libremente la paginación (flechas o slider) mediante arrastre en Ajustes.
+DockBar es una barra lateral de accesos directos estilo dock para Windows desarrollada en C# y WPF. La versión `1.8.7` añade la Gestión de Encendido en el Dock (Bloquear pantalla, Hibernar, Reiniciar y Apagar), centrado perfeccionado de modales de confirmación en pantalla, la nueva pestaña "Utilidades" en Ajustes y corrección de desincronización de miniaturas en YouTube Shorts.
 
 <img width="256" height="256" alt="Dock" src="https://github.com/user-attachments/assets/eb6fd915-77f7-4298-b41b-90a7d14f41d1" />
 
@@ -16,10 +16,32 @@ DockBar proporciona una barra lateral compacta y moderna para Windows con soport
 El proyecto está diseñado bajo cinco prioridades esenciales:
 
 - **Efecto Glass y estética unificada en toda la aplicación**: Composición por hardware DWM (`WindowChrome GlassFrameThickness="-1"`) extendida a todas las ventanas secundarias (Ajustes, Agregar Enlace, Apps Instaladas, Actualizaciones, Renombrar, etc.), respetando la opacidad, color de fondo y efecto Glass elegidos por el usuario.
-- **Pestañas de Configuración por Categorías**: Organización modular en el menú de Ajustes dividida en categorías independientes: **Básica**, **Reloj**, **Multimedia** y funciones **Experimentales** (monitor de recursos, Multi-GPU, modo Cafeína y organizador de widgets), con almacenamiento desacoplado en el archivo de configuración.
+- **Pestañas de Configuración por Categorías**: Organización modular en el menú de Ajustes dividida en categorías independientes: **Básica**, **Utilidades** (Reloj y Monitor de Recursos), **Multimedia** y funciones **Experimentales** (Gestión de Encendido, modo Cafeína, slider de páginas y organizador de widgets), con almacenamiento desacoplado en el archivo de configuración.
 - **Paleta de Énfasis / Acento Secundaria**: Personalización para botones principales (como *Guardar*), deslizadores (sliders), switches, cajas de selección y resaltados interactivos.
 - **Selector de Color Dual HSV y HEX**: El lienzo interactivo de saturación/brillo, el deslizador de tono y la entrada hexadecimal pueden utilizarse tanto para el fondo del dock como para el color de énfasis de los botones.
 - **Instancia única y rendimiento nativo**: Enumeración instantánea de aplicaciones y juegos mediante APIs nativas Win32 Shell COM y resolución paralela multihilo con precalentamiento en segundo plano y caché concurrente sin bloqueos de interfaz.
+
+---
+
+## Novedades en la versión 1.8.7
+- **⚡ Gestión de Encendido Integrada en el Dock**:
+  - Nueva barra de 4 botones funcionales dedicados con el mismo estilo y tamaño que los botones inferiores (`32x32px`):
+    - **Bloquear Pantalla**: Ejecución instantánea y segura mediante API nativa `LockWorkStation` (equivalente a `Win + L`).
+    - **Hibernar**: Pone el equipo en suspensión/hibernación profunda con diálogo de confirmación de seguridad previo.
+    - **Reiniciar**: Reinicia el equipo con confirmación segura.
+    - **Apagar**: Apaga el equipo con confirmación segura.
+  - Iconos vectoriales nítidos con trazo dinámico adaptado al tema.
+  - Integración completa en el sistema de orden de widgets (`WidgetOrder`) con arrastrar y soltar en Ajustes.
+- **🎯 Modales de Confirmación Centrados en Pantalla**:
+  - Los diálogos y modales de confirmación (`ThemedMessageBox`) ahora se centran automáticamente en el área de trabajo utilizable del monitor activo (`rcWork`), con cálculo exacto de escala DPI por monitor.
+  - Se elimina el problema de ventanas modales pegadas o cortadas sobre el lateral del dock.
+- **🛠️ Pestaña "Utilidades" en Ajustes**:
+  - La pestaña "Reloj" ha sido renombrada y expandida a "Utilidades", incorporando el **Monitor de Recursos del Sistema (CPU, RAM y GPU)** para centralizar las herramientas de diagnóstico y estado del PC.
+- **🎞️ Corrección en Miniaturas de YouTube Shorts**:
+  - Se eliminó el retraso/desincronización de carátulas al avanzar entre videos cortos de YouTube mediante huella hash del stream y recarga asíncrona prioritaria.
+- **☕ Botón de Donaciones (Ko-fi)**:
+  - Botón integrado en la barra inferior de Ajustes (junto a "Acerca de") y en la ventana informativa para apoyar el proyecto directamente en [Ko-fi](https://ko-fi.com/eliather), completamente adaptado y traducido en los 4 idiomas soportados.
+
 
 ---
 

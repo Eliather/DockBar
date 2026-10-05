@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -9,6 +10,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using DockBar.Controls;
 using DockBar.Models;
 using DockBar.Services;
 using Brush = System.Windows.Media.Brush;
@@ -41,7 +43,7 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
     private double _sat = 1.0;
     private double _val = 1.0;
     private bool _isEditingBackground = true;
-    private int _selectedTab = 0; // 0 = Basic, 1 = Clock, 2 = Media, 3 = Experimental
+    private int _selectedTab = 0; // 0 = Basic, 1 = Utilities, 2 = Media, 3 = Experimental
     private readonly System.Windows.Threading.DispatcherTimer _previewClockTimer;
 
     public bool IsBasicTabSelected
@@ -57,7 +59,7 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         }
     }
 
-    public bool IsClockTabSelected
+    public bool IsUtilitiesTabSelected
     {
         get => _selectedTab == 1;
         set
@@ -68,6 +70,12 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
                 NotifyTabsChanged();
             }
         }
+    }
+
+    public bool IsClockTabSelected
+    {
+        get => IsUtilitiesTabSelected;
+        set => IsUtilitiesTabSelected = value;
     }
 
     public bool IsMediaTabSelected
@@ -99,6 +107,7 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
     private void NotifyTabsChanged()
     {
         OnPropertyChanged(nameof(IsBasicTabSelected));
+        OnPropertyChanged(nameof(IsUtilitiesTabSelected));
         OnPropertyChanged(nameof(IsClockTabSelected));
         OnPropertyChanged(nameof(IsMediaTabSelected));
         OnPropertyChanged(nameof(IsExperimentalTabSelected));
@@ -324,9 +333,11 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         Loaded += (_, _) => ApplyWidgetOrderToPreview();
     }
 
+    public DockPreviewControl? ClockPreviewControl => UtilitiesPreviewControl;
+
     public void ApplyWidgetOrderToPreview()
     {
-        ClockPreviewControl?.ApplyWidgetOrderToPreview();
+        UtilitiesPreviewControl?.ApplyWidgetOrderToPreview();
         MediaPreviewControl?.ApplyWidgetOrderToPreview();
         ExperimentalPreviewControl?.ApplyWidgetOrderToPreview();
     }
@@ -491,8 +502,9 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         Config.MediaThumbnailOnly = false;
         Config.ShowResourceMonitor = false;
         Config.ShowHardwareModelNames = false;
+        Config.ShowPowerControl = false;
         Config.ShowCaffeine = false;
-        Config.WidgetOrder = new() { "Clock", "Media", "Volume", "Resource", "Caffeine", "Pagination" };
+        Config.WidgetOrder = new() { "Clock", "Media", "Volume", "Resource", "Power", "Caffeine", "Pagination" };
         ApplyWidgetOrderToPreview();
         _pendingR = Config.BackgroundR;
         _pendingG = Config.BackgroundG;
@@ -657,6 +669,20 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
             Owner = this
         };
         aboutWindow.ShowDialog();
+    }
+
+    private void Donations_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo("https://ko-fi.com/eliather")
+            {
+                UseShellExecute = true
+            });
+        }
+        catch
+        {
+        }
     }
 
     private void HueSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)

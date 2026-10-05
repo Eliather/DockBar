@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using DockBar.Services;
@@ -46,5 +47,19 @@ public partial class AboutWindow : Window
     private void Close_Click(object sender, RoutedEventArgs e)
     {
         Close();
+    }
+
+    private void Donations_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo("https://ko-fi.com/eliather")
+            {
+                UseShellExecute = true
+            });
+        }
+        catch
+        {
+        }
     }
 }

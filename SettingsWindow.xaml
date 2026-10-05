@@ -205,9 +205,9 @@
                                      IsChecked="{Binding IsBasicTabSelected, Mode=TwoWay}"
                                      Style="{StaticResource DialogSegmentedRadioStyle}"
                                      Padding="14,6"/>
-                        <RadioButton x:Name="TabClockRadio"
-                                     Content="{local:Loc Key=Settings_TabClock}"
-                                     IsChecked="{Binding IsClockTabSelected, Mode=TwoWay}"
+                        <RadioButton x:Name="TabUtilitiesRadio"
+                                     Content="{local:Loc Key=Settings_TabUtilities}"
+                                     IsChecked="{Binding IsUtilitiesTabSelected, Mode=TwoWay}"
                                      Margin="4,0,0,0"
                                      Style="{StaticResource DialogSegmentedRadioStyle}"
                                      Padding="14,6"/>
@@ -862,16 +862,16 @@
             </Border>
         </Grid>
 
-        <!-- Vista 2: Reloj -->
+        <!-- Vista 2: Utilidades (Reloj y Monitor de Recursos) -->
         <Grid Grid.Row="1"
-              Visibility="{Binding IsClockTabSelected, Converter={StaticResource BoolToVisibilityConverter}}">
+              Visibility="{Binding IsUtilitiesTabSelected, Converter={StaticResource BoolToVisibilityConverter}}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="500"/>
                 <ColumnDefinition Width="22"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Columna Izquierda: Opciones del Reloj -->
+            <!-- Columna Izquierda: Opciones de Utilidades -->
             <ScrollViewer Grid.Column="0"
                           Style="{StaticResource ModernScrollViewerStyle}"
                           VerticalScrollBarVisibility="Auto"
@@ -880,7 +880,7 @@
                           Padding="0,0,10,0">
                 <StackPanel>
                     <!-- Tarjeta: Reloj en Tiempo Real -->
-                    <Border Style="{StaticResource SettingsCardStyle}">
+                    <Border Style="{StaticResource SettingsCardStyle}" Margin="0,0,0,14">
                         <StackPanel>
                             <TextBlock Text="{local:Loc Key=Settings_ClockSection}"
                                        Style="{StaticResource SettingsSectionTitleStyle}"/>
@@ -983,11 +983,89 @@
                             </Border>
                         </StackPanel>
                     </Border>
+
+                    <!-- Tarjeta: Monitor de Recursos del Sistema (CPU, RAM y GPU) -->
+                    <Border Style="{StaticResource SettingsCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="{local:Loc Key=Settings_ShowResourceMonitor}"
+                                       Style="{StaticResource SettingsSectionTitleStyle}"/>
+                            <TextBlock Text="{local:Loc Key=Settings_ShowResourceMonitorDesc}"
+                                       Style="{StaticResource SettingsSectionBodyStyle}"/>
+
+                            <CheckBox Content="{local:Loc Key=Settings_ShowResourceMonitor}"
+                                      Style="{StaticResource DialogCheckBoxStyle}"
+                                      IsChecked="{Binding Config.ShowResourceMonitor, Mode=TwoWay}"
+                                      Checked="ExperimentalOption_Changed"
+                                      Unchecked="ExperimentalOption_Changed"
+                                      Margin="0,4,0,4"
+                                      FontWeight="SemiBold"/>
+
+                            <!-- Opción para mostrar nombres de hardware / modelos -->
+                            <CheckBox Content="{local:Loc Key=Settings_ShowHardwareModelNames}"
+                                      Style="{StaticResource DialogCheckBoxStyle}"
+                                      IsChecked="{Binding Config.ShowHardwareModelNames, Mode=TwoWay}"
+                                      Checked="HardwareNamesOption_Changed"
+                                      Unchecked="HardwareNamesOption_Changed"
+                                      Margin="0,2,0,2"/>
+                            <TextBlock Text="{local:Loc Key=Settings_ShowHardwareModelNamesDesc}"
+                                       Style="{StaticResource SettingsSectionBodyStyle}"
+                                       Margin="24,0,0,6" FontSize="11" Opacity="0.75"/>
+
+                            <!-- Información de GPUs detectadas -->
+                            <Border Margin="0,8,0,0"
+                                    Padding="10,8"
+                                    CornerRadius="6"
+                                    Background="{DynamicResource AppInputBrush}"
+                                    BorderBrush="{DynamicResource AppBorderBrush}"
+                                    BorderThickness="1"
+                                    Visibility="{Binding HasDetectedGpus, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <StackPanel Orientation="Vertical">
+                                    <TextBlock Text="{Binding GpuHeaderLabel}"
+                                               FontSize="11.5" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource AppAccentBrush}"
+                                               Margin="0,0,0,6"/>
+                                    <ItemsControl ItemsSource="{Binding GpuDevices}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,3,0,3">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Border Grid.Column="0"
+                                                            Background="{DynamicResource AppAccentBrush}"
+                                                            CornerRadius="3"
+                                                            Padding="5,1"
+                                                            Margin="0,0,8,0"
+                                                            VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Label}"
+                                                                   FontWeight="Bold" FontSize="10"
+                                                                   Foreground="White"/>
+                                                    </Border>
+                                                    <TextBlock Grid.Column="1" Text="{Binding Name}"
+                                                               FontSize="11"
+                                                               VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource AppTextBrush}"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Grid.Column="2" Text="{Binding DedicatedVramText}"
+                                                               FontSize="11" FontWeight="SemiBold"
+                                                               VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource AppMutedTextBrush}"
+                                                               Margin="8,0,0,0"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </ScrollViewer>
 
             <!-- Columna Derecha: Vista previa de la DockBar (Módulo Reutilizable) -->
-            <controls:DockPreviewControl x:Name="ClockPreviewControl" Grid.Column="2"/>
+            <controls:DockPreviewControl x:Name="UtilitiesPreviewControl" Grid.Column="2"/>
         </Grid>
 
         <!-- Vista 3: Multimedia -->
@@ -1106,81 +1184,21 @@
                           Focusable="False"
                           Padding="0,0,10,0">
                 <StackPanel>
-                    <!-- Tarjeta: Monitor de Recursos del Sistema (CPU y RAM) -->
+                    <!-- Tarjeta: Gestión de Encendido (Bloquear, Hibernar, Reiniciar, Apagar) -->
                     <Border Style="{StaticResource SettingsCardStyle}" Margin="0,0,0,14">
                         <StackPanel>
-                            <TextBlock Text="{local:Loc Key=Settings_ShowResourceMonitor}"
+                            <TextBlock Text="{local:Loc Key=Settings_ShowPowerControl}"
                                        Style="{StaticResource SettingsSectionTitleStyle}"/>
-                            <TextBlock Text="{local:Loc Key=Settings_ShowResourceMonitorDesc}"
+                            <TextBlock Text="{local:Loc Key=Settings_ShowPowerControlDesc}"
                                        Style="{StaticResource SettingsSectionBodyStyle}"/>
 
-                            <CheckBox Content="{local:Loc Key=Settings_ShowResourceMonitor}"
+                            <CheckBox Content="{local:Loc Key=Settings_ShowPowerControl}"
                                       Style="{StaticResource DialogCheckBoxStyle}"
-                                      IsChecked="{Binding Config.ShowResourceMonitor, Mode=TwoWay}"
+                                      IsChecked="{Binding Config.ShowPowerControl, Mode=TwoWay}"
                                       Checked="ExperimentalOption_Changed"
                                       Unchecked="ExperimentalOption_Changed"
                                       Margin="0,4,0,4"
                                       FontWeight="SemiBold"/>
-
-                            <!-- Opción para mostrar nombres de hardware / modelos -->
-                            <CheckBox Content="{local:Loc Key=Settings_ShowHardwareModelNames}"
-                                      Style="{StaticResource DialogCheckBoxStyle}"
-                                      IsChecked="{Binding Config.ShowHardwareModelNames, Mode=TwoWay}"
-                                      Checked="HardwareNamesOption_Changed"
-                                      Unchecked="HardwareNamesOption_Changed"
-                                      Margin="0,2,0,2"/>
-                            <TextBlock Text="{local:Loc Key=Settings_ShowHardwareModelNamesDesc}"
-                                       Style="{StaticResource SettingsSectionBodyStyle}"
-                                       Margin="24,0,0,6" FontSize="11" Opacity="0.75"/>
-
-                            <!-- Información de GPUs detectadas -->
-                            <Border Margin="0,8,0,0"
-                                    Padding="10,8"
-                                    CornerRadius="6"
-                                    Background="{DynamicResource AppInputBrush}"
-                                    BorderBrush="{DynamicResource AppBorderBrush}"
-                                    BorderThickness="1"
-                                    Visibility="{Binding HasDetectedGpus, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <StackPanel Orientation="Vertical">
-                                    <TextBlock Text="{Binding GpuHeaderLabel}"
-                                               FontSize="11.5" FontWeight="SemiBold"
-                                               Foreground="{DynamicResource AppAccentBrush}"
-                                               Margin="0,0,0,6"/>
-                                    <ItemsControl ItemsSource="{Binding GpuDevices}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Grid Margin="0,3,0,3">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <Border Grid.Column="0"
-                                                            Background="{DynamicResource AppAccentBrush}"
-                                                            CornerRadius="3"
-                                                            Padding="5,1"
-                                                            Margin="0,0,8,0"
-                                                            VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding Label}"
-                                                                   FontWeight="Bold" FontSize="10"
-                                                                   Foreground="White"/>
-                                                    </Border>
-                                                    <TextBlock Grid.Column="1" Text="{Binding Name}"
-                                                               FontSize="11"
-                                                               VerticalAlignment="Center"
-                                                               Foreground="{DynamicResource AppTextBrush}"
-                                                               TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Grid.Column="2" Text="{Binding DedicatedVramText}"
-                                                               FontSize="11" FontWeight="SemiBold"
-                                                               VerticalAlignment="Center"
-                                                               Foreground="{DynamicResource AppMutedTextBrush}"
-                                                               Margin="8,0,0,0"/>
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </Border>
                         </StackPanel>
                     </Border>
 
@@ -1237,10 +1255,27 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <Button Grid.Column="0"
-                        Content="{local:Loc Key=Common_About}"
-                        Style="{StaticResource SettingsSecondaryButtonStyle}"
-                        Click="About_Click"/>
+                <StackPanel Grid.Column="0"
+                            Orientation="Horizontal">
+                    <Button Content="{local:Loc Key=Common_About}"
+                            Style="{StaticResource SettingsSecondaryButtonStyle}"
+                            Click="About_Click"/>
+                    <Button Style="{StaticResource SettingsSecondaryButtonStyle}"
+                            Margin="8,0,0,0"
+                            ToolTip="{local:Loc Key=Common_DonationsTooltip}"
+                            Click="Donations_Click">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Path Data="M12,21.35l-1.45-1.32C5.4,15.36 2,12.28 2,8.5 2,5.42 4.42,3 7.5,3c1.74,0 3.41,0.81 4.5,2.09C13.09,3.81 14.76,3 16.5,3 19.58,3 22,5.42 22,8.5c0,3.78-3.4,6.86-8.55,11.54L12,21.35z"
+                                  Fill="#FF5E5B"
+                                  Width="13" Height="13"
+                                  Stretch="Uniform"
+                                  Margin="0,0,6,0"
+                                  VerticalAlignment="Center"/>
+                            <TextBlock Text="{local:Loc Key=Common_Donations}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
 
                 <TextBlock Grid.Column="1"
                            Text="{local:Loc Key=Settings_FooterHint}"

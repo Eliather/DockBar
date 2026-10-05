@@ -5,7 +5,7 @@
         Title="DockBar"
         Width="460"
         SizeToContent="Height"
-        WindowStartupLocation="CenterOwner"
+        WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         ResizeMode="NoResize"
         ShowInTaskbar="False"

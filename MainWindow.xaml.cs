@@ -101,6 +101,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public string MediaDurationText => MediaService.Instance.DurationText;
     public bool CanSeekMedia => MediaService.Instance.CanSeek && MediaService.Instance.DurationSeconds > 0;
     public bool IsResourceMonitorVisible => _config.ShowResourceMonitor && !IsEditMode;
+    public bool IsPowerVisible => _config.ShowPowerControl && !IsEditMode;
     public bool IsCaffeineVisible => _config.ShowCaffeine && !IsEditMode;
 
     private int _cpuUsagePercent;
@@ -555,6 +556,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         UpdateMediaTimelineUI();
         OnPropertyChanged(nameof(IsClockVisible));
         OnPropertyChanged(nameof(IsResourceMonitorVisible));
+        OnPropertyChanged(nameof(IsPowerVisible));
         OnPropertyChanged(nameof(IsCaffeineVisible));
         OnPropertyChanged(nameof(ButtonPaginationVisibility));
         OnPropertyChanged(nameof(SliderPaginationVisibility));
@@ -568,7 +570,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
-        var order = _config.Experimental?.WidgetOrder ?? new List<string> { "Clock", "Media", "Volume", "Resource", "Caffeine", "Pagination" };
+        var order = _config.Experimental?.WidgetOrder ?? new List<string> { "Clock", "Media", "Volume", "Resource", "Power", "Caffeine", "Pagination" };
         var panelMap = new Dictionary<string, UIElement>(StringComparer.OrdinalIgnoreCase)
         {
             ["Clock"] = ClockPanel,
@@ -576,6 +578,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             ["Volume"] = VolumePanel
         };
         if (ResourcePanel != null) panelMap["Resource"] = ResourcePanel;
+        if (PowerPanel != null) panelMap["Power"] = PowerPanel;
         if (CaffeinePanel != null) panelMap["Caffeine"] = CaffeinePanel;
         if (DockPaginationGrid != null) panelMap["Pagination"] = DockPaginationGrid;
 
@@ -763,6 +766,108 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             });
         }
         catch { }
+    }
+
+    private void PowerLock_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            NativeMethods.LockWorkStation();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Lock failed: {ex}");
+        }
+    }
+
+    private void PowerHibernate_Click(object sender, RoutedEventArgs e)
+    {
+        var result = ThemedMessageBox.Show(
+            this,
+            LocalizationService.Get("Prompt_HibernateConfirm"),
+            LocalizationService.Get("Dock_PowerHibernate"),
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (result == MessageBoxResult.Yes)
+        {
+            try
+            {
+                if (!NativeMethods.SetSuspendState(true, true, false))
+                {
+                    Process.Start(new ProcessStartInfo("shutdown.exe", "/h")
+                    {
+                        CreateNoWindow = true,
+                        UseShellExecute = false
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Hibernate failed: {ex}");
+                try
+                {
+                    Process.Start(new ProcessStartInfo("shutdown.exe", "/h")
+                    {
+                        CreateNoWindow = true,
+                        UseShellExecute = false
+                    });
+                }
+                catch { }
+            }
+        }
+    }
+
+    private void PowerRestart_Click(object sender, RoutedEventArgs e)
+    {
+        var result = ThemedMessageBox.Show(
+            this,
+            LocalizationService.Get("Prompt_RestartConfirm"),
+            LocalizationService.Get("Dock_PowerRestart"),
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (result == MessageBoxResult.Yes)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo("shutdown.exe", "/r /t 0")
+                {
+                    CreateNoWindow = true,
+                    UseShellExecute = false
+                });
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Restart failed: {ex}");
+            }
+        }
+    }
+
+    private void PowerShutdown_Click(object sender, RoutedEventArgs e)
+    {
+        var result = ThemedMessageBox.Show(
+            this,
+            LocalizationService.Get("Prompt_ShutdownConfirm"),
+            LocalizationService.Get("Dock_PowerShutdown"),
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (result == MessageBoxResult.Yes)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo("shutdown.exe", "/s /t 0")
+                {
+                    CreateNoWindow = true,
+                    UseShellExecute = false
+                });
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Shutdown failed: {ex}");
+            }
+        }
     }
 
     private void CaffeinePanel_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -3041,6 +3146,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         OnPropertyChanged(nameof(IsClockVisible));
         OnPropertyChanged(nameof(IsVolumeVisible));
         OnPropertyChanged(nameof(IsMediaVisible));
+        OnPropertyChanged(nameof(IsResourceMonitorVisible));
+        OnPropertyChanged(nameof(IsPowerVisible));
+        OnPropertyChanged(nameof(IsCaffeineVisible));
     }
 
     protected void OnPropertyChanged([CallerMemberName] string? name = null)
@@ -3115,6 +3223,12 @@ internal static class NativeMethods
 
     [DllImport("user32.dll")]
     public static extern bool UnhookWinEvent(IntPtr hWinEventHook);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool LockWorkStation();
+
+    [DllImport("Powrprof.dll", SetLastError = true)]
+    public static extern bool SetSuspendState(bool hibernate, bool forceCritical, bool disableWakeEvent);
 
     [DllImport("user32.dll")]
     public static extern IntPtr GetForegroundWindow();

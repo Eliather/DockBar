@@ -161,6 +161,8 @@ public static class ConfigService
                             config.Experimental.ShowResourceMonitor = srm.GetBoolean();
                         if (root.TryGetProperty("ShowHardwareModelNames", out var shm) && (shm.ValueKind == JsonValueKind.True || shm.ValueKind == JsonValueKind.False))
                             config.Experimental.ShowHardwareModelNames = shm.GetBoolean();
+                        if (root.TryGetProperty("ShowPowerControl", out var spc) && (spc.ValueKind == JsonValueKind.True || spc.ValueKind == JsonValueKind.False))
+                            config.Experimental.ShowPowerControl = spc.GetBoolean();
                         if (root.TryGetProperty("ShowCaffeine", out var scaf) && (scaf.ValueKind == JsonValueKind.True || scaf.ValueKind == JsonValueKind.False))
                             config.Experimental.ShowCaffeine = scaf.GetBoolean();
                     }
@@ -243,7 +245,7 @@ public static class ConfigService
         }
 
         config.Experimental.WidgetOrder ??= new();
-        var validWidgets = new[] { "Clock", "Media", "Volume", "Resource", "Caffeine", "Pagination" };
+        var validWidgets = new[] { "Clock", "Media", "Volume", "Resource", "Power", "Caffeine", "Pagination" };
         var sanitizedOrder = config.Experimental.WidgetOrder
             .Where(w => validWidgets.Contains(w, StringComparer.OrdinalIgnoreCase))
             .Select(w => validWidgets.First(v => string.Equals(v, w, StringComparison.OrdinalIgnoreCase)))

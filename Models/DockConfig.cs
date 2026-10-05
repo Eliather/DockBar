@@ -28,9 +28,10 @@ public class ExperimentalConfig
     public double EdgeTriggerPx { get; set; } = 8;
     public bool ShowResourceMonitor { get; set; } = false;
     public bool ShowHardwareModelNames { get; set; } = false;
+    public bool ShowPowerControl { get; set; } = false;
     public bool ShowCaffeine { get; set; } = false;
     public bool UseSliderPagination { get; set; } = false;
-    public List<string> WidgetOrder { get; set; } = new() { "Clock", "Media", "Volume", "Resource", "Caffeine", "Pagination" };
+    public List<string> WidgetOrder { get; set; } = new() { "Clock", "Media", "Volume", "Resource", "Power", "Caffeine", "Pagination" };
 }
 
 public class DockConfig
@@ -152,6 +153,13 @@ public class DockConfig
     }
 
     [JsonIgnore]
+    public bool ShowPowerControl
+    {
+        get => Experimental.ShowPowerControl;
+        set => Experimental.ShowPowerControl = value;
+    }
+
+    [JsonIgnore]
     public bool ShowCaffeine
     {
         get => Experimental.ShowCaffeine;
@@ -215,9 +223,10 @@ public class DockConfig
                 EdgeTriggerPx = EdgeTriggerPx,
                 ShowResourceMonitor = ShowResourceMonitor,
                 ShowHardwareModelNames = ShowHardwareModelNames,
+                ShowPowerControl = ShowPowerControl,
                 ShowCaffeine = ShowCaffeine,
                 UseSliderPagination = UseSliderPagination,
-                WidgetOrder = WidgetOrder != null ? new List<string>(WidgetOrder) : new() { "Clock", "Media", "Volume", "Resource", "Caffeine", "Pagination" }
+                WidgetOrder = WidgetOrder != null ? new List<string>(WidgetOrder) : new() { "Clock", "Media", "Volume", "Resource", "Power", "Caffeine", "Pagination" }
             },
             Shortcuts = shortcuts.Select(s => new ShortcutItem
             {
@@ -264,9 +273,10 @@ public class DockConfig
         EdgeTriggerPx = source.EdgeTriggerPx;
         ShowResourceMonitor = source.ShowResourceMonitor;
         ShowHardwareModelNames = source.ShowHardwareModelNames;
+        ShowPowerControl = source.ShowPowerControl;
         ShowCaffeine = source.ShowCaffeine;
         UseSliderPagination = source.UseSliderPagination;
-        WidgetOrder = source.WidgetOrder != null ? new List<string>(source.WidgetOrder) : new() { "Clock", "Media", "Volume", "Resource", "Caffeine", "Pagination" };
+        WidgetOrder = source.WidgetOrder != null ? new List<string>(source.WidgetOrder) : new() { "Clock", "Media", "Volume", "Resource", "Power", "Caffeine", "Pagination" };
 
         if (source.Shortcuts != null)
         {

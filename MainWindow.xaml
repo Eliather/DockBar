@@ -747,6 +747,70 @@
                     </StackPanel>
                 </Border>
 
+                <!-- Gestión de Encendido (Bloquear, Hibernar, Reiniciar, Apagar) -->
+                <Border x:Name="PowerPanel"
+                        HorizontalAlignment="Center"
+                        Margin="0,3,0,3"
+                        Visibility="{Binding IsPowerVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Button Style="{StaticResource BottomIconButtonStyle}"
+                                Click="PowerLock_Click">
+                            <Button.ToolTip>
+                                <ToolTip Style="{StaticResource DockToolTipStyle}"
+                                         Content="{local:Loc Key=Dock_PowerLock}"/>
+                            </Button.ToolTip>
+                            <Viewbox Width="16" Height="16">
+                                <Grid Width="24" Height="24">
+                                    <Path Style="{StaticResource DockActionStrokeIconStyle}"
+                                          Data="M8.5,10V6.5A3.5,3.5 0 0 1 15.5,6.5V10 M6.5,10H17.5A1.5,1.5 0 0 1 19,11.5V18.5A1.5,1.5 0 0 1 17.5,20H6.5A1.5,1.5 0 0 1 5,18.5V11.5A1.5,1.5 0 0 1 6.5,10Z M12,14V16.5"/>
+                                </Grid>
+                            </Viewbox>
+                        </Button>
+                        <Button Style="{StaticResource BottomIconButtonStyle}"
+                                Margin="8,0,0,0"
+                                Click="PowerHibernate_Click">
+                            <Button.ToolTip>
+                                <ToolTip Style="{StaticResource DockToolTipStyle}"
+                                         Content="{local:Loc Key=Dock_PowerHibernate}"/>
+                            </Button.ToolTip>
+                            <Viewbox Width="16" Height="16">
+                                <Grid Width="24" Height="24">
+                                    <Path Style="{StaticResource DockActionStrokeIconStyle}"
+                                          Data="M12,3 A6,6 0 0 0 21,12 A9,9 0 1 1 12,3 Z"/>
+                                </Grid>
+                            </Viewbox>
+                        </Button>
+                        <Button Style="{StaticResource BottomIconButtonStyle}"
+                                Margin="8,0,0,0"
+                                Click="PowerRestart_Click">
+                            <Button.ToolTip>
+                                <ToolTip Style="{StaticResource DockToolTipStyle}"
+                                         Content="{local:Loc Key=Dock_PowerRestart}"/>
+                            </Button.ToolTip>
+                            <Viewbox Width="16" Height="16">
+                                <Grid Width="24" Height="24">
+                                    <Path Style="{StaticResource DockActionStrokeIconStyle}"
+                                          Data="M21,12 A9,9 0 1 1 12,3 C14.52,3 16.93,4 18.74,5.74 L21,8 M21,3 V8 H16"/>
+                                </Grid>
+                            </Viewbox>
+                        </Button>
+                        <Button Style="{StaticResource BottomIconButtonStyle}"
+                                Margin="8,0,0,0"
+                                Click="PowerShutdown_Click">
+                            <Button.ToolTip>
+                                <ToolTip Style="{StaticResource DockToolTipStyle}"
+                                         Content="{local:Loc Key=Dock_PowerShutdown}"/>
+                            </Button.ToolTip>
+                            <Viewbox Width="16" Height="16">
+                                <Grid Width="24" Height="24">
+                                    <Path Style="{StaticResource DockActionStrokeIconStyle}"
+                                          Data="M12,3 V11 M18.36,6.64 A9,9 0 1 1 5.64,6.64"/>
+                                </Grid>
+                            </Viewbox>
+                        </Button>
+                    </StackPanel>
+                </Border>
+
                 <!-- Modo Caffeine (Mantener pantalla encendida) -->
                 <Border x:Name="CaffeinePanel"
                         HorizontalAlignment="Center"

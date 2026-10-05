@@ -138,7 +138,7 @@ public partial class DockPreviewControl : UserControl
         var config = CurrentConfig;
         if (config == null) return;
 
-        config.Experimental.WidgetOrder ??= new() { "Clock", "Media", "Volume", "Resource", "Caffeine", "Pagination" };
+        config.Experimental.WidgetOrder ??= new() { "Clock", "Media", "Volume", "Resource", "Power", "Caffeine", "Pagination" };
         var order = config.Experimental.WidgetOrder;
         var idxA = order.IndexOf(tagA);
         var idxB = order.IndexOf(tagB);
@@ -156,13 +156,14 @@ public partial class DockPreviewControl : UserControl
         if (PreviewWidgetsPanel == null) return;
 
         var config = CurrentConfig;
-        var order = config?.Experimental?.WidgetOrder ?? new List<string> { "Clock", "Media", "Volume", "Resource", "Caffeine", "Pagination" };
+        var order = config?.Experimental?.WidgetOrder ?? new List<string> { "Clock", "Media", "Volume", "Resource", "Power", "Caffeine", "Pagination" };
         var borders = new Dictionary<string, Border>(StringComparer.OrdinalIgnoreCase)
         {
             ["Clock"] = PreviewClockBorder,
             ["Media"] = PreviewMediaBorder,
             ["Volume"] = PreviewVolumeBorder,
             ["Resource"] = PreviewResourceBorder,
+            ["Power"] = PreviewPowerBorder,
             ["Caffeine"] = PreviewCaffeineBorder,
             ["Pagination"] = PreviewPaginationBorder
         };

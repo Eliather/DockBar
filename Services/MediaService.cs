@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
@@ -57,6 +59,12 @@ public sealed class MediaService : IDisposable
     private DateTimeOffset _lastTimelineUpdated;
     private DateTimeOffset _lastSeekTime = DateTimeOffset.MinValue;
     private bool _canSeek;
+
+    private int _updateGeneration;
+    private string? _currentThumbnailHash;
+    private string? _previousTrackThumbnailHash;
+    private string? _currentThumbnailTrackKey;
+    private DateTimeOffset _staleThumbnailCheckUntil = DateTimeOffset.MinValue;
 
     public MediaService()
     {
@@ -200,7 +208,7 @@ public sealed class MediaService : IDisposable
                 AttachSessionEvents();
             }
 
-            await UpdatePropertiesFromCurrentSessionAsync();
+            await UpdatePropertiesFromCurrentSessionAsync(forceReloadThumbnail: force || isDifferentSession);
         }
         catch (Exception ex)
         {
@@ -293,21 +301,23 @@ public sealed class MediaService : IDisposable
 
     private async void CurrentSession_PlaybackInfoChanged(GlobalSystemMediaTransportControlsSession sender, PlaybackInfoChangedEventArgs args)
     {
-        await UpdatePropertiesFromCurrentSessionAsync();
+        await UpdatePropertiesFromCurrentSessionAsync(forceReloadThumbnail: false);
     }
 
     private async void CurrentSession_MediaPropertiesChanged(GlobalSystemMediaTransportControlsSession sender, MediaPropertiesChangedEventArgs args)
     {
-        await UpdatePropertiesFromCurrentSessionAsync();
+        await UpdatePropertiesFromCurrentSessionAsync(forceReloadThumbnail: true);
     }
 
     private async void CurrentSession_TimelinePropertiesChanged(GlobalSystemMediaTransportControlsSession sender, TimelinePropertiesChangedEventArgs args)
     {
-        await UpdatePropertiesFromCurrentSessionAsync();
+        await UpdatePropertiesFromCurrentSessionAsync(forceReloadThumbnail: false);
     }
 
-    private async Task UpdatePropertiesFromCurrentSessionAsync()
+    private async Task UpdatePropertiesFromCurrentSessionAsync(bool forceReloadThumbnail = false)
     {
+        int gen = Interlocked.Increment(ref _updateGeneration);
+
         string newTitle = "";
         string newArtist = "";
         bool newIsPlaying = false;
@@ -327,6 +337,8 @@ public sealed class MediaService : IDisposable
                 }
 
                 var mediaProperties = await _currentSession.TryGetMediaPropertiesAsync();
+                if (gen != _updateGeneration) return;
+
                 if (mediaProperties != null)
                 {
                     newTitle = mediaProperties.Title?.Trim() ?? "";
@@ -336,13 +348,26 @@ public sealed class MediaService : IDisposable
                 // If the track actually changed, reset cached timeline
                 bool trackChanged = (!string.IsNullOrEmpty(Title) && !string.IsNullOrEmpty(newTitle) && !Title.Equals(newTitle, StringComparison.OrdinalIgnoreCase)) ||
                                     (!string.IsNullOrEmpty(Artist) && !string.IsNullOrEmpty(newArtist) && !Artist.Equals(newArtist, StringComparison.OrdinalIgnoreCase));
-                if (trackChanged)
+
+                string trackKey = $"{newAppId}|{newTitle}|{newArtist}";
+                bool trackKeyChanged = !string.Equals(trackKey, _currentThumbnailTrackKey, StringComparison.OrdinalIgnoreCase);
+
+                if (trackChanged || (trackKeyChanged && !string.IsNullOrEmpty(newTitle)))
                 {
                     _basePosition = TimeSpan.Zero;
                     _endTime = TimeSpan.Zero;
                     Position = TimeSpan.Zero;
                     Duration = TimeSpan.Zero;
                     _lastTimelineUpdated = DateTimeOffset.UtcNow;
+
+                    // El track o video cambió: guardamos el hash anterior para detectar miniaturas obsoletas retenidas por navegadores
+                    if (!string.IsNullOrEmpty(_currentThumbnailHash))
+                    {
+                        _previousTrackThumbnailHash = _currentThumbnailHash;
+                    }
+                    _currentThumbnailHash = null;
+                    _currentThumbnailTrackKey = trackKey;
+                    _staleThumbnailCheckUntil = DateTimeOffset.UtcNow.AddSeconds(3.5);
                 }
 
                 var timeline = _currentSession.GetTimelineProperties();
@@ -363,6 +388,9 @@ public sealed class MediaService : IDisposable
                     newIsPlaying = false;
                     newThumbnail = null;
                     newIsVideo = false;
+                    _currentThumbnailHash = null;
+                    _previousTrackThumbnailHash = null;
+                    _currentThumbnailTrackKey = null;
                     _basePosition = TimeSpan.Zero;
                     _endTime = TimeSpan.Zero;
                     Position = TimeSpan.Zero;
@@ -376,11 +404,56 @@ public sealed class MediaService : IDisposable
                 }
                 else
                 {
-                    if (trackChanged || Thumbnail == null)
+                    bool shouldReloadThumbnail = forceReloadThumbnail ||
+                                                 trackChanged ||
+                                                 trackKeyChanged ||
+                                                 Thumbnail == null ||
+                                                 (_currentThumbnailHash == null && isBrowser && !string.IsNullOrWhiteSpace(newTitle));
+
+                    if (shouldReloadThumbnail)
                     {
-                        var (thumb, isVid) = await LoadThumbnailAsync(mediaProperties);
-                        newThumbnail = thumb;
-                        newIsVideo = isVid;
+                        var (thumb, isVid, hash) = await LoadThumbnailAsync(mediaProperties);
+                        if (gen != _updateGeneration) return;
+
+                        bool isStaleBrowserThumbnail = isBrowser &&
+                                                       !string.IsNullOrEmpty(hash) &&
+                                                       string.Equals(hash, _previousTrackThumbnailHash, StringComparison.Ordinal) &&
+                                                       DateTimeOffset.UtcNow < _staleThumbnailCheckUntil;
+
+                        if (isStaleBrowserThumbnail)
+                        {
+                            // En navegadores (ej. YouTube Shorts), Chromium a menudo reporta momentáneamente la miniatura
+                            // del video anterior mientras descarga la nueva imagen. No mostramos la miniatura vieja y programamos reintentos.
+                            newThumbnail = null;
+                            newIsVideo = false;
+                            _currentThumbnailHash = null;
+                            _ = ScheduleThumbnailRetryAsync(gen, trackKey);
+                        }
+                        else if (thumb != null)
+                        {
+                            if (Thumbnail != null && string.Equals(hash, _currentThumbnailHash, StringComparison.Ordinal))
+                            {
+                                newThumbnail = Thumbnail;
+                                newIsVideo = IsVideo;
+                            }
+                            else
+                            {
+                                newThumbnail = thumb;
+                                newIsVideo = isVid;
+                                _currentThumbnailHash = hash;
+                                _previousTrackThumbnailHash = null;
+                            }
+                        }
+                        else
+                        {
+                            newThumbnail = null;
+                            newIsVideo = false;
+                            _currentThumbnailHash = null;
+                            if (isBrowser && !isPreview && !string.IsNullOrWhiteSpace(newTitle))
+                            {
+                                _ = ScheduleThumbnailRetryAsync(gen, trackKey);
+                            }
+                        }
                     }
                     else
                     {
@@ -389,48 +462,76 @@ public sealed class MediaService : IDisposable
                     }
 
                     if (timeline != null)
-                {
-                    bool recentlySeeked = (DateTimeOffset.UtcNow - _lastSeekTime).TotalSeconds < 2.5;
+                    {
+                        bool recentlySeeked = (DateTimeOffset.UtcNow - _lastSeekTime).TotalSeconds < 2.5;
 
-                    // Preserve existing duration if GSMTC temporarily reports zero during buffering/ads,
-                    // pero filtramos duraciones infinitas o anómalas
-                    if (timeline.EndTime > TimeSpan.Zero && timeline.EndTime < TimeSpan.FromHours(24) && timeline.EndTime != TimeSpan.MaxValue)
-                    {
-                        _endTime = timeline.EndTime;
-                        Duration = _endTime;
-                    }
-                    else if (timeline.MaxSeekTime > TimeSpan.Zero && timeline.MaxSeekTime < TimeSpan.FromHours(24) && timeline.MaxSeekTime != TimeSpan.MaxValue)
-                    {
-                        _endTime = timeline.MaxSeekTime;
-                        Duration = _endTime;
-                    }
-                    else if (_endTime > TimeSpan.Zero && _endTime < TimeSpan.FromHours(24) && _endTime != TimeSpan.MaxValue)
-                    {
-                        Duration = _endTime;
-                    }
-                    else
-                    {
-                        _endTime = TimeSpan.Zero;
-                        Duration = TimeSpan.Zero;
-                    }
-
-                    // Protect against browsers temporarily reporting 0:00 right after a seek
-                    if (recentlySeeked && timeline.Position == TimeSpan.Zero && _basePosition > TimeSpan.Zero)
-                    {
-                        Position = _basePosition;
-                    }
-                    else
-                    {
-                        bool posChanged = timeline.Position != _basePosition;
-                        _basePosition = timeline.Position;
-
-                        if (timeline.LastUpdatedTime != default && timeline.LastUpdatedTime <= DateTimeOffset.UtcNow)
+                        // Preserve existing duration if GSMTC temporarily reports zero during buffering/ads,
+                        // pero filtramos duraciones infinitas o anómalas
+                        if (timeline.EndTime > TimeSpan.Zero && timeline.EndTime < TimeSpan.FromHours(24) && timeline.EndTime != TimeSpan.MaxValue)
                         {
-                            _lastTimelineUpdated = timeline.LastUpdatedTime;
+                            _endTime = timeline.EndTime;
+                            Duration = _endTime;
                         }
-                        else if (posChanged || _lastTimelineUpdated == default)
+                        else if (timeline.MaxSeekTime > TimeSpan.Zero && timeline.MaxSeekTime < TimeSpan.FromHours(24) && timeline.MaxSeekTime != TimeSpan.MaxValue)
                         {
-                            _lastTimelineUpdated = DateTimeOffset.UtcNow;
+                            _endTime = timeline.MaxSeekTime;
+                            Duration = _endTime;
+                        }
+                        else if (_endTime > TimeSpan.Zero && _endTime < TimeSpan.FromHours(24) && _endTime != TimeSpan.MaxValue)
+                        {
+                            Duration = _endTime;
+                        }
+                        else
+                        {
+                            _endTime = TimeSpan.Zero;
+                            Duration = TimeSpan.Zero;
+                        }
+
+                        // Protect against browsers temporarily reporting 0:00 right after a seek
+                        if (recentlySeeked && timeline.Position == TimeSpan.Zero && _basePosition > TimeSpan.Zero)
+                        {
+                            Position = _basePosition;
+                        }
+                        else
+                        {
+                            bool posChanged = timeline.Position != _basePosition;
+                            _basePosition = timeline.Position;
+
+                            if (timeline.LastUpdatedTime != default && timeline.LastUpdatedTime <= DateTimeOffset.UtcNow)
+                            {
+                                _lastTimelineUpdated = timeline.LastUpdatedTime;
+                            }
+                            else if (posChanged || _lastTimelineUpdated == default)
+                            {
+                                _lastTimelineUpdated = DateTimeOffset.UtcNow;
+                            }
+
+                            if (newIsPlaying)
+                            {
+                                var elapsed = DateTimeOffset.UtcNow - _lastTimelineUpdated;
+                                if (elapsed < TimeSpan.Zero) elapsed = TimeSpan.Zero;
+                                var current = _basePosition + elapsed;
+                                if (Duration > TimeSpan.Zero && current > Duration) current = Duration;
+                                Position = current;
+                            }
+                            else
+                            {
+                                Position = _basePosition;
+                            }
+                        }
+
+                        _canSeek = Duration > TimeSpan.FromSeconds(1) && Duration < TimeSpan.FromHours(24);
+                    }
+                    else
+                    {
+                        if (_endTime > TimeSpan.Zero && _endTime < TimeSpan.FromHours(24) && _endTime != TimeSpan.MaxValue)
+                        {
+                            Duration = _endTime;
+                        }
+                        else
+                        {
+                            _endTime = TimeSpan.Zero;
+                            Duration = TimeSpan.Zero;
                         }
 
                         if (newIsPlaying)
@@ -445,37 +546,9 @@ public sealed class MediaService : IDisposable
                         {
                             Position = _basePosition;
                         }
-                    }
 
-                    _canSeek = Duration > TimeSpan.FromSeconds(1) && Duration < TimeSpan.FromHours(24);
-                }
-                else
-                {
-                    if (_endTime > TimeSpan.Zero && _endTime < TimeSpan.FromHours(24) && _endTime != TimeSpan.MaxValue)
-                    {
-                        Duration = _endTime;
+                        _canSeek = Duration > TimeSpan.FromSeconds(1) && Duration < TimeSpan.FromHours(24);
                     }
-                    else
-                    {
-                        _endTime = TimeSpan.Zero;
-                        Duration = TimeSpan.Zero;
-                    }
-
-                    if (newIsPlaying)
-                    {
-                        var elapsed = DateTimeOffset.UtcNow - _lastTimelineUpdated;
-                        if (elapsed < TimeSpan.Zero) elapsed = TimeSpan.Zero;
-                        var current = _basePosition + elapsed;
-                        if (Duration > TimeSpan.Zero && current > Duration) current = Duration;
-                        Position = current;
-                    }
-                    else
-                    {
-                        Position = _basePosition;
-                    }
-
-                    _canSeek = Duration > TimeSpan.FromSeconds(1) && Duration < TimeSpan.FromHours(24);
-                }
                 }
 
                 // Si cambió de pista o está reproduciendo pero aún no se tiene la duración (común en YouTube/Spotify al inicio),
@@ -498,6 +571,10 @@ public sealed class MediaService : IDisposable
             _canSeek = false;
             Position = TimeSpan.Zero;
             Duration = TimeSpan.Zero;
+            newThumbnail = null;
+            _currentThumbnailHash = null;
+            _previousTrackThumbnailHash = null;
+            _currentThumbnailTrackKey = null;
         }
 
         string fullText;
@@ -554,6 +631,62 @@ public sealed class MediaService : IDisposable
         RaiseTimelineChanged();
     }
 
+    private async Task ScheduleThumbnailRetryAsync(int generation, string trackKey)
+    {
+        int[] delays = { 200, 350, 600, 1000, 1500 };
+        foreach (var delay in delays)
+        {
+            await Task.Delay(delay);
+            if (_disposed ||
+                generation != _updateGeneration ||
+                !string.Equals(_currentThumbnailTrackKey, trackKey, StringComparison.OrdinalIgnoreCase) ||
+                _currentThumbnailHash != null ||
+                _currentSession == null)
+            {
+                return;
+            }
+
+            try
+            {
+                var props = await _currentSession.TryGetMediaPropertiesAsync();
+                if (generation != _updateGeneration ||
+                    !string.Equals(_currentThumbnailTrackKey, trackKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+                if (props == null) continue;
+
+                var (thumb, isVid, hash) = await LoadThumbnailAsync(props);
+                if (generation != _updateGeneration ||
+                    !string.Equals(_currentThumbnailTrackKey, trackKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                if (thumb != null && !string.IsNullOrEmpty(hash))
+                {
+                    bool isStale = IsBrowserApp(_currentSession.SourceAppUserModelId) &&
+                                   string.Equals(hash, _previousTrackThumbnailHash, StringComparison.Ordinal) &&
+                                   DateTimeOffset.UtcNow < _staleThumbnailCheckUntil;
+
+                    if (!isStale)
+                    {
+                        _currentThumbnailHash = hash;
+                        _previousTrackThumbnailHash = null;
+                        Thumbnail = thumb;
+                        IsVideo = isVid;
+                        RaiseMediaStateChanged();
+                        return;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MediaService] Thumbnail retry failed: {ex.Message}");
+            }
+        }
+    }
+
     private async Task ScheduleTimelineRetryAsync()
     {
         int[] delays = { 300, 600, 1200 };
@@ -569,7 +702,7 @@ public sealed class MediaService : IDisposable
                     var tl = _currentSession.GetTimelineProperties();
                     if (tl != null && tl.EndTime > TimeSpan.Zero && tl.EndTime < TimeSpan.FromHours(24) && tl.EndTime != TimeSpan.MaxValue)
                     {
-                        await UpdatePropertiesFromCurrentSessionAsync();
+                        await UpdatePropertiesFromCurrentSessionAsync(forceReloadThumbnail: false);
                         return;
                     }
                 }
@@ -674,7 +807,7 @@ public sealed class MediaService : IDisposable
                 if (await _currentSession.TryTogglePlayPauseAsync())
                 {
                     await Task.Delay(100);
-                    await UpdatePropertiesFromCurrentSessionAsync();
+                    await UpdatePropertiesFromCurrentSessionAsync(forceReloadThumbnail: false);
                     return;
                 }
             }
@@ -696,7 +829,7 @@ public sealed class MediaService : IDisposable
                 if (await _currentSession.TrySkipNextAsync())
                 {
                     await Task.Delay(150);
-                    await UpdatePropertiesFromCurrentSessionAsync();
+                    await UpdatePropertiesFromCurrentSessionAsync(forceReloadThumbnail: true);
                     return;
                 }
             }
@@ -717,7 +850,7 @@ public sealed class MediaService : IDisposable
                 if (await _currentSession.TrySkipPreviousAsync())
                 {
                     await Task.Delay(150);
-                    await UpdatePropertiesFromCurrentSessionAsync();
+                    await UpdatePropertiesFromCurrentSessionAsync(forceReloadThumbnail: true);
                     return;
                 }
             }
@@ -739,20 +872,24 @@ public sealed class MediaService : IDisposable
         catch { }
     }
 
-    private static async Task<(ImageSource? Image, bool IsVideo)> LoadThumbnailAsync(GlobalSystemMediaTransportControlsSessionMediaProperties? props)
+    private static async Task<(ImageSource? Image, bool IsVideo, string? Hash)> LoadThumbnailAsync(GlobalSystemMediaTransportControlsSessionMediaProperties? props)
     {
-        if (props?.Thumbnail == null) return (null, false);
+        if (props?.Thumbnail == null) return (null, false, null);
 
         try
         {
             using var ras = await props.Thumbnail.OpenReadAsync();
-            if (ras == null || ras.Size == 0) return (null, false);
+            if (ras == null || ras.Size == 0) return (null, false, null);
 
             using var stream = System.IO.WindowsRuntimeStreamExtensions.AsStreamForRead(ras);
             using var ms = new MemoryStream();
             await stream.CopyToAsync(ms);
-            ms.Position = 0;
+            if (ms.Length == 0) return (null, false, null);
 
+            byte[] bytes = ms.ToArray();
+            string hash = Convert.ToHexString(SHA256.HashData(bytes));
+
+            ms.Position = 0;
             var bmp = new BitmapImage();
             bmp.BeginInit();
             bmp.CacheOption = BitmapCacheOption.OnLoad;
@@ -763,12 +900,12 @@ public sealed class MediaService : IDisposable
             bool isVideo = props.PlaybackType == Windows.Media.MediaPlaybackType.Video ||
                            (bmp.PixelWidth > 0 && bmp.PixelHeight > 0 && (double)bmp.PixelWidth / bmp.PixelHeight > 1.25);
 
-            return (bmp, isVideo);
+            return (bmp, isVideo, hash);
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[MediaService] Failed to load thumbnail: {ex.Message}");
-            return (null, false);
+            return (null, false, null);
         }
     }
 

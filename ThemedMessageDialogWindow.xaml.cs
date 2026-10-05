@@ -1,8 +1,10 @@
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using DockBar.Services;
 using Brush = System.Windows.Media.Brush;
@@ -113,7 +115,10 @@ public partial class ThemedMessageDialogWindow : Window, INotifyPropertyChanged
         {
             WindowSwitcherHelper.HideFromWindowSwitchers(this);
             ThemeService.ApplyWindowBackdrop(this);
+            CenterOnMonitor();
         };
+
+        Loaded += (_, _) => CenterOnMonitor();
     }
 
     private void CountdownTimer_Tick(object? sender, EventArgs e)
@@ -206,6 +211,72 @@ public partial class ThemedMessageDialogWindow : Window, INotifyPropertyChanged
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
+
+    private void CenterOnMonitor()
+    {
+        try
+        {
+            IntPtr hwndRef = IntPtr.Zero;
+            if (Owner != null && Owner.IsVisible)
+            {
+                hwndRef = new WindowInteropHelper(Owner).Handle;
+            }
+
+            if (hwndRef == IntPtr.Zero)
+            {
+                hwndRef = NativeMethods.GetForegroundWindow();
+            }
+
+            IntPtr monitor = hwndRef != IntPtr.Zero
+                ? NativeMethods.MonitorFromWindow(hwndRef, NativeMethods.MONITOR_DEFAULTTONEAREST)
+                : IntPtr.Zero;
+
+            if (monitor != IntPtr.Zero)
+            {
+                var mi = new NativeMethods.MONITORINFO { cbSize = Marshal.SizeOf(typeof(NativeMethods.MONITORINFO)) };
+                if (NativeMethods.GetMonitorInfo(monitor, ref mi))
+                {
+                    double scaleX = 1.0;
+                    double scaleY = 1.0;
+                    if (NativeMethods.TryGetMonitorDpi(monitor, out var dpiX, out var dpiY) && dpiX > 0 && dpiY > 0)
+                    {
+                        scaleX = 96.0 / dpiX;
+                        scaleY = 96.0 / dpiY;
+                    }
+                    else
+                    {
+                        var source = PresentationSource.FromVisual(this);
+                        if (source?.CompositionTarget != null)
+                        {
+                            scaleX = 1.0 / source.CompositionTarget.TransformToDevice.M11;
+                            scaleY = 1.0 / source.CompositionTarget.TransformToDevice.M22;
+                        }
+                    }
+
+                    var workLeft = mi.rcWork.Left * scaleX;
+                    var workTop = mi.rcWork.Top * scaleY;
+                    var workWidth = (mi.rcWork.Right - mi.rcWork.Left) * scaleX;
+                    var workHeight = (mi.rcWork.Bottom - mi.rcWork.Top) * scaleY;
+
+                    var targetWidth = ActualWidth > 0 ? ActualWidth : (Width > 0 ? Width : 460);
+                    var targetHeight = ActualHeight > 0 ? ActualHeight : 180;
+
+                    Left = workLeft + Math.Max(0, (workWidth - targetWidth) / 2.0);
+                    Top = workTop + Math.Max(0, (workHeight - targetHeight) / 2.0);
+                    return;
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        var wa = SystemParameters.WorkArea;
+        var w = ActualWidth > 0 ? ActualWidth : (Width > 0 ? Width : 460);
+        var h = ActualHeight > 0 ? ActualHeight : 180;
+        Left = wa.Left + Math.Max(0, (wa.Width - w) / 2.0);
+        Top = wa.Top + Math.Max(0, (wa.Height - h) / 2.0);
+    }
 }
 
 public static class ThemedMessageBox
@@ -235,13 +306,9 @@ public static class ThemedMessageBox
         if (owner != null && owner.IsVisible && owner.WindowState != WindowState.Minimized)
         {
             dlg.Owner = owner;
-            dlg.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        }
-        else
-        {
-            dlg.WindowStartupLocation = WindowStartupLocation.CenterScreen;
         }
 
+        dlg.WindowStartupLocation = WindowStartupLocation.CenterScreen;
         dlg.ShowDialog();
         return dlg.Result;
     }
@@ -271,13 +338,9 @@ public static class ThemedMessageBox
         if (owner != null && owner.IsVisible && owner.WindowState != WindowState.Minimized)
         {
             dlg.Owner = owner;
-            dlg.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        }
-        else
-        {
-            dlg.WindowStartupLocation = WindowStartupLocation.CenterScreen;
         }
 
+        dlg.WindowStartupLocation = WindowStartupLocation.CenterScreen;
         dlg.ShowDialog();
         return dlg.Result;
     }
