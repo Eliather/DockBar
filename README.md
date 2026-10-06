@@ -20,7 +20,9 @@ DockBar es una barra lateral de accesos directos estilo dock de alto rendimiento
 
 ### Interfaz Principal
 
-![DockBar Preview](https://github.com/user-attachments/assets/302484ca-4aa6-4e54-9b0d-35e484cdc4ff)
+<img width="1917" height="1078" alt="C1" src="https://github.com/user-attachments/assets/8891ef33-ae05-4cbb-93cf-fb6e19d8b24d" />
+<img width="1913" height="1078" alt="C2" src="https://github.com/user-attachments/assets/a793fe53-5c35-47d3-9ae6-b09d8eaecf8c" />
+
 
 ### Demostración en Vídeo
 
