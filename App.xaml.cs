@@ -13,8 +13,13 @@ namespace DockBar;
 
 public partial class App : System.Windows.Application
 {
+#if DEBUG
+    private const string SingleInstanceMutexName = "Local\\DockBar_SingleInstance_Mutex_Eliather_Debug";
+    private const string SingleInstanceEventName = "Local\\DockBar_SingleInstance_Event_Eliather_Debug";
+#else
     private const string SingleInstanceMutexName = "Local\\DockBar_SingleInstance_Mutex_Eliather";
     private const string SingleInstanceEventName = "Local\\DockBar_SingleInstance_Event_Eliather";
+#endif
     private static Mutex? _singleInstanceMutex;
     private static EventWaitHandle? _singleInstanceEvent;
     private static Thread? _signalWatcherThread;
@@ -127,7 +132,11 @@ public partial class App : System.Windows.Application
         var trayIcon = LoadTrayIcon();
         _notifyIcon = new WinForms.NotifyIcon
         {
+#if DEBUG
+            Text = "DockBar (Debug)",
+#else
             Text = "DockBar",
+#endif
             Icon = trayIcon,
             Visible = true
         };
@@ -260,6 +269,10 @@ public partial class App : System.Windows.Application
         {
             var baseDir = AppDomain.CurrentDomain.BaseDirectory;
             var iconPath = Path.Combine(baseDir, "Dock.ico");
+            if (!File.Exists(iconPath))
+            {
+                iconPath = Path.Combine(baseDir, "Assets", "Dock.ico");
+            }
             if (File.Exists(iconPath))
             {
                 const uint IMAGE_ICON = 1;

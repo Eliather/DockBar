@@ -2,15 +2,23 @@ param(
     [string]$Project = "DockBar.csproj",
     [string]$Runtime = "win-x64",
     [string]$Configuration = "Release",
-    [string]$OutputFile = "DockBar.msix",
+    [string]$OutputFile = "dist\DockBar.msix",
     [switch]$SkipPublish,
     [switch]$SkipSigning
 )
 
 $ErrorActionPreference = "Stop"
 
-$repoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$repoRoot = if (Test-Path (Join-Path $PSScriptRoot "..\DockBar.csproj")) {
+    (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+} else {
+    $PSScriptRoot
+}
 Set-Location $repoRoot
+
+if (-not (Test-Path "dist")) {
+    New-Item -ItemType Directory -Path "dist" -Force | Out-Null
+}
 
 function Ensure-PackagingTools {
     $toolsDir = Join-Path $repoRoot ".tools"

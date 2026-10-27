@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -29,6 +30,10 @@ public partial class ThemedMessageDialogWindow : Window, INotifyPropertyChanged
     public bool ShowNoButton { get; }
     public bool ShowCancelButton { get; }
 
+    private readonly MessageBoxImage _dialogImage;
+    public bool ShowCopyButton => !string.IsNullOrWhiteSpace(DialogMessage) && (_dialogImage == MessageBoxImage.Error || _dialogImage == MessageBoxImage.Warning || DialogMessage.Length > 40);
+    public string CopyButtonLabel => _dialogImage == MessageBoxImage.Error ? "Copiar error" : "Copiar";
+
     public bool HasCountdown => _remainingSeconds > 0;
     public int RemainingSeconds => _remainingSeconds;
     public string CountdownText => string.Format(
@@ -51,6 +56,7 @@ public partial class ThemedMessageDialogWindow : Window, INotifyPropertyChanged
         DialogMessage = message ?? string.Empty;
         _remainingSeconds = countdownSeconds;
         _countdownFormat = countdownFormat;
+        _dialogImage = image;
 
         if (countdownSeconds > 0)
         {
@@ -166,6 +172,24 @@ public partial class ThemedMessageDialogWindow : Window, INotifyPropertyChanged
                 Result = MessageBoxResult.OK;
                 Close();
             }
+        }
+    }
+
+    private async void BtnCopy_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(DialogMessage))
+            {
+                System.Windows.Clipboard.SetText(DialogMessage);
+                BtnCopy.Content = "\u00A1Copiado!";
+                await Task.Delay(2000);
+                BtnCopy.Content = CopyButtonLabel;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(ex);
         }
     }
 

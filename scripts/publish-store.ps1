@@ -30,8 +30,28 @@ param(
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 -bor [System.Net.SecurityProtocolType]::Tls13
 $ErrorActionPreference = "Stop"
 
-$repoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$repoRoot = if (Test-Path (Join-Path $PSScriptRoot "..\DockBar.csproj")) {
+    (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+} else {
+    $PSScriptRoot
+}
 Set-Location $repoRoot
+
+if (-not (Test-Path $PackagePath)) {
+    if (Test-Path (Join-Path "dist" $PackagePath)) {
+        $PackagePath = Join-Path "dist" $PackagePath
+    }
+}
+if (-not (Test-Path $ListingPath)) {
+    if (Test-Path (Join-Path "docs" $ListingPath)) {
+        $ListingPath = Join-Path "docs" $ListingPath
+    }
+}
+if (-not (Test-Path $CredentialsPath)) {
+    if (Test-Path (Join-Path "scripts" $CredentialsPath)) {
+        $CredentialsPath = Join-Path "scripts" $CredentialsPath
+    }
+}
 
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host "   DockBar - Publicacion Directa a Microsoft Store (API)   " -ForegroundColor Cyan

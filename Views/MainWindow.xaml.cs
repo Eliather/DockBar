@@ -1708,7 +1708,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _isHidden = false;
         ResumeBackgroundMonitors();
         UpdateEdgeHotspotState();
-        AnimateLeft(Left, GetShownLeft(GetMonitorBounds()));
+
+        var area = GetMonitorBounds();
+        var to = GetShownLeft(area);
+        var from = Left;
+        if (double.IsNaN(from) || double.IsInfinity(from))
+        {
+            from = GetHiddenLeft(area);
+        }
+
+        AnimateLeft(from, to);
     }
 
     private void HideDockAnimated()
@@ -1725,11 +1734,63 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         _isHidden = true;
         PauseBackgroundMonitors();
-        AnimateLeft(Left, GetHiddenLeft(GetMonitorBounds()));
+
+        var area = GetMonitorBounds();
+        var to = GetHiddenLeft(area);
+        var from = Left;
+        if (double.IsNaN(from) || double.IsInfinity(from))
+        {
+            from = GetShownLeft(area);
+        }
+
+        AnimateLeft(from, to);
     }
 
     private void AnimateLeft(double from, double to)
     {
+        var area = GetMonitorBounds();
+
+        // 1. Si el destino es inválido, recalcularlo con seguridad
+        if (double.IsNaN(to) || double.IsInfinity(to))
+        {
+            to = !_isHidden ? GetShownLeft(area) : GetHiddenLeft(area);
+            if (double.IsNaN(to) || double.IsInfinity(to))
+            {
+                return;
+            }
+        }
+
+        // 2. Si la ventana aún no está cargada / renderizada en pantalla, asignar posición directa sin animar
+        if (!IsLoaded || PresentationSource.FromVisual(this) == null)
+        {
+            BeginAnimation(Window.LeftProperty, null);
+            Left = to;
+            _isAnimating = false;
+            return;
+        }
+
+        // 3. Si el origen es inválido (NaN durante startup), resolver fallback seguro
+        if (double.IsNaN(from) || double.IsInfinity(from))
+        {
+            from = _isHidden ? GetShownLeft(area) : GetHiddenLeft(area);
+            if (double.IsNaN(from) || double.IsInfinity(from))
+            {
+                BeginAnimation(Window.LeftProperty, null);
+                Left = to;
+                _isAnimating = false;
+                return;
+            }
+        }
+
+        // 4. Si origen y destino son prácticamente iguales, aplicar directamente sin animación
+        if (Math.Abs(from - to) < 0.5)
+        {
+            BeginAnimation(Window.LeftProperty, null);
+            Left = to;
+            _isAnimating = false;
+            return;
+        }
+
         _isAnimating = true;
         var durationMs = _config.HideAnimationMs <= 0 ? 200 : _config.HideAnimationMs;
         var animation = new DoubleAnimation
@@ -1743,8 +1804,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         animation.Completed += (_, _) =>
         {
             _isAnimating = false;
-            var area = GetMonitorBounds();
-            var targetLeft = !_isHidden ? GetShownLeft(area) : GetHiddenLeft(area);
+            var currentArea = GetMonitorBounds();
+            var targetLeft = !_isHidden ? GetShownLeft(currentArea) : GetHiddenLeft(currentArea);
             BeginAnimation(Window.LeftProperty, null);
             Left = targetLeft;
             UpdateEdgeHotspotState();

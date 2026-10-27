@@ -101,6 +101,28 @@ public static class AutoStartService
 
     private static void ApplyRegistry(bool enable)
     {
+#if DEBUG
+        try
+        {
+            // En desarrollo (DEBUG), nunca registramos ejecutables de desarrollo (bin\Debug, etc.)
+            // para evitar que Windows ejecute la versión en desarrollo en el arranque del sistema.
+            // Si el registro quedó apuntando previamente a una carpeta de compilación, lo limpiamos.
+            using var key = Registry.CurrentUser.OpenSubKey(RunKey, true);
+            var currentVal = key?.GetValue(ValueName) as string;
+            if (!string.IsNullOrWhiteSpace(currentVal) &&
+                (currentVal.Contains(@"\bin\Debug\", StringComparison.OrdinalIgnoreCase) ||
+                 currentVal.Contains(@"\bin\Release\", StringComparison.OrdinalIgnoreCase)))
+            {
+                key?.DeleteValue(ValueName, false);
+                Debug.WriteLine("[AutoStartService] Se eliminó la ruta de desarrollo residual del inicio de Windows.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+        return;
+#else
         try
         {
             using var key = Registry.CurrentUser.CreateSubKey(RunKey);
@@ -122,6 +144,7 @@ public static class AutoStartService
         {
             Debug.WriteLine(ex);
         }
+#endif
     }
 
     private static bool IsEnabledRegistry()
@@ -130,7 +153,19 @@ public static class AutoStartService
         {
             using var key = Registry.CurrentUser.OpenSubKey(RunKey);
             var value = key?.GetValue(ValueName) as string;
-            return !string.IsNullOrWhiteSpace(value);
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+
+#if DEBUG
+            if (value.Contains(@"\bin\Debug\", StringComparison.OrdinalIgnoreCase) ||
+                value.Contains(@"\bin\Release\", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+#endif
+            return true;
         }
         catch
         {

@@ -1,15 +1,15 @@
 !define APPNAME "DockBar"
-!define APPVERSION "1.8.8"
+!define APPVERSION "1.8.10"
 !define EXE_NAME "DockBar.exe"
 !define COMPANY "Eliather"
 
-OutFile "DockBarSetup.exe"
+OutFile "dist\DockBarSetup.exe"
 InstallDir "$LOCALAPPDATA\${APPNAME}"
 RequestExecutionLevel user
 
 Name "${APPNAME} ${APPVERSION}"
-Icon "Dock.ico"
-UninstallIcon "Dock.ico"
+Icon "Assets\Dock.ico"
+UninstallIcon "Assets\Dock.ico"
 
 !include "MUI2.nsh"
 !define MUI_ABORTWARNING

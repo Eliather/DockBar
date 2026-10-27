@@ -135,6 +135,14 @@
 
             <!-- Action Buttons -->
             <Grid Grid.Row="2">
+                <Button x:Name="BtnCopy"
+                        Content="{Binding CopyButtonLabel}"
+                        Style="{StaticResource DialogButtonSecondaryStyle}"
+                        HorizontalAlignment="Left"
+                        MinWidth="115"
+                        Visibility="{Binding ShowCopyButton, Converter={StaticResource BoolToVisibilityConverter}}"
+                        ToolTip="Copiar el texto al portapapeles"
+                        Click="BtnCopy_Click"/>
                 <StackPanel Orientation="Horizontal"
                             HorizontalAlignment="Right">
                     <Button x:Name="BtnCancel"

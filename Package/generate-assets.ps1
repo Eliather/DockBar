@@ -1,5 +1,5 @@
 param(
-    [string]$SourceIcon = "Dock.png",
+    [string]$SourceIcon = "Assets\Dock.png",
     [string]$OutputDir = "Package\Assets"
 )
 
@@ -7,6 +7,10 @@ $ErrorActionPreference = "Stop"
 
 Add-Type -AssemblyName System.Drawing
 
+if (-not (Test-Path $SourceIcon)) {
+    if (Test-Path "Assets\Dock.png") { $SourceIcon = "Assets\Dock.png" }
+    elseif (Test-Path "Dock.png") { $SourceIcon = "Dock.png" }
+}
 if (-not (Test-Path $SourceIcon)) {
     throw "No se encontro la imagen fuente: $SourceIcon"
 }

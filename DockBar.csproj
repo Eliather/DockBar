@@ -6,16 +6,22 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
-    <ApplicationIcon>Dock.ico</ApplicationIcon>
-    <Version>1.8.8</Version>
-    <AssemblyVersion>1.8.8</AssemblyVersion>
-    <FileVersion>1.8.8</FileVersion>
-    <InformationalVersion>1.8.8</InformationalVersion>
+    <ApplicationIcon>Assets\Dock.ico</ApplicationIcon>
+    <Version>1.8.10</Version>
+    <AssemblyVersion>1.8.10</AssemblyVersion>
+    <FileVersion>1.8.10</FileVersion>
+    <InformationalVersion>1.8.10</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <!-- Silenciar advertencia de auditoría de vulnerabilidades cuando no hay conexión a nuget.org -->
+    <NoWarn>$(NoWarn);NU1900</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="Dock.ico">
+    <Content Include="Assets\Dock.ico">
+      <Link>Dock.ico</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Dock.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

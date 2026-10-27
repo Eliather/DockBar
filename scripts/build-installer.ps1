@@ -26,8 +26,16 @@ function Get-MakeNsisPath {
     throw "NSIS no esta instalado o makensis.exe no se pudo localizar. Instala NSIS o agregalo al PATH."
 }
 
-$repoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$repoRoot = if (Test-Path (Join-Path $PSScriptRoot "..\DockBar.csproj")) {
+    (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+} else {
+    $PSScriptRoot
+}
 Set-Location $repoRoot
+
+if (-not (Test-Path "dist")) {
+    New-Item -ItemType Directory -Path "dist" -Force | Out-Null
+}
 
 if (-not $SkipPublish) {
     dotnet publish $Project -c Release -r $Runtime --self-contained false -o publish
@@ -57,9 +65,10 @@ if ($cert) {
     }
 
     # Firmar el instalador
-    if (Test-Path "DockBarSetup.exe") {
-        Set-AuthenticodeSignature -Certificate $cert -FilePath "DockBarSetup.exe" -TimestampServer "http://timestamp.digicert.com" | Out-Null
-        Write-Host "DockBarSetup.exe firmado."
+    $setupExe = if (Test-Path "dist\DockBarSetup.exe") { "dist\DockBarSetup.exe" } else { "DockBarSetup.exe" }
+    if (Test-Path $setupExe) {
+        Set-AuthenticodeSignature -Certificate $cert -FilePath $setupExe -TimestampServer "http://timestamp.digicert.com" | Out-Null
+        Write-Host "$setupExe firmado."
     }
 } else {
     Write-Host "No se encontro un certificado para 'Eliather'. Omitiendo la firma de codigo."
