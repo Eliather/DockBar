@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
 namespace DockBar.Models;
@@ -23,6 +25,147 @@ public class MediaConfig
     public bool MediaThumbnailOnly { get; set; } = false;
 }
 
+public class AiProviderConfig : INotifyPropertyChanged
+{
+    private bool _enabled = false;
+    private bool _show5Hr = true;
+    private bool _showWeek = true;
+    private bool _useAutoDetect = true;
+    private string _webToken = string.Empty;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public bool Enabled
+    {
+        get => _enabled;
+        set
+        {
+            if (_enabled != value)
+            {
+                _enabled = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public bool Show5Hr
+    {
+        get => _show5Hr;
+        set
+        {
+            if (_show5Hr != value)
+            {
+                _show5Hr = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public bool ShowWeek
+    {
+        get => _showWeek;
+        set
+        {
+            if (_showWeek != value)
+            {
+                _showWeek = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public bool UseAutoDetect
+    {
+        get => _useAutoDetect;
+        set
+        {
+            if (_useAutoDetect != value)
+            {
+                _useAutoDetect = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public string WebToken
+    {
+        get => _webToken;
+        set
+        {
+            var normalized = value ?? string.Empty;
+            if (_webToken != normalized)
+            {
+                _webToken = normalized;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public AiProviderConfig Clone() => new()
+    {
+        Enabled = Enabled,
+        Show5Hr = Show5Hr,
+        ShowWeek = ShowWeek,
+        UseAutoDetect = UseAutoDetect,
+        WebToken = WebToken ?? string.Empty
+    };
+
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+}
+
+public class AiConfig : INotifyPropertyChanged
+{
+    private bool _showAiQuota = false;
+    private int _refreshIntervalSeconds = 60;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public bool ShowAiQuota
+    {
+        get => _showAiQuota;
+        set
+        {
+            if (_showAiQuota != value)
+            {
+                _showAiQuota = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public int RefreshIntervalSeconds
+    {
+        get => _refreshIntervalSeconds;
+        set
+        {
+            if (_refreshIntervalSeconds != value)
+            {
+                _refreshIntervalSeconds = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public AiProviderConfig Antigravity { get; set; } = new() { Enabled = true, Show5Hr = true, ShowWeek = false, UseAutoDetect = true };
+    public AiProviderConfig Gemini { get; set; } = new() { Enabled = false, Show5Hr = true, ShowWeek = true, UseAutoDetect = true };
+    public AiProviderConfig Claude { get; set; } = new() { Enabled = false, Show5Hr = true, ShowWeek = true, UseAutoDetect = true };
+    public AiProviderConfig ChatGpt { get; set; } = new() { Enabled = false, Show5Hr = true, ShowWeek = true, UseAutoDetect = true };
+
+    public AiConfig Clone() => new()
+    {
+        ShowAiQuota = ShowAiQuota,
+        RefreshIntervalSeconds = RefreshIntervalSeconds,
+        Antigravity = (Antigravity ?? new()).Clone(),
+        Gemini = (Gemini ?? new()).Clone(),
+        Claude = (Claude ?? new()).Clone(),
+        ChatGpt = (ChatGpt ?? new()).Clone()
+    };
+
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+}
+
 public class ExperimentalConfig
 {
     public double EdgeTriggerPx { get; set; } = 8;
@@ -31,7 +174,7 @@ public class ExperimentalConfig
     public bool ShowPowerControl { get; set; } = false;
     public bool ShowCaffeine { get; set; } = false;
     public bool UseSliderPagination { get; set; } = false;
-    public List<string> WidgetOrder { get; set; } = new() { "Clock", "Media", "Volume", "Resource", "Power", "Caffeine", "Pagination" };
+    public List<string> WidgetOrder { get; set; } = new() { "Clock", "Media", "Volume", "Resource", "AiQuota", "Power", "Caffeine", "Pagination" };
 }
 
 public class DockConfig
@@ -40,6 +183,8 @@ public class DockConfig
     public List<ShortcutItem> Shortcuts { get; set; } = new();
     public double DockWidth { get; set; } = 175;
     public double IconSize { get; set; } = 40;
+    public double TopDockHeight { get; set; } = 118;
+    public double TopIconSize { get; set; } = 40;
     public double AutoHideDelaySeconds { get; set; } = 0; // Win8-style immediate hide on leave by default
     public bool AlwaysShow { get; set; } = false;
     public double HideAnimationMs { get; set; } = 200;
@@ -59,7 +204,15 @@ public class DockConfig
     // Categorías de configuración dedicadas
     public ClockConfig Clock { get; set; } = new();
     public MediaConfig Media { get; set; } = new();
+    public AiConfig Ai { get; set; } = new();
     public ExperimentalConfig Experimental { get; set; } = new();
+
+    [JsonIgnore]
+    public bool ShowAiQuota
+    {
+        get => Ai.ShowAiQuota;
+        set => Ai.ShowAiQuota = value;
+    }
 
     // Propiedades puente para enlaces directos en XAML y compatibilidad transparente
     [JsonIgnore]
@@ -181,6 +334,40 @@ public class DockConfig
         set => Experimental.WidgetOrder = value;
     }
 
+    [JsonIgnore]
+    public double ActiveDockSize
+    {
+        get => DockSide == DockSide.Top ? TopDockHeight : DockWidth;
+        set
+        {
+            if (DockSide == DockSide.Top)
+            {
+                TopDockHeight = value;
+            }
+            else
+            {
+                DockWidth = value;
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public double ActiveIconSize
+    {
+        get => DockSide == DockSide.Top ? TopIconSize : IconSize;
+        set
+        {
+            if (DockSide == DockSide.Top)
+            {
+                TopIconSize = value;
+            }
+            else
+            {
+                IconSize = value;
+            }
+        }
+    }
+
     public DockConfig Clone()
     {
         var shortcuts = Shortcuts ?? new();
@@ -189,6 +376,8 @@ public class DockConfig
             DockSide = DockSide,
             DockWidth = DockWidth,
             IconSize = IconSize,
+            TopDockHeight = TopDockHeight,
+            TopIconSize = TopIconSize,
             AutoHideDelaySeconds = AutoHideDelaySeconds,
             AlwaysShow = AlwaysShow,
             HideAnimationMs = HideAnimationMs,
@@ -220,6 +409,7 @@ public class DockConfig
                 ShowMediaThumbnail = ShowMediaThumbnail,
                 MediaThumbnailOnly = MediaThumbnailOnly
             },
+            Ai = (Ai ?? new()).Clone(),
             Experimental = new ExperimentalConfig
             {
                 EdgeTriggerPx = EdgeTriggerPx,
@@ -228,7 +418,7 @@ public class DockConfig
                 ShowPowerControl = ShowPowerControl,
                 ShowCaffeine = ShowCaffeine,
                 UseSliderPagination = UseSliderPagination,
-                WidgetOrder = WidgetOrder != null ? new List<string>(WidgetOrder) : new() { "Clock", "Media", "Volume", "Resource", "Power", "Caffeine", "Pagination" }
+                WidgetOrder = WidgetOrder != null ? new List<string>(WidgetOrder) : new() { "Clock", "Media", "Volume", "Resource", "AiQuota", "Power", "Caffeine", "Pagination" }
             },
             Shortcuts = shortcuts.Select(s => new ShortcutItem
             {
@@ -245,6 +435,8 @@ public class DockConfig
         DockSide = source.DockSide;
         DockWidth = source.DockWidth;
         IconSize = source.IconSize;
+        TopDockHeight = source.TopDockHeight;
+        TopIconSize = source.TopIconSize;
         AutoHideDelaySeconds = source.AutoHideDelaySeconds;
         AlwaysShow = source.AlwaysShow;
         HideAnimationMs = source.HideAnimationMs;
@@ -273,13 +465,15 @@ public class DockConfig
         ShowMediaThumbnail = source.ShowMediaThumbnail;
         MediaThumbnailOnly = source.MediaThumbnailOnly;
 
+        Ai = (source.Ai ?? new()).Clone();
+
         EdgeTriggerPx = source.EdgeTriggerPx;
         ShowResourceMonitor = source.ShowResourceMonitor;
         ShowHardwareModelNames = source.ShowHardwareModelNames;
         ShowPowerControl = source.ShowPowerControl;
         ShowCaffeine = source.ShowCaffeine;
         UseSliderPagination = source.UseSliderPagination;
-        WidgetOrder = source.WidgetOrder != null ? new List<string>(source.WidgetOrder) : new() { "Clock", "Media", "Volume", "Resource", "Power", "Caffeine", "Pagination" };
+        WidgetOrder = source.WidgetOrder != null ? new List<string>(source.WidgetOrder) : new() { "Clock", "Media", "Volume", "Resource", "AiQuota", "Power", "Caffeine", "Pagination" };
 
         if (source.Shortcuts != null)
         {

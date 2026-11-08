@@ -193,6 +193,7 @@ public partial class App : System.Windows.Application
         var menu = new TrayMenuWindow(_window?.Config);
         menu.PauseRequested += (_, _) => _window?.TogglePause();
         menu.ToggleSideRequested += (_, _) => _window?.ToggleDockSide();
+        menu.SideSelected += (_, side) => _window?.SetDockSide(side);
         menu.SettingsRequested += (_, _) => OpenSettingsWindow();
         menu.UpdateRequested += async (_, _) =>
         {

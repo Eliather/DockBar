@@ -217,6 +217,12 @@
                                      Margin="4,0,0,0"
                                      Style="{StaticResource DialogSegmentedRadioStyle}"
                                      Padding="14,6"/>
+                        <RadioButton x:Name="TabAiRadio"
+                                     Content="{local:Loc Key=Settings_TabAi}"
+                                     IsChecked="{Binding IsAiTabSelected, Mode=TwoWay}"
+                                     Margin="4,0,0,0"
+                                     Style="{StaticResource DialogSegmentedRadioStyle}"
+                                     Padding="14,6"/>
                         <RadioButton x:Name="TabExperimentalRadio"
                                      Content="{local:Loc Key=Settings_TabExperimental}"
                                      IsChecked="{Binding IsExperimentalTabSelected, Mode=TwoWay}"
@@ -257,6 +263,8 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <TextBlock Grid.Row="0"
@@ -267,9 +275,39 @@
                                Style="{StaticResource SettingsSectionBodyStyle}"/>
 
                     <TextBlock Grid.Row="2"
-                               Text="{local:Loc Key=Settings_DockWidth}"
+                               Text="{local:Loc Key=Settings_DockPosition}"
                                Style="{StaticResource SettingsLabelStyle}"/>
-                    <Grid Grid.Row="3"
+                    <Border Grid.Row="3"
+                            Style="{StaticResource DialogSurfaceStyle}"
+                            HorizontalAlignment="Left"
+                            Padding="3"
+                            CornerRadius="6"
+                            Margin="0,0,0,10">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton GroupName="DockSideGroup"
+                                         Content="{local:Loc Key=Settings_DockSideLeft}"
+                                         IsChecked="{Binding IsDockSideLeft, Mode=TwoWay}"
+                                         Style="{StaticResource DialogSegmentedRadioStyle}"
+                                         Padding="12,5"/>
+                            <RadioButton GroupName="DockSideGroup"
+                                         Content="{local:Loc Key=Settings_DockSideTop}"
+                                         IsChecked="{Binding IsDockSideTop, Mode=TwoWay}"
+                                         Margin="4,0,0,0"
+                                         Style="{StaticResource DialogSegmentedRadioStyle}"
+                                         Padding="12,5"/>
+                            <RadioButton GroupName="DockSideGroup"
+                                         Content="{local:Loc Key=Settings_DockSideRight}"
+                                         IsChecked="{Binding IsDockSideRight, Mode=TwoWay}"
+                                         Margin="4,0,0,0"
+                                         Style="{StaticResource DialogSegmentedRadioStyle}"
+                                         Padding="12,5"/>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Grid.Row="4"
+                               Text="{Binding DockSizeLabel}"
+                               Style="{StaticResource SettingsLabelStyle}"/>
+                    <Grid Grid.Row="5"
                           Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -279,26 +317,26 @@
                         <Slider x:Name="WidthSlider"
                                 Grid.Column="0"
                                 Style="{StaticResource DialogSliderStyle}"
-                                Minimum="175"
+                                Minimum="{Binding ActiveDockMinSize}"
                                 Maximum="640"
-                                Value="{Binding Config.DockWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                Value="{Binding ActiveDockSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                 ValueChanged="NumericSettingChanged"/>
                         <TextBox Grid.Column="1"
                                  MinWidth="78"
                                  Margin="8,0,0,0"
                                  Style="{StaticResource SettingsTextBoxStyle}"
                                  HorizontalContentAlignment="Center"
-                                 Text="{Binding Config.DockWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=F0}"
+                                 Text="{Binding ActiveDockSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=F0}"
                                  PreviewTextInput="NumericTextBox_PreviewTextInput"
                                  LostFocus="NumericTextBox_LostFocus"
                                  DataObject.Pasting="NumericTextBox_Pasting"
-                                 Tag="175|640"/>
+                                 Tag="{Binding ActiveDockSizeTag}"/>
                     </Grid>
 
-                    <TextBlock Grid.Row="4"
+                    <TextBlock Grid.Row="6"
                                Text="{local:Loc Key=Settings_IconSize}"
                                Style="{StaticResource SettingsLabelStyle}"/>
-                    <Grid Grid.Row="5">
+                    <Grid Grid.Row="7">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
@@ -309,14 +347,14 @@
                                 Style="{StaticResource DialogSliderStyle}"
                                 Minimum="16"
                                 Maximum="96"
-                                Value="{Binding Config.IconSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                Value="{Binding ActiveIconSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                 ValueChanged="NumericSettingChanged"/>
                         <TextBox Grid.Column="1"
                                  MinWidth="78"
                                  Margin="8,0,0,0"
                                  Style="{StaticResource SettingsTextBoxStyle}"
                                  HorizontalContentAlignment="Center"
-                                 Text="{Binding Config.IconSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=F0}"
+                                 Text="{Binding ActiveIconSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=F0}"
                                  PreviewTextInput="NumericTextBox_PreviewTextInput"
                                  LostFocus="NumericTextBox_LostFocus"
                                  DataObject.Pasting="NumericTextBox_Pasting"
@@ -513,45 +551,88 @@
                                            Style="{StaticResource SettingsLabelStyle}"
                                            Margin="0,0,0,6"/>
 
-                                <Border Width="64"
-                                        Height="110"
-                                        Margin="0,0,0,8"
-                                        CornerRadius="14"
-                                        Background="{Binding PreviewBrush}"
-                                        BorderBrush="#44FFFFFF"
-                                        BorderThickness="1"
-                                        Padding="6"
-                                        HorizontalAlignment="Center">
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="*"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
+                                <Grid Height="110" Margin="0,0,0,8">
+                                    <!-- Mini vista previa Vertical (Izquierda / Derecha) -->
+                                    <Border Width="64"
+                                            Height="110"
+                                            CornerRadius="14"
+                                            Background="{Binding PreviewBrush}"
+                                            BorderBrush="#44FFFFFF"
+                                            BorderThickness="1"
+                                            Padding="6"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsDockSideTop}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="*"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
 
-                                        <Border Width="24"
-                                                Height="24"
-                                                CornerRadius="6"
-                                                Background="#22FFFFFF"
-                                                HorizontalAlignment="Center">
-                                            <Viewbox Width="12" Height="12" VerticalAlignment="Center" HorizontalAlignment="Center">
-                                                <Grid Width="24" Height="24">
-                                                    <Border Width="6" Height="18" Background="{Binding TextBrush}" CornerRadius="3" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0"/>
-                                                    <Ellipse Width="4" Height="4" Fill="{Binding TextBrush}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,4,0"/>
-                                                    <Ellipse Width="4" Height="4" Fill="{Binding TextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                                                    <Ellipse Width="4" Height="4" Fill="{Binding TextBrush}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,4,4"/>
-                                                </Grid>
-                                            </Viewbox>
-                                        </Border>
+                                            <Border Width="24"
+                                                    Height="24"
+                                                    CornerRadius="6"
+                                                    Background="#22FFFFFF"
+                                                    HorizontalAlignment="Center">
+                                                <Viewbox Width="12" Height="12" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                    <Grid Width="24" Height="24">
+                                                        <Border Width="6" Height="18" Background="{Binding TextBrush}" CornerRadius="3" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0"/>
+                                                        <Ellipse Width="4" Height="4" Fill="{Binding TextBrush}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,4,0"/>
+                                                        <Ellipse Width="4" Height="4" Fill="{Binding TextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                        <Ellipse Width="4" Height="4" Fill="{Binding TextBrush}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,4,4"/>
+                                                    </Grid>
+                                                </Viewbox>
+                                            </Border>
 
-                                        <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,4,0,4">
-                                            <Border Width="22" Height="22" CornerRadius="6" Background="#20FFFFFF" BorderBrush="#2AFFFFFF" BorderThickness="1" HorizontalAlignment="Center"/>
-                                            <Border Width="22" Height="22" CornerRadius="6" Background="#16FFFFFF" BorderBrush="#24FFFFFF" BorderThickness="1" HorizontalAlignment="Center" Margin="0,4,0,0"/>
-                                        </StackPanel>
+                                            <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,4,0,4">
+                                                <Border Width="22" Height="22" CornerRadius="6" Background="#20FFFFFF" BorderBrush="#2AFFFFFF" BorderThickness="1" HorizontalAlignment="Center"/>
+                                                <Border Width="22" Height="22" CornerRadius="6" Background="#16FFFFFF" BorderBrush="#24FFFFFF" BorderThickness="1" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                            </StackPanel>
 
-                                        <TextBlock Grid.Row="2" Text="DockBar" Foreground="{Binding TextBrush}" FontWeight="SemiBold" FontSize="8.5" TextAlignment="Center"/>
-                                    </Grid>
-                                </Border>
+                                            <TextBlock Grid.Row="2" Text="DockBar" Foreground="{Binding TextBrush}" FontWeight="SemiBold" FontSize="8.5" TextAlignment="Center"/>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Mini vista previa Horizontal (Modo Superior) -->
+                                    <Border Width="140"
+                                            Height="54"
+                                            CornerRadius="12"
+                                            Background="{Binding PreviewBrush}"
+                                            BorderBrush="#44FFFFFF"
+                                            BorderThickness="1"
+                                            Padding="8,6"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Visibility="{Binding IsDockSideTop, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Border Width="20" Height="20" CornerRadius="5" Background="#22FFFFFF" BorderBrush="#2AFFFFFF" BorderThickness="1"/>
+                                                <Border Width="20" Height="20" CornerRadius="5" Background="#16FFFFFF" BorderBrush="#24FFFFFF" BorderThickness="1" Margin="4,0,0,0"/>
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" Text="DockBar" Foreground="{Binding TextBrush}" FontWeight="SemiBold" FontSize="8.5" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <StackPanel Grid.Column="2" Orientation="Vertical" VerticalAlignment="Center">
+                                                <Ellipse Width="4" Height="4" Fill="{Binding TextBrush}" Margin="0,1"/>
+                                                <Ellipse Width="4" Height="4" Fill="{Binding TextBrush}" Margin="0,1"/>
+                                                <Ellipse Width="4" Height="4" Fill="{Binding TextBrush}" Margin="0,1"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
 
                                 <TextBlock Text="{Binding HexLabelText}"
                                            Style="{StaticResource SettingsLabelStyle}"
@@ -598,11 +679,11 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
-                                    <TextBlock Grid.Row="0" Text="{local:Loc Key=Settings_DockWidth}" Style="{StaticResource SettingsMutedStyle}" FontSize="10.5"/>
-                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Config.DockWidth, StringFormat={}{0:F0}px}" Style="{StaticResource SettingsLabelStyle}" FontSize="10.5" Margin="4,0,0,0"/>
+                                    <TextBlock Grid.Row="0" Text="{Binding DockSizeLabel}" Style="{StaticResource SettingsMutedStyle}" FontSize="10.5"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ActiveDockSize, StringFormat={}{0:F0}px}" Style="{StaticResource SettingsLabelStyle}" FontSize="10.5" Margin="4,0,0,0"/>
 
                                     <TextBlock Grid.Row="1" Text="{local:Loc Key=Settings_IconSize}" Style="{StaticResource SettingsMutedStyle}" FontSize="10.5" Margin="0,2,0,0"/>
-                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Config.IconSize, StringFormat={}{0:F0}px}" Style="{StaticResource SettingsLabelStyle}" FontSize="10.5" Margin="4,2,0,0"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ActiveIconSize, StringFormat={}{0:F0}px}" Style="{StaticResource SettingsLabelStyle}" FontSize="10.5" Margin="4,2,0,0"/>
 
                                     <TextBlock Grid.Row="2" Text="{local:Loc Key=Settings_GlassEffect}" Style="{StaticResource SettingsMutedStyle}" FontSize="10.5" Margin="0,2,0,0"/>
                                     <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding GlassStatusText}" Style="{StaticResource SettingsLabelStyle}" FontSize="10.5" Margin="4,2,0,0"/>
@@ -1172,6 +1253,327 @@
 
             <!-- Columna Derecha: Vista previa de la DockBar (Mismo Módulo Reutilizable) -->
             <controls:DockPreviewControl x:Name="MediaPreviewControl" Grid.Column="2"/>
+        </Grid>
+
+        <!-- Vista AI: Monitor de Cuotas de IA (Antigravity, Gemini, Claude, ChatGPT) -->
+        <Grid Grid.Row="1"
+              Visibility="{Binding IsAiTabSelected, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="520"/>
+                <ColumnDefinition Width="22"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Columna Izquierda: Configuración de Proveedores IA -->
+            <ScrollViewer Grid.Column="0"
+                          Style="{StaticResource ModernScrollViewerStyle}"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Focusable="False"
+                          Padding="0,0,10,0">
+                <StackPanel>
+                    <!-- Tarjeta Principal: Monitor de Cuotas IA -->
+                    <Border Style="{StaticResource SettingsCardStyle}" Margin="0,0,0,12">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0"
+                                           Text="{local:Loc Key=Settings_AiBanner}"
+                                           Style="{StaticResource SettingsSectionTitleStyle}"
+                                           VerticalAlignment="Center"/>
+                                <Button Grid.Column="1"
+                                        Content="{local:Loc Key=Settings_AiRefreshNow}"
+                                        Style="{StaticResource SettingsSecondaryButtonStyle}"
+                                        Padding="10,4"
+                                        MinHeight="26"
+                                        FontSize="11"
+                                        Click="AiRefreshNow_Click"/>
+                            </Grid>
+                            <TextBlock Text="{local:Loc Key=Settings_AiHint}"
+                                       Style="{StaticResource SettingsSectionBodyStyle}"/>
+
+                            <CheckBox Content="{local:Loc Key=Settings_ShowAiQuota}"
+                                      Style="{StaticResource DialogCheckBoxStyle}"
+                                      IsChecked="{Binding Config.ShowAiQuota, Mode=TwoWay}"
+                                      Checked="AiOption_Changed"
+                                      Unchecked="AiOption_Changed"
+                                      Margin="0,4,0,2"
+                                      FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Proveedor 1: Antigravity IDE (Local) -->
+                    <Border Style="{StaticResource SettingsCardStyle}"
+                            Margin="0,0,0,12">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <CheckBox Grid.Column="0"
+                                          Tag="ProviderEnable"
+                                          Content="{local:Loc Key=Settings_AiAntigravityTitle}"
+                                          Style="{StaticResource DialogCheckBoxStyle}"
+                                          IsChecked="{Binding Config.Ai.Antigravity.Enabled, Mode=TwoWay}"
+                                          Checked="AiOption_Changed"
+                                          Unchecked="AiOption_Changed"
+                                          FontWeight="SemiBold"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding AiQuotaServiceInstance.AntigravityStatus}"
+                                           Style="{StaticResource SettingsMutedStyle}"
+                                           VerticalAlignment="Center"
+                                           FontSize="10.5"/>
+                            </Grid>
+                            <TextBlock Text="{local:Loc Key=Settings_AiAntigravityDesc}"
+                                       Style="{StaticResource SettingsSectionBodyStyle}"
+                                       Margin="24,2,0,8"/>
+
+                            <Border Style="{StaticResource SettingsInsetCardStyle}"
+                                    Padding="10,8"
+                                    Margin="24,0,0,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <CheckBox Content="{local:Loc Key=Settings_AiBar5Hr}"
+                                              Style="{StaticResource DialogCheckBoxStyle}"
+                                              IsChecked="{Binding Config.Ai.Antigravity.Show5Hr, Mode=TwoWay}"
+                                              Checked="AiOption_Changed"
+                                              Unchecked="AiOption_Changed"
+                                              Margin="0,0,18,0"/>
+                                    <CheckBox Content="{local:Loc Key=Settings_AiBarWeek}"
+                                              Style="{StaticResource DialogCheckBoxStyle}"
+                                              IsChecked="{Binding Config.Ai.Antigravity.ShowWeek, Mode=TwoWay}"
+                                              Checked="AiOption_Changed"
+                                              Unchecked="AiOption_Changed"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Proveedor 2: Google Gemini (CLI / Web / Antigravity) -->
+                    <Border Style="{StaticResource SettingsCardStyle}"
+                            Margin="0,0,0,12">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <CheckBox Grid.Column="0"
+                                          Tag="ProviderEnable"
+                                          Content="{local:Loc Key=Settings_AiGeminiTitle}"
+                                          Style="{StaticResource DialogCheckBoxStyle}"
+                                          IsChecked="{Binding Config.Ai.Gemini.Enabled, Mode=TwoWay}"
+                                          Checked="AiOption_Changed"
+                                          Unchecked="AiOption_Changed"
+                                          FontWeight="SemiBold"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding AiQuotaServiceInstance.GeminiStatus}"
+                                           Style="{StaticResource SettingsMutedStyle}"
+                                           VerticalAlignment="Center"
+                                           Margin="8,0,8,0"
+                                           FontSize="10.5"/>
+                                <Button Grid.Column="2"
+                                        Content="{local:Loc Key=Settings_AiOpenWeb}"
+                                        Tag="Gemini"
+                                        Style="{StaticResource SettingsSecondaryButtonStyle}"
+                                        Padding="8,3"
+                                        MinHeight="24"
+                                        FontSize="10.5"
+                                        Click="AiOpenWeb_Click"/>
+                            </Grid>
+                            <TextBlock Text="{local:Loc Key=Settings_AiGeminiDesc}"
+                                       Style="{StaticResource SettingsSectionBodyStyle}"
+                                       Margin="24,2,0,8"/>
+
+                            <Border Style="{StaticResource SettingsInsetCardStyle}"
+                                    Padding="10,8"
+                                    Margin="24,0,0,0">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <CheckBox Content="{local:Loc Key=Settings_AiBar5Hr}"
+                                                  Style="{StaticResource DialogCheckBoxStyle}"
+                                                  IsChecked="{Binding Config.Ai.Gemini.Show5Hr, Mode=TwoWay}"
+                                                  Checked="AiOption_Changed"
+                                                  Unchecked="AiOption_Changed"
+                                                  Margin="0,0,18,0"/>
+                                        <CheckBox Content="{local:Loc Key=Settings_AiBarWeek}"
+                                                  Style="{StaticResource DialogCheckBoxStyle}"
+                                                  IsChecked="{Binding Config.Ai.Gemini.ShowWeek, Mode=TwoWay}"
+                                                  Checked="AiOption_Changed"
+                                                  Unchecked="AiOption_Changed"/>
+                                    </StackPanel>
+                                    <CheckBox Content="{local:Loc Key=Settings_AiAutoDetect}"
+                                              Style="{StaticResource DialogCheckBoxStyle}"
+                                              IsChecked="{Binding Config.Ai.Gemini.UseAutoDetect, Mode=TwoWay}"
+                                              Checked="AiOption_Changed"
+                                              Unchecked="AiOption_Changed"
+                                              Margin="0,0,0,6"/>
+                                    <TextBlock Text="{local:Loc Key=Settings_AiWebTokenLabel}"
+                                               Style="{StaticResource SettingsMutedStyle}"
+                                               Margin="0,0,0,3"/>
+                                    <TextBox Tag="Gemini"
+                                             Style="{StaticResource SettingsTextBoxStyle}"
+                                             Text="{Binding Config.Ai.Gemini.WebToken, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             TextChanged="AiToken_TextChanged"
+                                             LostFocus="AiToken_LostFocus"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Proveedor 3: Anthropic Claude (Claude Code / claude.ai Web) -->
+                    <Border Style="{StaticResource SettingsCardStyle}"
+                            Margin="0,0,0,12">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <CheckBox Grid.Column="0"
+                                          Tag="ProviderEnable"
+                                          Content="{local:Loc Key=Settings_AiClaudeTitle}"
+                                          Style="{StaticResource DialogCheckBoxStyle}"
+                                          IsChecked="{Binding Config.Ai.Claude.Enabled, Mode=TwoWay}"
+                                          Checked="AiOption_Changed"
+                                          Unchecked="AiOption_Changed"
+                                          FontWeight="SemiBold"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding AiQuotaServiceInstance.ClaudeStatus}"
+                                           Style="{StaticResource SettingsMutedStyle}"
+                                           VerticalAlignment="Center"
+                                           Margin="8,0,8,0"
+                                           FontSize="10.5"/>
+                                <Button Grid.Column="2"
+                                        Content="{local:Loc Key=Settings_AiOpenWeb}"
+                                        Tag="Claude"
+                                        Style="{StaticResource SettingsSecondaryButtonStyle}"
+                                        Padding="8,3"
+                                        MinHeight="24"
+                                        FontSize="10.5"
+                                        Click="AiOpenWeb_Click"/>
+                            </Grid>
+                            <TextBlock Text="{local:Loc Key=Settings_AiClaudeDesc}"
+                                       Style="{StaticResource SettingsSectionBodyStyle}"
+                                       Margin="24,2,0,8"/>
+
+                            <Border Style="{StaticResource SettingsInsetCardStyle}"
+                                    Padding="10,8"
+                                    Margin="24,0,0,0">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <CheckBox Content="{local:Loc Key=Settings_AiBar5Hr}"
+                                                  Style="{StaticResource DialogCheckBoxStyle}"
+                                                  IsChecked="{Binding Config.Ai.Claude.Show5Hr, Mode=TwoWay}"
+                                                  Checked="AiOption_Changed"
+                                                  Unchecked="AiOption_Changed"
+                                                  Margin="0,0,18,0"/>
+                                        <CheckBox Content="{local:Loc Key=Settings_AiBarWeek}"
+                                                  Style="{StaticResource DialogCheckBoxStyle}"
+                                                  IsChecked="{Binding Config.Ai.Claude.ShowWeek, Mode=TwoWay}"
+                                                  Checked="AiOption_Changed"
+                                                  Unchecked="AiOption_Changed"/>
+                                    </StackPanel>
+                                    <CheckBox Content="{local:Loc Key=Settings_AiAutoDetect}"
+                                              Style="{StaticResource DialogCheckBoxStyle}"
+                                              IsChecked="{Binding Config.Ai.Claude.UseAutoDetect, Mode=TwoWay}"
+                                              Checked="AiOption_Changed"
+                                              Unchecked="AiOption_Changed"
+                                              Margin="0,0,0,6"/>
+                                    <TextBlock Text="{local:Loc Key=Settings_AiWebTokenLabel}"
+                                               Style="{StaticResource SettingsMutedStyle}"
+                                               Margin="0,0,0,3"/>
+                                    <TextBox Tag="Claude"
+                                             Style="{StaticResource SettingsTextBoxStyle}"
+                                             Text="{Binding Config.Ai.Claude.WebToken, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             TextChanged="AiToken_TextChanged"
+                                             LostFocus="AiToken_LostFocus"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Proveedor 4: OpenAI ChatGPT / Codex (CLI / chatgpt.com Web) -->
+                    <Border Style="{StaticResource SettingsCardStyle}">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <CheckBox Grid.Column="0"
+                                          Tag="ProviderEnable"
+                                          Content="{local:Loc Key=Settings_AiChatGptTitle}"
+                                          Style="{StaticResource DialogCheckBoxStyle}"
+                                          IsChecked="{Binding Config.Ai.ChatGpt.Enabled, Mode=TwoWay}"
+                                          Checked="AiOption_Changed"
+                                          Unchecked="AiOption_Changed"
+                                          FontWeight="SemiBold"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding AiQuotaServiceInstance.ChatGptStatus}"
+                                           Style="{StaticResource SettingsMutedStyle}"
+                                           VerticalAlignment="Center"
+                                           Margin="8,0,8,0"
+                                           FontSize="10.5"/>
+                                <Button Grid.Column="2"
+                                        Content="{local:Loc Key=Settings_AiOpenWeb}"
+                                        Tag="ChatGpt"
+                                        Style="{StaticResource SettingsSecondaryButtonStyle}"
+                                        Padding="8,3"
+                                        MinHeight="24"
+                                        FontSize="10.5"
+                                        Click="AiOpenWeb_Click"/>
+                            </Grid>
+                            <TextBlock Text="{local:Loc Key=Settings_AiChatGptDesc}"
+                                       Style="{StaticResource SettingsSectionBodyStyle}"
+                                       Margin="24,2,0,8"/>
+
+                            <Border Style="{StaticResource SettingsInsetCardStyle}"
+                                    Padding="10,8"
+                                    Margin="24,0,0,0">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <CheckBox Content="{local:Loc Key=Settings_AiBar5Hr}"
+                                                  Style="{StaticResource DialogCheckBoxStyle}"
+                                                  IsChecked="{Binding Config.Ai.ChatGpt.Show5Hr, Mode=TwoWay}"
+                                                  Checked="AiOption_Changed"
+                                                  Unchecked="AiOption_Changed"
+                                                  Margin="0,0,18,0"/>
+                                        <CheckBox Content="{local:Loc Key=Settings_AiBarWeek}"
+                                                  Style="{StaticResource DialogCheckBoxStyle}"
+                                                  IsChecked="{Binding Config.Ai.ChatGpt.ShowWeek, Mode=TwoWay}"
+                                                  Checked="AiOption_Changed"
+                                                  Unchecked="AiOption_Changed"/>
+                                    </StackPanel>
+                                    <CheckBox Content="{local:Loc Key=Settings_AiAutoDetect}"
+                                              Style="{StaticResource DialogCheckBoxStyle}"
+                                              IsChecked="{Binding Config.Ai.ChatGpt.UseAutoDetect, Mode=TwoWay}"
+                                              Checked="AiOption_Changed"
+                                              Unchecked="AiOption_Changed"
+                                              Margin="0,0,0,6"/>
+                                    <TextBlock Text="{local:Loc Key=Settings_AiWebTokenLabel}"
+                                               Style="{StaticResource SettingsMutedStyle}"
+                                               Margin="0,0,0,3"/>
+                                    <TextBox Tag="ChatGpt"
+                                             Style="{StaticResource SettingsTextBoxStyle}"
+                                             Text="{Binding Config.Ai.ChatGpt.WebToken, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             TextChanged="AiToken_TextChanged"
+                                             LostFocus="AiToken_LostFocus"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Columna Derecha: Vista previa de la DockBar -->
+            <controls:DockPreviewControl x:Name="AiPreviewControl" Grid.Column="2"/>
         </Grid>
 
         <!-- Vista 4: Funciones Experimentales -->

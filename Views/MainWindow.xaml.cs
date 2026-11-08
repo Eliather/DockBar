@@ -24,6 +24,8 @@ namespace DockBar;
 public partial class MainWindow : Window, INotifyPropertyChanged
 {
     private const double GlassOpacity = 0.45;
+    private const double MinTopDockHeight = 116.0;
+    private const double MinTopEditDockHeight = 136.0;
     private const int InitialRecoveryDelayMs = 600;
     private const int RetryRecoveryDelayMs = 900;
     private const int ResumeRecoveryPasses = 3;
@@ -60,6 +62,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly DispatcherTimer _systemRecoveryTimer;
     private readonly DispatcherTimer _clockTimer;
     private readonly DispatcherTimer _resourceTimer;
+    private readonly DispatcherTimer _aiQuotaTimer;
     private ulong _lastIdle;
     private ulong _lastKernel;
     private ulong _lastUser;
@@ -75,12 +78,22 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private DateTime _suppressConfigWatcherUntilUtc;
 
     public string ClockTimeString { get; private set; } = "";
+    public string ClockSubTimeString { get; private set; } = "";
     public string ClockDateString { get; private set; } = "";
     public string ClockFullDateTooltip { get; private set; } = "";
     public bool IsClockVisible => _config.ShowClock && !IsEditMode;
+    public bool IsClockSubTimeVisible => IsHorizontalDock && !string.IsNullOrEmpty(ClockSubTimeString);
     public bool IsClockDateVisible => _config.ShowClockDate;
     public double ClockFontSize => _config.ClockFontSize > 0 ? _config.ClockFontSize : 18;
+    public double ClockSubTimeFontSize => Math.Max(9, Math.Round(ClockFontSize * 0.62));
     public double ClockDateFontSize => Math.Max(9, Math.Round(ClockFontSize * 0.65));
+
+    public string PaginationPrevIconData => IsHorizontalDock
+        ? "M5,14.5L12,8.5L19,14.5"
+        : "M14.5,5L8.5,12L14.5,19";
+    public string PaginationNextIconData => IsHorizontalDock
+        ? "M5,9.5L12,15.5L19,9.5"
+        : "M9.5,5L15.5,12L9.5,19";
 
     // Widgets experimentales: Volumen, Multimedia, Monitor de Recursos y Caffeine
     public bool IsVolumeVisible => _config.ShowVolumeControl && !IsEditMode;
@@ -101,6 +114,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public string MediaDurationText => MediaService.Instance.DurationText;
     public bool CanSeekMedia => MediaService.Instance.CanSeek && MediaService.Instance.DurationSeconds > 0;
     public bool IsResourceMonitorVisible => _config.ShowResourceMonitor && !IsEditMode;
+    public bool IsAiQuotaVisible => _config.ShowAiQuota && AiQuotaService.Instance.Bars.Count > 0 && !IsEditMode;
+    public ObservableCollection<AiQuotaBarItem> AiQuotaBars => AiQuotaService.Instance.Bars;
+    public string AiQuotaTooltip => string.IsNullOrWhiteSpace(AiQuotaService.Instance.CombinedTooltip)
+        ? LocalizationService.Get("Dock_AiQuotaTooltipTitle")
+        : $"{LocalizationService.Get("Dock_AiQuotaTooltipTitle")}\n\n{AiQuotaService.Instance.CombinedTooltip}";
     public bool IsPowerVisible => _config.ShowPowerControl && !IsEditMode;
     public bool IsCaffeineVisible => _config.ShowCaffeine && !IsEditMode;
 
@@ -341,24 +359,50 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             if (_isEditMode != value)
             {
                 _isEditMode = value;
+                OnPropertyChanged();
+                RefreshModeUI();
+                OnPropertyChanged(nameof(PaginationVisibility));
                 if (_isEditMode)
                 {
                     StopHideTimer();
                     _isHidden = false;
                     _isAnimating = false;
                     BeginAnimation(Window.LeftProperty, null);
-                    _preEditWidth = _config.DockWidth <= 0 ? Width : _config.DockWidth;
-                    Width = Math.Max(350, _preEditWidth);
+                    BeginAnimation(Window.TopProperty, null);
+                    var currentThickness = _dockSide == DockSide.Top ? Height : Width;
+                    var configuredThickness = _config.ActiveDockSize;
+                    _preEditWidth = configuredThickness <= 0 ? currentThickness : configuredThickness;
+                    if (_dockSide == DockSide.Top)
+                    {
+                        Height = Math.Max(MinTopEditDockHeight, _preEditWidth);
+                    }
+                    else
+                    {
+                        Width = Math.Max(350, _preEditWidth);
+                    }
                     UpdateLayout();
                     AlignDock(true);
                     QueueDockRealign(true);
-                    Dispatcher.BeginInvoke(new Action(UpdateEditModeScrollBar), DispatcherPriority.Loaded);
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        EditListScroll?.UpdateLayout();
+                        UpdateEditModeScrollBar();
+                    }), DispatcherPriority.Loaded);
+                    Dispatcher.BeginInvoke(new Action(UpdateEditModeScrollBar), DispatcherPriority.ContextIdle);
                 }
                 else
                 {
                     _isAnimating = false;
                     BeginAnimation(Window.LeftProperty, null);
-                    Width = Math.Max(_config.DockWidth, 175);
+                    BeginAnimation(Window.TopProperty, null);
+                    if (_dockSide == DockSide.Top)
+                    {
+                        Height = Math.Max(_config.TopDockHeight, MinTopDockHeight);
+                    }
+                    else
+                    {
+                        Width = Math.Max(_config.DockWidth, 175);
+                    }
                     UpdateLayout();
                     AlignDock(!_isHidden);
                     QueueDockRealign(!_isHidden);
@@ -368,12 +412,29 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                         EditModeScrollBar.Visibility = Visibility.Collapsed;
                     }
                 }
-                OnPropertyChanged();
-                RefreshModeUI();
-                OnPropertyChanged(nameof(PaginationVisibility));
             }
         }
     }
+
+    public bool IsHorizontalDock => _dockSide == DockSide.Top;
+    public System.Windows.Controls.Orientation ItemsOrientation => IsHorizontalDock
+        ? System.Windows.Controls.Orientation.Horizontal
+        : System.Windows.Controls.Orientation.Vertical;
+    public System.Windows.Controls.Orientation ActionButtonsOrientation => IsHorizontalDock
+        ? System.Windows.Controls.Orientation.Vertical
+        : System.Windows.Controls.Orientation.Horizontal;
+    public double ActionButtonSize => IsHorizontalDock ? 24.0 : 32.0;
+    public double ActionButtonIconSize => IsHorizontalDock ? 13.5 : 16.0;
+    public Thickness ActionButtonSpacingMargin => IsHorizontalDock
+        ? new Thickness(0, 4, 0, 0)
+        : new Thickness(8, 0, 0, 0);
+    public Thickness EditItemFirstButtonMargin => new Thickness(4, 0, 0, 0);
+    public Thickness EditItemButtonMargin => IsHorizontalDock
+        ? new Thickness(4, 3, 0, 0)
+        : new Thickness(4, 0, 0, 0);
+    public Thickness MediaPlayButtonMargin => IsHorizontalDock
+        ? new Thickness(0, 4, 0, 4)
+        : new Thickness(6, 0, 6, 0);
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -391,6 +452,20 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         _resourceTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
         _resourceTimer.Tick += (_, _) => UpdateResourceDisplay();
+        _aiQuotaTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(60) };
+        _aiQuotaTimer.Tick += async (_, _) => await RefreshAiQuotasAsync();
+        AiQuotaService.Instance.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(AiQuotaService.CombinedTooltip))
+            {
+                OnPropertyChanged(nameof(AiQuotaTooltip));
+            }
+        };
+        AiQuotaService.Instance.Bars.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(IsAiQuotaVisible));
+            QueueItemsPerPageRefresh();
+        };
         GpuService.Instance.Initialize();
         UpdateHardwareLabels();
         Closed += (_, _) =>
@@ -531,14 +606,23 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void ApplyVisualConfig()
     {
         ThemeService.Apply(_config);
-        IconSize = _config.IconSize;
-        Width = Math.Max(_config.DockWidth, 175);
+        IconSize = _config.ActiveIconSize;
+        if (_dockSide == DockSide.Top)
+        {
+            Height = IsEditMode ? Math.Max(MinTopEditDockHeight, _config.TopDockHeight) : Math.Max(_config.TopDockHeight, MinTopDockHeight);
+        }
+        else
+        {
+            Width = IsEditMode ? Math.Max(350, _config.DockWidth) : Math.Max(_config.DockWidth, 175);
+        }
+        ApplyDockLayoutOrientation();
         UpdateBackgroundBrush();
         UpdateTextBrush();
         UpdateHideTimerInterval();
         UpdateWidgetsOrder();
         UpdateClockState();
         UpdateResourceMonitorState();
+        UpdateAiQuotaState();
         UpdateItemsPerPage();
         if (_config.AlwaysShow && _isHidden)
         {
@@ -564,11 +648,421 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         UpdateMediaTimelineUI();
         OnPropertyChanged(nameof(IsClockVisible));
         OnPropertyChanged(nameof(IsResourceMonitorVisible));
+        OnPropertyChanged(nameof(IsAiQuotaVisible));
         OnPropertyChanged(nameof(IsPowerVisible));
         OnPropertyChanged(nameof(IsCaffeineVisible));
         OnPropertyChanged(nameof(ButtonPaginationVisibility));
         OnPropertyChanged(nameof(SliderPaginationVisibility));
         MediaService.Instance.SetPollingEnabled(_config.ShowMediaControl);
+    }
+
+    private void ApplyDockLayoutOrientation()
+    {
+        OnPropertyChanged(nameof(IsHorizontalDock));
+        OnPropertyChanged(nameof(ItemsOrientation));
+        OnPropertyChanged(nameof(ActionButtonsOrientation));
+        OnPropertyChanged(nameof(ActionButtonSize));
+        OnPropertyChanged(nameof(ActionButtonIconSize));
+        OnPropertyChanged(nameof(ActionButtonSpacingMargin));
+        OnPropertyChanged(nameof(EditItemFirstButtonMargin));
+        OnPropertyChanged(nameof(EditItemButtonMargin));
+        OnPropertyChanged(nameof(MediaPlayButtonMargin));
+        OnPropertyChanged(nameof(PaginationPrevIconData));
+        OnPropertyChanged(nameof(PaginationNextIconData));
+        OnPropertyChanged(nameof(PageInfo));
+        UpdateClockDisplay();
+
+        if (DockLayoutRoot == null)
+        {
+            return;
+        }
+
+        if (IsHorizontalDock)
+        {
+            const double topModuleHeight = 108.0;
+            if (RootDockBorder != null)
+            {
+                RootDockBorder.Padding = new Thickness(10, 4, 10, 4);
+            }
+
+            DockLayoutRoot.RowDefinitions.Clear();
+            DockLayoutRoot.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+
+            DockLayoutRoot.ColumnDefinitions.Clear();
+            DockLayoutRoot.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            DockLayoutRoot.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = GridLength.Auto });
+            DockLayoutRoot.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = GridLength.Auto });
+
+            if (NormalList != null)
+            {
+                System.Windows.Controls.Grid.SetRow(NormalList, 0);
+                System.Windows.Controls.Grid.SetColumn(NormalList, 0);
+                NormalList.HorizontalAlignment = System.Windows.HorizontalAlignment.Left;
+                NormalList.VerticalAlignment = System.Windows.VerticalAlignment.Center;
+                NormalList.Margin = new Thickness(0, 0, 8, 0);
+            }
+
+            if (EditModeGrid != null)
+            {
+                System.Windows.Controls.Grid.SetRow(EditModeGrid, 0);
+                System.Windows.Controls.Grid.SetColumn(EditModeGrid, 0);
+                EditModeGrid.Margin = new Thickness(0, 0, 8, 0);
+                EditModeGrid.VerticalAlignment = System.Windows.VerticalAlignment.Center;
+            }
+
+            if (EditListScroll != null)
+            {
+                EditListScroll.VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Disabled;
+                EditListScroll.HorizontalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Hidden;
+            }
+
+            if (EditModeScrollBar != null)
+            {
+                System.Windows.Controls.Grid.SetRow(EditModeScrollBar, 1);
+                System.Windows.Controls.Grid.SetColumn(EditModeScrollBar, 0);
+                EditModeScrollBar.Orientation = System.Windows.Controls.Orientation.Horizontal;
+                EditModeScrollBar.IsDirectionReversed = false;
+                EditModeScrollBar.Width = double.NaN;
+                EditModeScrollBar.Height = 14;
+                EditModeScrollBar.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
+                EditModeScrollBar.VerticalAlignment = System.Windows.VerticalAlignment.Center;
+                EditModeScrollBar.Margin = new Thickness(4, 4, 4, 0);
+            }
+
+            if (ExperimentalWidgetsPanel != null)
+            {
+                System.Windows.Controls.Grid.SetRow(ExperimentalWidgetsPanel, 0);
+                System.Windows.Controls.Grid.SetColumn(ExperimentalWidgetsPanel, 1);
+                ExperimentalWidgetsPanel.Orientation = System.Windows.Controls.Orientation.Horizontal;
+                ExperimentalWidgetsPanel.VerticalAlignment = System.Windows.VerticalAlignment.Center;
+                ExperimentalWidgetsPanel.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
+            }
+
+            if (ClockPanel != null)
+            {
+                ClockPanel.Height = topModuleHeight;
+                ClockPanel.Padding = new Thickness(10, 6, 10, 6);
+                ClockPanel.VerticalAlignment = System.Windows.VerticalAlignment.Center;
+                ClockPanel.Margin = new Thickness(4, 0, 4, 0);
+            }
+            if (MediaPanel != null)
+            {
+                MediaPanel.Height = topModuleHeight;
+                MediaPanel.Padding = new Thickness(8, 6, 8, 6);
+                MediaPanel.VerticalAlignment = System.Windows.VerticalAlignment.Center;
+                MediaPanel.Width = double.NaN;
+                MediaPanel.Margin = new Thickness(4, 0, 4, 0);
+            }
+            if (MediaRootStack != null)
+            {
+                MediaRootStack.Orientation = System.Windows.Controls.Orientation.Horizontal;
+            }
+            if (MediaInfoStack != null)
+            {
+                MediaInfoStack.Width = 155;
+            }
+            if (MediaControlsStack != null)
+            {
+                MediaControlsStack.Margin = new Thickness(6, 0, 0, 0);
+            }
+            if (MediaThumbnailBorder != null)
+            {
+                MediaThumbnailBorder.MaxHeight = 48;
+            }
+            if (VolumePanel != null)
+            {
+                VolumePanel.Height = topModuleHeight;
+                VolumePanel.Padding = new Thickness(6, 6, 6, 6);
+                VolumePanel.VerticalAlignment = System.Windows.VerticalAlignment.Center;
+                VolumePanel.Width = double.NaN;
+                VolumePanel.Margin = new Thickness(4, 0, 4, 0);
+            }
+            if (VolumeLayoutGrid != null)
+            {
+                VolumeLayoutGrid.ColumnDefinitions.Clear();
+                VolumeLayoutGrid.RowDefinitions.Clear();
+                VolumeLayoutGrid.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = GridLength.Auto });
+                VolumeLayoutGrid.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+                VolumeLayoutGrid.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = GridLength.Auto });
+            }
+            if (VolumePercentLabel != null)
+            {
+                System.Windows.Controls.Grid.SetRow(VolumePercentLabel, 0);
+                System.Windows.Controls.Grid.SetColumn(VolumePercentLabel, 0);
+                VolumePercentLabel.FontSize = 9.5;
+                VolumePercentLabel.TextAlignment = System.Windows.TextAlignment.Center;
+                VolumePercentLabel.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
+            }
+            if (VolumeSlider != null)
+            {
+                System.Windows.Controls.Grid.SetRow(VolumeSlider, 1);
+                System.Windows.Controls.Grid.SetColumn(VolumeSlider, 0);
+                VolumeSlider.Orientation = System.Windows.Controls.Orientation.Vertical;
+                VolumeSlider.Height = 50;
+                VolumeSlider.Width = 24;
+                VolumeSlider.Margin = new Thickness(0, 4, 0, 4);
+                VolumeSlider.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
+            }
+            if (VolumeMuteButton != null)
+            {
+                System.Windows.Controls.Grid.SetRow(VolumeMuteButton, 2);
+                System.Windows.Controls.Grid.SetColumn(VolumeMuteButton, 0);
+                VolumeMuteButton.Width = 22;
+                VolumeMuteButton.Height = 22;
+                VolumeMuteButton.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
+            }
+            if (ResourcePanel != null)
+            {
+                ResourcePanel.Height = topModuleHeight;
+                ResourcePanel.Padding = new Thickness(8, 6, 8, 6);
+                ResourcePanel.VerticalAlignment = System.Windows.VerticalAlignment.Center;
+                ResourcePanel.Width = 155;
+                ResourcePanel.Margin = new Thickness(4, 0, 4, 0);
+            }
+            if (AiQuotaPanel != null)
+            {
+                AiQuotaPanel.Height = topModuleHeight;
+                AiQuotaPanel.VerticalAlignment = System.Windows.VerticalAlignment.Center;
+                AiQuotaPanel.Width = double.NaN;
+                AiQuotaPanel.Padding = new Thickness(6, 6, 6, 6);
+                AiQuotaPanel.Margin = new Thickness(4, 0, 4, 0);
+            }
+            if (PowerPanel != null)
+            {
+                PowerPanel.Height = topModuleHeight;
+                PowerPanel.VerticalAlignment = System.Windows.VerticalAlignment.Center;
+                PowerPanel.Margin = new Thickness(4, 0, 4, 0);
+            }
+            if (CaffeinePanel != null)
+            {
+                CaffeinePanel.Height = topModuleHeight;
+                CaffeinePanel.Padding = new Thickness(8, 6, 8, 6);
+                CaffeinePanel.VerticalAlignment = System.Windows.VerticalAlignment.Center;
+                CaffeinePanel.Margin = new Thickness(4, 0, 4, 0);
+            }
+            if (CaffeineIconViewbox != null)
+            {
+                CaffeineIconViewbox.Margin = new Thickness(0, 0, 0, 3);
+            }
+            if (DockPaginationGrid != null)
+            {
+                DockPaginationGrid.Height = topModuleHeight;
+                DockPaginationGrid.VerticalAlignment = System.Windows.VerticalAlignment.Center;
+                DockPaginationGrid.Margin = new Thickness(4, 0, 4, 0);
+            }
+            if (PaginationLabel != null)
+            {
+                PaginationLabel.Margin = new Thickness(0, 4, 0, 4);
+            }
+            if (PaginationSliderPanel != null)
+            {
+                PaginationSliderPanel.Width = double.NaN;
+                PaginationSliderPanel.Margin = new Thickness(4, 0, 4, 0);
+            }
+            if (PageSlider != null)
+            {
+                PageSlider.Orientation = System.Windows.Controls.Orientation.Vertical;
+                PageSlider.IsDirectionReversed = false;
+                PageSlider.Height = 58;
+                PageSlider.Width = 18;
+                PageSlider.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
+            }
+
+            if (ActionButtonsPanel != null)
+            {
+                ActionButtonsPanel.Height = topModuleHeight;
+                System.Windows.Controls.Grid.SetRow(ActionButtonsPanel, 0);
+                System.Windows.Controls.Grid.SetColumn(ActionButtonsPanel, 2);
+                ActionButtonsPanel.Margin = new Thickness(8, 0, 2, 0);
+            }
+        }
+        else
+        {
+            if (RootDockBorder != null)
+            {
+                RootDockBorder.Padding = new Thickness(10);
+            }
+            DockLayoutRoot.ColumnDefinitions.Clear();
+            DockLayoutRoot.RowDefinitions.Clear();
+            DockLayoutRoot.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            DockLayoutRoot.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = GridLength.Auto });
+            DockLayoutRoot.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = GridLength.Auto });
+
+            if (NormalList != null)
+            {
+                System.Windows.Controls.Grid.SetRow(NormalList, 0);
+                System.Windows.Controls.Grid.SetColumn(NormalList, 0);
+                NormalList.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
+                NormalList.VerticalAlignment = System.Windows.VerticalAlignment.Top;
+                NormalList.Margin = new Thickness(0);
+            }
+
+            if (EditModeGrid != null)
+            {
+                System.Windows.Controls.Grid.SetRow(EditModeGrid, 0);
+                System.Windows.Controls.Grid.SetColumn(EditModeGrid, 0);
+                EditModeGrid.Margin = new Thickness(0);
+                EditModeGrid.VerticalAlignment = System.Windows.VerticalAlignment.Stretch;
+            }
+
+            if (EditListScroll != null)
+            {
+                EditListScroll.VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Hidden;
+                EditListScroll.HorizontalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Disabled;
+            }
+
+            if (EditModeScrollBar != null)
+            {
+                System.Windows.Controls.Grid.SetRow(EditModeScrollBar, 0);
+                System.Windows.Controls.Grid.SetColumn(EditModeScrollBar, 1);
+                EditModeScrollBar.Orientation = System.Windows.Controls.Orientation.Vertical;
+                EditModeScrollBar.IsDirectionReversed = true;
+                EditModeScrollBar.Width = 16;
+                EditModeScrollBar.Height = double.NaN;
+                EditModeScrollBar.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
+                EditModeScrollBar.VerticalAlignment = System.Windows.VerticalAlignment.Stretch;
+                EditModeScrollBar.Margin = new Thickness(10, 0, 0, 0);
+            }
+
+            if (ExperimentalWidgetsPanel != null)
+            {
+                System.Windows.Controls.Grid.SetRow(ExperimentalWidgetsPanel, 1);
+                System.Windows.Controls.Grid.SetColumn(ExperimentalWidgetsPanel, 0);
+                ExperimentalWidgetsPanel.Orientation = System.Windows.Controls.Orientation.Vertical;
+                ExperimentalWidgetsPanel.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
+                ExperimentalWidgetsPanel.VerticalAlignment = System.Windows.VerticalAlignment.Bottom;
+            }
+
+            if (ClockPanel != null)
+            {
+                ClockPanel.Height = double.NaN;
+                ClockPanel.Padding = new Thickness(10, 4, 10, 4);
+                ClockPanel.Margin = new Thickness(0, 2, 0, 2);
+            }
+            if (MediaPanel != null)
+            {
+                MediaPanel.Height = double.NaN;
+                MediaPanel.Padding = new Thickness(6, 5, 6, 5);
+                MediaPanel.Width = double.NaN;
+                MediaPanel.Margin = new Thickness(2, 2, 2, 3);
+            }
+            if (MediaRootStack != null)
+            {
+                MediaRootStack.Orientation = System.Windows.Controls.Orientation.Vertical;
+            }
+            if (MediaInfoStack != null)
+            {
+                MediaInfoStack.Width = double.NaN;
+            }
+            if (MediaControlsStack != null)
+            {
+                MediaControlsStack.Margin = new Thickness(0);
+            }
+            if (MediaThumbnailBorder != null)
+            {
+                MediaThumbnailBorder.MaxHeight = double.PositiveInfinity;
+            }
+            if (VolumePanel != null)
+            {
+                VolumePanel.Height = double.NaN;
+                VolumePanel.Padding = new Thickness(6, 4, 6, 4);
+                VolumePanel.Width = double.NaN;
+                VolumePanel.Margin = new Thickness(2, 2, 2, 3);
+            }
+            if (VolumeLayoutGrid != null)
+            {
+                VolumeLayoutGrid.RowDefinitions.Clear();
+                VolumeLayoutGrid.ColumnDefinitions.Clear();
+                VolumeLayoutGrid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = GridLength.Auto });
+                VolumeLayoutGrid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                VolumeLayoutGrid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = GridLength.Auto });
+            }
+            if (VolumeMuteButton != null)
+            {
+                System.Windows.Controls.Grid.SetRow(VolumeMuteButton, 0);
+                System.Windows.Controls.Grid.SetColumn(VolumeMuteButton, 0);
+                VolumeMuteButton.Width = 24;
+                VolumeMuteButton.Height = 24;
+                VolumeMuteButton.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
+            }
+            if (VolumeSlider != null)
+            {
+                System.Windows.Controls.Grid.SetRow(VolumeSlider, 0);
+                System.Windows.Controls.Grid.SetColumn(VolumeSlider, 1);
+                VolumeSlider.Orientation = System.Windows.Controls.Orientation.Horizontal;
+                VolumeSlider.Height = 26;
+                VolumeSlider.Width = double.NaN;
+                VolumeSlider.Margin = new Thickness(4, 0, 4, 0);
+                VolumeSlider.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
+            }
+            if (VolumePercentLabel != null)
+            {
+                System.Windows.Controls.Grid.SetRow(VolumePercentLabel, 0);
+                System.Windows.Controls.Grid.SetColumn(VolumePercentLabel, 2);
+                VolumePercentLabel.FontSize = 10;
+                VolumePercentLabel.TextAlignment = System.Windows.TextAlignment.Right;
+                VolumePercentLabel.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
+            }
+            if (ResourcePanel != null)
+            {
+                ResourcePanel.Height = double.NaN;
+                ResourcePanel.Padding = new Thickness(8, 5, 8, 5);
+                ResourcePanel.Width = double.NaN;
+                ResourcePanel.Margin = new Thickness(2, 2, 2, 3);
+            }
+            if (AiQuotaPanel != null)
+            {
+                AiQuotaPanel.Height = double.NaN;
+                AiQuotaPanel.Width = double.NaN;
+                AiQuotaPanel.Padding = new Thickness(8, 5, 8, 5);
+                AiQuotaPanel.Margin = new Thickness(2, 2, 2, 3);
+            }
+            if (PowerPanel != null)
+            {
+                PowerPanel.Height = double.NaN;
+                PowerPanel.Margin = new Thickness(0, 3, 0, 3);
+            }
+            if (CaffeinePanel != null)
+            {
+                CaffeinePanel.Height = double.NaN;
+                CaffeinePanel.Padding = new Thickness(8, 4, 8, 4);
+                CaffeinePanel.Margin = new Thickness(0, 2, 0, 2);
+            }
+            if (CaffeineIconViewbox != null)
+            {
+                CaffeineIconViewbox.Margin = new Thickness(0, 0, 5, 0);
+            }
+            if (DockPaginationGrid != null)
+            {
+                DockPaginationGrid.Height = double.NaN;
+                DockPaginationGrid.Margin = new Thickness(0, 4, 0, 4);
+            }
+            if (PaginationLabel != null)
+            {
+                PaginationLabel.Margin = new Thickness(8, 0, 8, 0);
+            }
+            if (PaginationSliderPanel != null)
+            {
+                PaginationSliderPanel.Width = double.NaN;
+                PaginationSliderPanel.Margin = new Thickness(8, 0, 8, 0);
+            }
+            if (PageSlider != null)
+            {
+                PageSlider.Orientation = System.Windows.Controls.Orientation.Horizontal;
+                PageSlider.IsDirectionReversed = false;
+                PageSlider.Height = 14;
+                PageSlider.Width = double.NaN;
+                PageSlider.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
+            }
+
+            if (ActionButtonsPanel != null)
+            {
+                ActionButtonsPanel.Height = double.NaN;
+                System.Windows.Controls.Grid.SetRow(ActionButtonsPanel, 2);
+                System.Windows.Controls.Grid.SetColumn(ActionButtonsPanel, 0);
+                ActionButtonsPanel.Margin = new Thickness(0, 10, 0, 10);
+            }
+        }
     }
 
     private void UpdateWidgetsOrder()
@@ -578,7 +1072,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
-        var order = _config.Experimental?.WidgetOrder ?? new List<string> { "Clock", "Media", "Volume", "Resource", "Power", "Caffeine", "Pagination" };
+        var order = _config.Experimental?.WidgetOrder ?? new List<string> { "Clock", "Media", "Volume", "Resource", "AiQuota", "Power", "Caffeine", "Pagination" };
         var panelMap = new Dictionary<string, UIElement>(StringComparer.OrdinalIgnoreCase)
         {
             ["Clock"] = ClockPanel,
@@ -586,6 +1080,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             ["Volume"] = VolumePanel
         };
         if (ResourcePanel != null) panelMap["Resource"] = ResourcePanel;
+        if (AiQuotaPanel != null) panelMap["AiQuota"] = AiQuotaPanel;
         if (PowerPanel != null) panelMap["Power"] = PowerPanel;
         if (CaffeinePanel != null) panelMap["Caffeine"] = CaffeinePanel;
         if (DockPaginationGrid != null) panelMap["Pagination"] = DockPaginationGrid;
@@ -605,6 +1100,45 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 ExperimentalWidgetsPanel.Children.Add(kvp.Value);
             }
         }
+    }
+
+    private void UpdateAiQuotaState()
+    {
+        AiQuotaService.Instance.SyncStructure(_config.Ai);
+        if (_config.ShowAiQuota && AiQuotaService.Instance.Bars.Count > 0 && !_isHidden && !_fullscreenActive)
+        {
+            var intervalSec = Math.Clamp(_config.Ai?.RefreshIntervalSeconds ?? 60, 15, 600);
+            _aiQuotaTimer.Interval = TimeSpan.FromSeconds(intervalSec);
+            if (!_aiQuotaTimer.IsEnabled)
+            {
+                _aiQuotaTimer.Start();
+            }
+            _ = RefreshAiQuotasAsync();
+        }
+        else
+        {
+            if (_aiQuotaTimer.IsEnabled)
+            {
+                _aiQuotaTimer.Stop();
+            }
+        }
+        OnPropertyChanged(nameof(IsAiQuotaVisible));
+        OnPropertyChanged(nameof(AiQuotaTooltip));
+        QueueItemsPerPageRefresh();
+    }
+
+    private async Task RefreshAiQuotasAsync()
+    {
+        if (!_config.ShowAiQuota) return;
+        await AiQuotaService.Instance.RefreshAllAsync(_config.Ai);
+        OnPropertyChanged(nameof(IsAiQuotaVisible));
+        OnPropertyChanged(nameof(AiQuotaTooltip));
+        QueueItemsPerPageRefresh();
+    }
+
+    private void AiQuotaPanel_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        _ = RefreshAiQuotasAsync();
     }
 
     private void UpdateResourceMonitorState()
@@ -917,14 +1451,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             }
         }
         OnPropertyChanged(nameof(IsClockVisible));
+        OnPropertyChanged(nameof(IsClockSubTimeVisible));
         OnPropertyChanged(nameof(IsClockDateVisible));
         OnPropertyChanged(nameof(ClockFontSize));
+        OnPropertyChanged(nameof(ClockSubTimeFontSize));
         OnPropertyChanged(nameof(ClockDateFontSize));
     }
 
     private void PauseBackgroundMonitors()
     {
         if (_resourceTimer.IsEnabled) _resourceTimer.Stop();
+        if (_aiQuotaTimer.IsEnabled) _aiQuotaTimer.Stop();
         if (_clockTimer.IsEnabled) _clockTimer.Stop();
     }
 
@@ -933,20 +1470,48 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (_isHidden || _fullscreenActive) return;
         UpdateClockState();
         UpdateResourceMonitorState();
+        UpdateAiQuotaState();
     }
 
     private void UpdateClockDisplay()
     {
         var now = DateTime.Now;
-        var timeFormat = _config.ClockFormat24H ? "HH:mm" : "hh:mm tt";
-        if (_config.ShowClockSeconds)
+        if (IsHorizontalDock)
         {
-            timeFormat = _config.ClockFormat24H ? "HH:mm:ss" : "hh:mm:ss tt";
+            ClockTimeString = now.ToString(_config.ClockFormat24H ? "HH:mm" : "hh:mm");
+            if (_config.ShowClockSeconds && !_config.ClockFormat24H)
+            {
+                ClockSubTimeString = now.ToString(":ss tt");
+            }
+            else if (_config.ShowClockSeconds)
+            {
+                ClockSubTimeString = now.ToString(":ss");
+            }
+            else if (!_config.ClockFormat24H)
+            {
+                ClockSubTimeString = now.ToString("tt");
+            }
+            else
+            {
+                ClockSubTimeString = string.Empty;
+            }
+            ClockDateString = now.ToString("ddd\nd MMM");
         }
-        ClockTimeString = now.ToString(timeFormat);
-        ClockDateString = now.ToString("ddd, d MMM");
+        else
+        {
+            var timeFormat = _config.ClockFormat24H ? "HH:mm" : "hh:mm tt";
+            if (_config.ShowClockSeconds)
+            {
+                timeFormat = _config.ClockFormat24H ? "HH:mm:ss" : "hh:mm:ss tt";
+            }
+            ClockTimeString = now.ToString(timeFormat);
+            ClockSubTimeString = string.Empty;
+            ClockDateString = now.ToString("ddd, d MMM");
+        }
         ClockFullDateTooltip = now.ToLongDateString();
         OnPropertyChanged(nameof(ClockTimeString));
+        OnPropertyChanged(nameof(ClockSubTimeString));
+        OnPropertyChanged(nameof(IsClockSubTimeVisible));
         OnPropertyChanged(nameof(ClockDateString));
         OnPropertyChanged(nameof(ClockFullDateTooltip));
     }
@@ -973,6 +1538,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (_dockSide == DockSide.Left)
         {
             DockBorderThickness = new Thickness(0, 0, 1, 0);
+        }
+        else if (_dockSide == DockSide.Top)
+        {
+            DockBorderThickness = new Thickness(0, 0, 0, 1);
         }
         else
         {
@@ -1262,13 +1831,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
-        if (e.WidthChanged)
+        if (e.WidthChanged || e.HeightChanged)
         {
             QueueDockRealign(!_isHidden);
-        }
-
-        if (e.HeightChanged || e.WidthChanged)
-        {
             UpdateItemsPerPage();
             UpdateVisibleItems();
             QueueItemsPerPageRefresh();
@@ -1277,6 +1842,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 Dispatcher.BeginInvoke(new Action(UpdateEditModeScrollBar), DispatcherPriority.Loaded);
             }
         }
+    }
+
+    private void EditListScroll_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (!IsEditMode || !IsHorizontalDock || EditListScroll == null || EditListScroll.ScrollableWidth <= 0)
+        {
+            return;
+        }
+
+        var targetOffset = Math.Clamp(EditListScroll.HorizontalOffset - (e.Delta * 0.65), 0, EditListScroll.ScrollableWidth);
+        EditListScroll.ScrollToHorizontalOffset(targetOffset);
+        UpdateEditModeScrollBar();
+        e.Handled = true;
     }
 
     private void EditListScroll_ScrollChanged(object sender, System.Windows.Controls.ScrollChangedEventArgs e)
@@ -1291,7 +1869,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
-        EditListScroll.ScrollToVerticalOffset(e.NewValue);
+        if (IsHorizontalDock)
+        {
+            EditListScroll.ScrollToHorizontalOffset(e.NewValue);
+        }
+        else
+        {
+            EditListScroll.ScrollToVerticalOffset(e.NewValue);
+        }
     }
 
     private void UpdateEditModeScrollBar()
@@ -1301,14 +1886,28 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
-        var canScroll = IsEditMode && EditListScroll.ScrollableHeight > 1;
-        _syncingEditModeScroll = true;
-        EditModeScrollBar.Minimum = 0;
-        EditModeScrollBar.Maximum = Math.Max(0, EditListScroll.ScrollableHeight);
-        EditModeScrollBar.Value = Math.Min(EditListScroll.VerticalOffset, EditModeScrollBar.Maximum);
-        EditModeScrollBar.IsEnabled = canScroll;
-        EditModeScrollBar.Visibility = canScroll ? Visibility.Visible : Visibility.Collapsed;
-        _syncingEditModeScroll = false;
+        if (IsHorizontalDock)
+        {
+            var canScroll = IsEditMode && EditListScroll.ScrollableWidth > 1;
+            _syncingEditModeScroll = true;
+            EditModeScrollBar.Minimum = 0;
+            EditModeScrollBar.Maximum = Math.Max(0, EditListScroll.ScrollableWidth);
+            EditModeScrollBar.Value = Math.Min(EditListScroll.HorizontalOffset, EditModeScrollBar.Maximum);
+            EditModeScrollBar.IsEnabled = canScroll;
+            EditModeScrollBar.Visibility = canScroll ? Visibility.Visible : Visibility.Collapsed;
+            _syncingEditModeScroll = false;
+        }
+        else
+        {
+            var canScroll = IsEditMode && EditListScroll.ScrollableHeight > 1;
+            _syncingEditModeScroll = true;
+            EditModeScrollBar.Minimum = 0;
+            EditModeScrollBar.Maximum = Math.Max(0, EditListScroll.ScrollableHeight);
+            EditModeScrollBar.Value = Math.Min(EditListScroll.VerticalOffset, EditModeScrollBar.Maximum);
+            EditModeScrollBar.IsEnabled = canScroll;
+            EditModeScrollBar.Visibility = canScroll ? Visibility.Visible : Visibility.Collapsed;
+            _syncingEditModeScroll = false;
+        }
     }
 
     private void Window_Activated(object? sender, EventArgs e)
@@ -1572,12 +2171,49 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void AlignDock(bool showState)
     {
         var area = GetMonitorBounds();
-        Top = area.Top;
-        Height = area.Height;
-        var targetLeft = showState ? GetShownLeft(area) : GetHiddenLeft(area);
         BeginAnimation(Window.LeftProperty, null);
-        Left = targetLeft;
+        BeginAnimation(Window.TopProperty, null);
+
+        if (_dockSide == DockSide.Top)
+        {
+            var dockHeight = IsEditMode ? Math.Max(MinTopEditDockHeight, _preEditWidth) : Math.Max(_config.TopDockHeight, MinTopDockHeight);
+            Left = area.Left;
+            Width = area.Width;
+            Height = dockHeight;
+            var targetTop = showState ? GetShownTop(area) : GetHiddenTop(area);
+            Top = targetTop;
+        }
+        else
+        {
+            var dockWidth = IsEditMode ? Math.Max(350, _preEditWidth) : Math.Max(_config.DockWidth, 175);
+            Top = area.Top;
+            Height = area.Height;
+            Width = dockWidth;
+            var targetLeft = showState ? GetShownLeft(area) : GetHiddenLeft(area);
+            Left = targetLeft;
+        }
         UpdateEdgeHotspotState();
+    }
+
+    private double GetShownTop(Rect area)
+    {
+        return area.Top;
+    }
+
+    private double GetHiddenTop(Rect area)
+    {
+        var dockHeight = GetDockHeightForPositioning();
+        return area.Top - (dockHeight - EdgeRevealPx);
+    }
+
+    private double GetDockHeightForPositioning()
+    {
+        var configured = IsEditMode ? Math.Max(MinTopEditDockHeight, _preEditWidth) : Math.Max(_config.TopDockHeight, MinTopDockHeight);
+        if (!double.IsNaN(Height) && Height > 0 && Math.Abs(Height - GetMonitorBounds().Height) > 10)
+        {
+            return Height;
+        }
+        return configured;
     }
 
     private double GetShownLeft(Rect area)
@@ -1598,11 +2234,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private double GetDockWidthForPositioning()
     {
-        if (!double.IsNaN(Width) && Width > 0)
+        var configured = IsEditMode ? Math.Max(350, _preEditWidth) : Math.Max(_config.DockWidth, 175);
+        if (!double.IsNaN(Width) && Width > 0 && Math.Abs(Width - GetMonitorBounds().Width) > 10)
         {
             return Width;
         }
-        return ActualWidth > 0 ? ActualWidth : 175;
+        return configured;
     }
 
     private Rect GetMonitorBounds()
@@ -1710,14 +2347,26 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         UpdateEdgeHotspotState();
 
         var area = GetMonitorBounds();
-        var to = GetShownLeft(area);
-        var from = Left;
-        if (double.IsNaN(from) || double.IsInfinity(from))
+        if (_dockSide == DockSide.Top)
         {
-            from = GetHiddenLeft(area);
+            var to = GetShownTop(area);
+            var from = Top;
+            if (double.IsNaN(from) || double.IsInfinity(from))
+            {
+                from = GetHiddenTop(area);
+            }
+            AnimateTop(from, to);
         }
-
-        AnimateLeft(from, to);
+        else
+        {
+            var to = GetShownLeft(area);
+            var from = Left;
+            if (double.IsNaN(from) || double.IsInfinity(from))
+            {
+                from = GetHiddenLeft(area);
+            }
+            AnimateLeft(from, to);
+        }
     }
 
     private void HideDockAnimated()
@@ -1736,21 +2385,96 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         PauseBackgroundMonitors();
 
         var area = GetMonitorBounds();
-        var to = GetHiddenLeft(area);
-        var from = Left;
-        if (double.IsNaN(from) || double.IsInfinity(from))
+        if (_dockSide == DockSide.Top)
         {
-            from = GetShownLeft(area);
+            var to = GetHiddenTop(area);
+            var from = Top;
+            if (double.IsNaN(from) || double.IsInfinity(from))
+            {
+                from = GetShownTop(area);
+            }
+            AnimateTop(from, to);
+        }
+        else
+        {
+            var to = GetHiddenLeft(area);
+            var from = Left;
+            if (double.IsNaN(from) || double.IsInfinity(from))
+            {
+                from = GetShownLeft(area);
+            }
+            AnimateLeft(from, to);
+        }
+    }
+
+    private void AnimateTop(double from, double to)
+    {
+        var area = GetMonitorBounds();
+
+        if (double.IsNaN(to) || double.IsInfinity(to))
+        {
+            to = !_isHidden ? GetShownTop(area) : GetHiddenTop(area);
+            if (double.IsNaN(to) || double.IsInfinity(to))
+            {
+                return;
+            }
         }
 
-        AnimateLeft(from, to);
+        if (!IsLoaded || PresentationSource.FromVisual(this) == null)
+        {
+            BeginAnimation(Window.TopProperty, null);
+            Top = to;
+            _isAnimating = false;
+            return;
+        }
+
+        if (double.IsNaN(from) || double.IsInfinity(from))
+        {
+            from = _isHidden ? GetShownTop(area) : GetHiddenTop(area);
+            if (double.IsNaN(from) || double.IsInfinity(from))
+            {
+                BeginAnimation(Window.TopProperty, null);
+                Top = to;
+                _isAnimating = false;
+                return;
+            }
+        }
+
+        if (Math.Abs(from - to) < 0.5)
+        {
+            BeginAnimation(Window.TopProperty, null);
+            Top = to;
+            _isAnimating = false;
+            return;
+        }
+
+        _isAnimating = true;
+        var durationMs = _config.HideAnimationMs <= 0 ? 200 : _config.HideAnimationMs;
+        var animation = new DoubleAnimation
+        {
+            From = from,
+            To = to,
+            Duration = TimeSpan.FromMilliseconds(durationMs),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+
+        animation.Completed += (_, _) =>
+        {
+            _isAnimating = false;
+            var currentArea = GetMonitorBounds();
+            var targetTop = !_isHidden ? GetShownTop(currentArea) : GetHiddenTop(currentArea);
+            BeginAnimation(Window.TopProperty, null);
+            Top = targetTop;
+            UpdateEdgeHotspotState();
+        };
+
+        BeginAnimation(Window.TopProperty, animation, HandoffBehavior.SnapshotAndReplace);
     }
 
     private void AnimateLeft(double from, double to)
     {
         var area = GetMonitorBounds();
 
-        // 1. Si el destino es inválido, recalcularlo con seguridad
         if (double.IsNaN(to) || double.IsInfinity(to))
         {
             to = !_isHidden ? GetShownLeft(area) : GetHiddenLeft(area);
@@ -1760,7 +2484,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             }
         }
 
-        // 2. Si la ventana aún no está cargada / renderizada en pantalla, asignar posición directa sin animar
         if (!IsLoaded || PresentationSource.FromVisual(this) == null)
         {
             BeginAnimation(Window.LeftProperty, null);
@@ -1769,7 +2492,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
-        // 3. Si el origen es inválido (NaN durante startup), resolver fallback seguro
         if (double.IsNaN(from) || double.IsInfinity(from))
         {
             from = _isHidden ? GetShownLeft(area) : GetHiddenLeft(area);
@@ -1782,7 +2504,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             }
         }
 
-        // 4. Si origen y destino son prácticamente iguales, aplicar directamente sin animación
         if (Math.Abs(from - to) < 0.5)
         {
             BeginAnimation(Window.LeftProperty, null);
@@ -1874,6 +2595,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     return;
                 }
 
+                var clickedButton = FindAncestor<System.Windows.Controls.Button>(element);
+                if (clickedButton != null && clickedButton.IsHitTestVisible)
+                {
+                    return;
+                }
+
                 var data = (element as FrameworkElement)?.DataContext as ShortcutItem
                            ?? FindAncestor<FrameworkElement>(element)?.DataContext as ShortcutItem;
                 if (data != null)
@@ -1911,7 +2638,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             var targetIndex = Shortcuts.IndexOf(targetData);
             var relativePos = e.GetPosition(targetElement);
-            newIndex = relativePos.Y < (targetElement.ActualHeight / 2) ? targetIndex : targetIndex + 1;
+            var beforeHalf = IsHorizontalDock
+                ? relativePos.X < (targetElement.ActualWidth / 2)
+                : relativePos.Y < (targetElement.ActualHeight / 2);
+            newIndex = beforeHalf ? targetIndex : targetIndex + 1;
         }
         else
         {
@@ -1948,12 +2678,29 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         e.Effects = System.Windows.DragDropEffects.Move;
+        if (IsHorizontalDock && EditListScroll != null && EditListScroll.ScrollableWidth > 0)
+        {
+            var scrollPos = e.GetPosition(EditListScroll);
+            const double edgeThreshold = 48.0;
+            const double scrollStep = 14.0;
+            if (scrollPos.X < edgeThreshold)
+            {
+                EditListScroll.ScrollToHorizontalOffset(Math.Max(0, EditListScroll.HorizontalOffset - scrollStep));
+            }
+            else if (scrollPos.X > EditListScroll.ActualWidth - edgeThreshold)
+            {
+                EditListScroll.ScrollToHorizontalOffset(Math.Min(EditListScroll.ScrollableWidth, EditListScroll.HorizontalOffset + scrollStep));
+            }
+        }
         var targetElement = FindAncestor<FrameworkElement>((DependencyObject)e.OriginalSource);
         if (targetElement?.DataContext is ShortcutItem targetItem)
         {
             var targetIndex = Shortcuts.IndexOf(targetItem);
             var pos = e.GetPosition(targetElement);
-            var insertIndex = pos.Y < targetElement.ActualHeight / 2 ? targetIndex : targetIndex + 1;
+            var beforeHalf = IsHorizontalDock
+                ? pos.X < targetElement.ActualWidth / 2
+                : pos.Y < targetElement.ActualHeight / 2;
+            var insertIndex = beforeHalf ? targetIndex : targetIndex + 1;
             DropInsertIndex = insertIndex;
             DragHoverPath = targetItem.Path;
         }
@@ -2309,7 +3056,24 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     public void ToggleDockSide()
     {
-        _dockSide = _dockSide == DockSide.Left ? DockSide.Right : DockSide.Left;
+        var nextSide = _dockSide switch
+        {
+            DockSide.Left => DockSide.Top,
+            DockSide.Top => DockSide.Right,
+            _ => DockSide.Left
+        };
+        SetDockSide(nextSide);
+    }
+
+    public void SetDockSide(DockSide side)
+    {
+        _dockSide = side;
+        _config.DockSide = _dockSide;
+        if (IsEditMode)
+        {
+            _preEditWidth = Math.Max(_config.ActiveDockSize, _dockSide == DockSide.Top ? MinTopDockHeight : 175);
+        }
+        ApplyVisualConfig();
         SaveConfig();
         RevealDockOnCurrentSide();
     }
@@ -2335,6 +3099,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public void RevealDockOnCurrentSide()
     {
         BeginAnimation(Window.LeftProperty, null);
+        BeginAnimation(Window.TopProperty, null);
         _isAnimating = false;
         _fullscreenActive = false;
         _isHidden = false;
@@ -2585,8 +3350,24 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void SaveConfig()
     {
         _config.DockSide = _dockSide;
-        _config.DockWidth = IsEditMode ? Math.Max(_preEditWidth, 175) : Math.Max(Width, 175);
-        _config.IconSize = IconSize;
+        var minDockSize = _dockSide == DockSide.Top ? MinTopDockHeight : 175.0;
+        if (IsEditMode)
+        {
+            _config.ActiveDockSize = Math.Max(_preEditWidth, minDockSize);
+        }
+        else
+        {
+            var currentThickness = _dockSide == DockSide.Top ? Height : Width;
+            if (!double.IsNaN(currentThickness) && currentThickness >= minDockSize && currentThickness <= 640)
+            {
+                _config.ActiveDockSize = currentThickness;
+            }
+            else
+            {
+                _config.ActiveDockSize = Math.Max(_config.ActiveDockSize, minDockSize);
+            }
+        }
+        _config.ActiveIconSize = IconSize;
         _config.UseLightText = _config.UseLightText;
         _config.Shortcuts = Shortcuts.ToList();
         PersistConfigToDisk(_config);
@@ -2701,6 +3482,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _configReloadTimer.Stop();
         _clockTimer.Stop();
         _resourceTimer.Stop();
+        _aiQuotaTimer.Stop();
         _hideTimer.Stop();
         _fullscreenDebounceTimer.Stop();
         DisposeConfigWatcher();
@@ -2974,7 +3756,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         OnPropertyChanged(nameof(SliderPaginationVisibility));
         QueueItemsPerPageRefresh();
     }
-    public string PageInfo => $"{LocalizationService.Get("Common_Page")} {_currentPage + 1}/{Math.Max(1, (int)Math.Ceiling(Shortcuts.Count / (double)_itemsPerPage))}";
+    public string PageInfo => IsHorizontalDock
+        ? $"{_currentPage + 1}/{Math.Max(1, (int)Math.Ceiling(Shortcuts.Count / (double)_itemsPerPage))}"
+        : $"{LocalizationService.Get("Common_Page")} {_currentPage + 1}/{Math.Max(1, (int)Math.Ceiling(Shortcuts.Count / (double)_itemsPerPage))}";
 
     private void PrevPage_Click(object sender, RoutedEventArgs e)
     {
@@ -3090,7 +3874,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var totalPages = Math.Max(1, (int)Math.Ceiling(Shortcuts.Count / (double)_itemsPerPage));
         if (totalPages <= 1) return;
 
-        if (e.Delta < 0)
+        bool bottomToTopSlider = IsHorizontalDock && _config.UseSliderPagination;
+        bool moveNext = bottomToTopSlider ? e.Delta > 0 : e.Delta < 0;
+        if (moveNext)
         {
             if (_currentPage < totalPages - 1)
             {
@@ -3098,7 +3884,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 UpdateVisibleItems();
             }
         }
-        else if (e.Delta > 0)
+        else if (e.Delta != 0)
         {
             if (_currentPage > 0)
             {
@@ -3114,6 +3900,33 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (TryMeasureItemsPerPage(out var measuredCount))
         {
             _itemsPerPage = measuredCount;
+        }
+        else if (IsHorizontalDock)
+        {
+            const double fallbackItemHorizontalChrome = 56;
+            const double fallbackChromeWithoutPagination = 72;
+            const double fallbackChromeWithPagination = 120;
+
+            var bounds = GetMonitorBounds();
+            var monitorWidth = bounds.Width > 0 ? bounds.Width : SystemParameters.PrimaryScreenWidth;
+            var perItem = Math.Max(IconSize + fallbackItemHorizontalChrome, 84);
+            var clockChrome = _config.ShowClock ? 110.0 : 0.0;
+            var volumeChrome = _config.ShowVolumeControl ? 50.0 : 0.0;
+            var mediaChrome = _config.ShowMediaControl ? 210.0 : 0.0;
+            var resourceChrome = _config.ShowResourceMonitor ? 165.0 : 0.0;
+            var aiQuotaChrome = _config.ShowAiQuota ? Math.Max(76.0, AiQuotaService.Instance.Bars.Count * 36.0 + 20.0) : 0.0;
+            var powerChrome = _config.ShowPowerControl ? 44.0 : 0.0;
+            var caffeineChrome = _config.ShowCaffeine ? 56.0 : 0.0;
+            var usableWidth = Math.Max(1, monitorWidth - fallbackChromeWithoutPagination - clockChrome - volumeChrome - mediaChrome - resourceChrome - aiQuotaChrome - powerChrome - caffeineChrome);
+            var count = Math.Max(1, (int)Math.Floor(usableWidth / perItem));
+
+            if (Shortcuts.Count > count)
+            {
+                usableWidth = Math.Max(1, monitorWidth - fallbackChromeWithPagination - clockChrome - volumeChrome - mediaChrome - resourceChrome - aiQuotaChrome - powerChrome - caffeineChrome);
+                count = Math.Max(1, (int)Math.Floor(usableWidth / perItem));
+            }
+
+            _itemsPerPage = Math.Max(1, count);
         }
         else
         {
@@ -3184,6 +3997,78 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         UpdateLayout();
         NormalList.UpdateLayout();
 
+        if (IsHorizontalDock)
+        {
+            if (DockLayoutRoot.ColumnDefinitions.Count == 0)
+            {
+                return false;
+            }
+
+            var rawAvailableWidth = DockLayoutRoot.ColumnDefinitions[0].ActualWidth - 10;
+            if (rawAvailableWidth <= 1)
+            {
+                return false;
+            }
+
+            if (NormalList.ItemContainerGenerator.ContainerFromIndex(0) is not FrameworkElement firstItem ||
+                firstItem.ActualWidth <= 1)
+            {
+                return false;
+            }
+
+            var paginationReserve = (DockPaginationGrid != null && DockPaginationGrid.Visibility != Visibility.Visible) ? 48.0 : 0.0;
+            var itemWidths = new double[Shortcuts.Count];
+            for (int i = 0; i < Shortcuts.Count; i++)
+            {
+                var estimated = EstimateShortcutHorizontalWidth(Shortcuts[i]);
+                var visibleIndex = i - (_currentPage * _itemsPerPage);
+                if (visibleIndex >= 0 && visibleIndex < VisibleShortcuts.Count &&
+                    NormalList.ItemContainerGenerator.ContainerFromIndex(visibleIndex) is FrameworkElement realized &&
+                    realized.ActualWidth > 1)
+                {
+                    itemWidths[i] = Math.Max(realized.ActualWidth, estimated);
+                }
+                else
+                {
+                    itemWidths[i] = estimated;
+                }
+            }
+
+            int bestCount = 1;
+            for (int k = Shortcuts.Count; k >= 1; k--)
+            {
+                var limitWidth = k < Shortcuts.Count
+                    ? Math.Max(1, rawAvailableWidth - paginationReserve)
+                    : rawAvailableWidth;
+
+                bool allPagesFit = true;
+                for (int pageStart = 0; pageStart < Shortcuts.Count; pageStart += k)
+                {
+                    double pageWidth = 0;
+                    int pageEnd = Math.Min(Shortcuts.Count, pageStart + k);
+                    for (int idx = pageStart; idx < pageEnd; idx++)
+                    {
+                        pageWidth += itemWidths[idx];
+                    }
+
+                    if (pageWidth > limitWidth)
+                    {
+                        allPagesFit = false;
+                        break;
+                    }
+                }
+
+                if (allPagesFit)
+                {
+                    bestCount = k;
+                    break;
+                }
+            }
+
+            count = Math.Max(1, bestCount);
+            return true;
+        }
+
         if (DockLayoutRoot.RowDefinitions.Count == 0)
         {
             return false;
@@ -3195,14 +4080,38 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return false;
         }
 
-        if (NormalList.ItemContainerGenerator.ContainerFromIndex(0) is not FrameworkElement firstItem ||
-            firstItem.ActualHeight <= 1)
+        if (NormalList.ItemContainerGenerator.ContainerFromIndex(0) is not FrameworkElement firstItemVert ||
+            firstItemVert.ActualHeight <= 1)
         {
             return false;
         }
 
-        count = Math.Max(1, (int)Math.Floor((availableHeight + 2) / firstItem.ActualHeight));
+        count = Math.Max(1, (int)Math.Floor((availableHeight + 2) / firstItemVert.ActualHeight));
         return true;
+    }
+
+    private double EstimateShortcutHorizontalWidth(ShortcutItem item)
+    {
+        // Border Padding=4 (8px) + Button Padding=8,6,8,5 (16px) + Button BorderThickness=1 (2px) = 26px
+        const double horizontalChrome = 26.0;
+        double labelWidth = 0;
+        if (!string.IsNullOrWhiteSpace(item.Name))
+        {
+            var dpi = VisualTreeHelper.GetDpi(this);
+            var pixelsPerDip = dpi.PixelsPerDip > 0 ? dpi.PixelsPerDip : 1.0;
+            var formatted = new System.Windows.Media.FormattedText(
+                item.Name,
+                System.Globalization.CultureInfo.CurrentUICulture,
+                System.Windows.FlowDirection.LeftToRight,
+                new Typeface(new System.Windows.Media.FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal),
+                11.0,
+                System.Windows.Media.Brushes.White,
+                pixelsPerDip);
+            labelWidth = Math.Min(118.0, Math.Ceiling(formatted.WidthIncludingTrailingWhitespace) + 2.0);
+        }
+
+        var contentWidth = Math.Max(IconSize, labelWidth);
+        return contentWidth + horizontalChrome;
     }
 
     private void RefreshModeUI()
@@ -3216,6 +4125,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         OnPropertyChanged(nameof(IsVolumeVisible));
         OnPropertyChanged(nameof(IsMediaVisible));
         OnPropertyChanged(nameof(IsResourceMonitorVisible));
+        OnPropertyChanged(nameof(IsAiQuotaVisible));
         OnPropertyChanged(nameof(IsPowerVisible));
         OnPropertyChanged(nameof(IsCaffeineVisible));
     }
@@ -3262,7 +4172,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 public enum DockSide
 {
     Left,
-    Right
+    Right,
+    Top
 }
 
 // ---- Native interop for fullscreen detection ----

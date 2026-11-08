@@ -215,6 +215,8 @@ public static class ConfigService
         config.Shortcuts ??= new();
         if (config.DockWidth < 175) config.DockWidth = 175;
         if (config.IconSize <= 0) config.IconSize = 40;
+        if (config.TopDockHeight < 116 || Math.Abs(config.TopDockHeight - 175) < 0.1) config.TopDockHeight = 118;
+        if (config.TopIconSize <= 0) config.TopIconSize = 40;
         if (config.HideAnimationMs <= 0) config.HideAnimationMs = 200;
         if (config.AutoHideDelaySeconds < 0) config.AutoHideDelaySeconds = 0;
         if (config.BackgroundOpacity < 0 || config.BackgroundOpacity > 1.0)
@@ -234,6 +236,13 @@ public static class ConfigService
 
         config.Media ??= new();
 
+        config.Ai ??= new();
+        config.Ai.Antigravity ??= new() { Enabled = true, Show5Hr = true, ShowWeek = false, UseAutoDetect = true };
+        config.Ai.Gemini ??= new() { Enabled = false, Show5Hr = true, ShowWeek = true, UseAutoDetect = true };
+        config.Ai.Claude ??= new() { Enabled = false, Show5Hr = true, ShowWeek = true, UseAutoDetect = true };
+        config.Ai.ChatGpt ??= new() { Enabled = false, Show5Hr = true, ShowWeek = true, UseAutoDetect = true };
+        if (config.Ai.RefreshIntervalSeconds < 15) config.Ai.RefreshIntervalSeconds = 60;
+
         config.Experimental ??= new();
         if (config.Experimental.EdgeTriggerPx <= 0)
         {
@@ -245,7 +254,7 @@ public static class ConfigService
         }
 
         config.Experimental.WidgetOrder ??= new();
-        var validWidgets = new[] { "Clock", "Media", "Volume", "Resource", "Power", "Caffeine", "Pagination" };
+        var validWidgets = new[] { "Clock", "Media", "Volume", "Resource", "AiQuota", "Power", "Caffeine", "Pagination" };
         var sanitizedOrder = config.Experimental.WidgetOrder
             .Where(w => validWidgets.Contains(w, StringComparer.OrdinalIgnoreCase))
             .Select(w => validWidgets.First(v => string.Equals(v, w, StringComparison.OrdinalIgnoreCase)))

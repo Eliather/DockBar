@@ -104,13 +104,123 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         }
     }
 
+    public bool IsAiTabSelected
+    {
+        get => _selectedTab == 4;
+        set
+        {
+            if (value && _selectedTab != 4)
+            {
+                _selectedTab = 4;
+                NotifyTabsChanged();
+                _ = AiQuotaService.Instance.RefreshAllAsync(Config.Ai);
+            }
+        }
+    }
+
+    public AiQuotaService AiQuotaServiceInstance => AiQuotaService.Instance;
+
     private void NotifyTabsChanged()
     {
         OnPropertyChanged(nameof(IsBasicTabSelected));
         OnPropertyChanged(nameof(IsUtilitiesTabSelected));
         OnPropertyChanged(nameof(IsClockTabSelected));
         OnPropertyChanged(nameof(IsMediaTabSelected));
+        OnPropertyChanged(nameof(IsAiTabSelected));
         OnPropertyChanged(nameof(IsExperimentalTabSelected));
+    }
+
+    public bool IsDockSideLeft
+    {
+        get => Config.DockSide == DockSide.Left;
+        set
+        {
+            if (value && Config.DockSide != DockSide.Left)
+            {
+                Config.DockSide = DockSide.Left;
+                NotifyDockSideChanged();
+            }
+        }
+    }
+
+    public bool IsDockSideTop
+    {
+        get => Config.DockSide == DockSide.Top;
+        set
+        {
+            if (value && Config.DockSide != DockSide.Top)
+            {
+                Config.DockSide = DockSide.Top;
+                NotifyDockSideChanged();
+            }
+        }
+    }
+
+    public bool IsDockSideRight
+    {
+        get => Config.DockSide == DockSide.Right;
+        set
+        {
+            if (value && Config.DockSide != DockSide.Right)
+            {
+                Config.DockSide = DockSide.Right;
+                NotifyDockSideChanged();
+            }
+        }
+    }
+
+    public string DockSizeLabel => LocalizationService.Get(Config.DockSide == DockSide.Top ? "Settings_DockHeight" : "Settings_DockWidth");
+    public double ActiveDockMinSize => Config.DockSide == DockSide.Top ? 116.0 : 175.0;
+    public string ActiveDockSizeTag => Config.DockSide == DockSide.Top ? "116|640" : "175|640";
+
+    public double ActiveDockSize
+    {
+        get => Config.ActiveDockSize;
+        set
+        {
+            if (Math.Abs(Config.ActiveDockSize - value) > double.Epsilon)
+            {
+                Config.ActiveDockSize = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(Config));
+            }
+        }
+    }
+
+    public double ActiveIconSize
+    {
+        get => Config.ActiveIconSize;
+        set
+        {
+            if (Math.Abs(Config.ActiveIconSize - value) > double.Epsilon)
+            {
+                Config.ActiveIconSize = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(Config));
+            }
+        }
+    }
+
+    private void NotifyDockSideChanged()
+    {
+        OnPropertyChanged(nameof(IsDockSideLeft));
+        OnPropertyChanged(nameof(IsDockSideTop));
+        OnPropertyChanged(nameof(IsDockSideRight));
+        OnPropertyChanged(nameof(DockSizeLabel));
+        OnPropertyChanged(nameof(ActiveDockMinSize));
+        OnPropertyChanged(nameof(ActiveDockSizeTag));
+        OnPropertyChanged(nameof(ActiveDockSize));
+        OnPropertyChanged(nameof(ActiveIconSize));
+        OnPropertyChanged(nameof(PreviewClockTime));
+        OnPropertyChanged(nameof(PreviewClockMainTime));
+        OnPropertyChanged(nameof(PreviewClockSubTime));
+        OnPropertyChanged(nameof(IsPreviewClockSubTimeVisible));
+        OnPropertyChanged(nameof(Config));
+        ApplyWidgetOrderToPreview();
+        if (!_isInitializing)
+        {
+            OnApplyPreview?.Invoke(Config.Clone());
+        }
     }
 
     public string PreviewClockTime
@@ -126,6 +236,30 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
             return now.ToString(format);
         }
     }
+
+    public string PreviewClockMainTime
+    {
+        get
+        {
+            var now = DateTime.Now;
+            return now.ToString(Config.ClockFormat24H ? "HH:mm" : "hh:mm");
+        }
+    }
+
+    public string PreviewClockSubTime
+    {
+        get
+        {
+            var now = DateTime.Now;
+            if (Config.ClockFormat24H)
+            {
+                return Config.ShowClockSeconds ? now.ToString(":ss") : string.Empty;
+            }
+            return Config.ShowClockSeconds ? now.ToString("ss tt") : now.ToString("tt");
+        }
+    }
+
+    public bool IsPreviewClockSubTimeVisible => !string.IsNullOrEmpty(PreviewClockSubTime);
 
     public string PreviewClockDate => DateTime.Now.ToString("ddd, d MMM");
     public double PreviewClockDateFontSize => Math.Max(9, Math.Round((Config.ClockFontSize > 0 ? Config.ClockFontSize : 18) * 0.65));
@@ -269,6 +403,7 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
     }
 
     private DockConfig _baselineConfig;
+    private bool _isInitializing = true;
 
     public Action<DockConfig>? OnApplyPreview { get; set; }
     public Action<DockConfig>? OnRevertPreview { get; set; }
@@ -290,6 +425,7 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
 
     private void HardwareNamesOption_Changed(object sender, RoutedEventArgs e)
     {
+        if (_isInitializing) return;
         OnPropertyChanged(nameof(PreviewCpuLabel));
         OnPropertyChanged(nameof(PreviewGpuLabel));
         OnPropertyChanged(nameof(Config));
@@ -298,16 +434,9 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
 
     public SettingsWindow(DockConfig config)
     {
+        _isInitializing = true;
         Config = config;
         _baselineConfig = config.Clone();
-        GpuService.Instance.Initialize();
-        InitializeComponent();
-        DataContext = this;
-        SourceInitialized += (_, _) =>
-        {
-            WindowSwitcherHelper.HideFromWindowSwitchers(this);
-            ThemeService.ApplyWindowBackdrop(this, Config);
-        };
         if (Config.BackgroundOpacity < 0 || Config.BackgroundOpacity > 1.0)
         {
             Config.BackgroundOpacity = GlassOpacity;
@@ -315,6 +444,13 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         _pendingR = Config.BackgroundR;
         _pendingG = Config.BackgroundG;
         _pendingB = Config.BackgroundB;
+        InitializeComponent();
+        DataContext = this;
+        SourceInitialized += (_, _) =>
+        {
+            WindowSwitcherHelper.HideFromWindowSwitchers(this);
+            ThemeService.ApplyWindowBackdrop(this, Config);
+        };
         SyncHsvToActiveTarget();
         UpdatePreviewBrush();
         UpdateTextBrush();
@@ -326,11 +462,15 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         _previewClockTimer.Tick += (_, _) =>
         {
             OnPropertyChanged(nameof(PreviewClockTime));
+            OnPropertyChanged(nameof(PreviewClockMainTime));
+            OnPropertyChanged(nameof(PreviewClockSubTime));
+            OnPropertyChanged(nameof(IsPreviewClockSubTimeVisible));
             OnPropertyChanged(nameof(PreviewClockDate));
         };
         _previewClockTimer.Start();
         Closed += (_, _) => _previewClockTimer.Stop();
         Loaded += (_, _) => ApplyWidgetOrderToPreview();
+        _isInitializing = false;
     }
 
     public DockPreviewControl? ClockPreviewControl => UtilitiesPreviewControl;
@@ -339,33 +479,177 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
     {
         UtilitiesPreviewControl?.ApplyWidgetOrderToPreview();
         MediaPreviewControl?.ApplyWidgetOrderToPreview();
+        AiPreviewControl?.ApplyWidgetOrderToPreview();
         ExperimentalPreviewControl?.ApplyWidgetOrderToPreview();
     }
 
     private void SettingOption_Changed(object sender, RoutedEventArgs e)
     {
+        if (_isInitializing) return;
         OnPropertyChanged(nameof(PreviewClockTime));
+        OnPropertyChanged(nameof(PreviewClockMainTime));
+        OnPropertyChanged(nameof(PreviewClockSubTime));
+        OnPropertyChanged(nameof(IsPreviewClockSubTimeVisible));
         OnPropertyChanged(nameof(PreviewClockDate));
         OnPropertyChanged(nameof(PreviewClockDateFontSize));
         OnPropertyChanged(nameof(Config));
         ApplyWidgetOrderToPreview();
     }
 
+    private System.Windows.Threading.DispatcherTimer? _aiTokenDebounceTimer;
+
     private void ExperimentalOption_Changed(object sender, RoutedEventArgs e) => SettingOption_Changed(sender, e);
+
+    private void AiOption_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_isInitializing) return;
+
+        if (sender is System.Windows.Controls.CheckBox chk &&
+            string.Equals(chk.Tag as string, "ProviderEnable", StringComparison.Ordinal) &&
+            chk.IsChecked == true &&
+            !Config.ShowAiQuota)
+        {
+            Config.ShowAiQuota = true;
+            OnPropertyChanged(nameof(Config));
+        }
+
+        AiQuotaService.Instance.SyncStructure(Config.Ai);
+        SettingOption_Changed(sender, e);
+        _ = AiQuotaService.Instance.RefreshAllAsync(Config.Ai);
+    }
+
+    private void AiToken_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_isInitializing) return;
+
+        if (sender is System.Windows.Controls.TextBox tb && !string.IsNullOrWhiteSpace(tb.Text))
+        {
+            var tag = tb.Tag as string;
+            bool structureChanged = false;
+            if (!Config.ShowAiQuota)
+            {
+                Config.ShowAiQuota = true;
+                structureChanged = true;
+            }
+
+            if (string.Equals(tag, "Gemini", StringComparison.Ordinal) && !Config.Ai.Gemini.Enabled)
+            {
+                Config.Ai.Gemini.Enabled = true;
+                structureChanged = true;
+            }
+            else if (string.Equals(tag, "Claude", StringComparison.Ordinal) && !Config.Ai.Claude.Enabled)
+            {
+                Config.Ai.Claude.Enabled = true;
+                structureChanged = true;
+            }
+            else if (string.Equals(tag, "ChatGpt", StringComparison.Ordinal) && !Config.Ai.ChatGpt.Enabled)
+            {
+                Config.Ai.ChatGpt.Enabled = true;
+                structureChanged = true;
+            }
+
+            if (structureChanged)
+            {
+                AiQuotaService.Instance.SyncStructure(Config.Ai);
+                OnPropertyChanged(nameof(Config));
+                ApplyWidgetOrderToPreview();
+            }
+        }
+
+        if (_aiTokenDebounceTimer == null)
+        {
+            _aiTokenDebounceTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(550)
+            };
+            _aiTokenDebounceTimer.Tick += (_, _) =>
+            {
+                _aiTokenDebounceTimer.Stop();
+                _ = AiQuotaService.Instance.RefreshAllAsync(Config.Ai);
+            };
+        }
+
+        _aiTokenDebounceTimer.Stop();
+        _aiTokenDebounceTimer.Start();
+    }
+
+    private void AiToken_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if (_isInitializing) return;
+        _aiTokenDebounceTimer?.Stop();
+        _ = AiQuotaService.Instance.RefreshAllAsync(Config.Ai);
+    }
+
+    private void AiRefreshNow_Click(object sender, RoutedEventArgs e)
+    {
+        AiQuotaService.Instance.SyncStructure(Config.Ai);
+        _ = AiQuotaService.Instance.RefreshAllAsync(Config.Ai);
+    }
+
+    private async void AiOpenWeb_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string tag && !string.IsNullOrWhiteSpace(tag))
+        {
+            if (tag.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    Process.Start(new ProcessStartInfo(tag) { UseShellExecute = true });
+                }
+                catch { }
+                return;
+            }
+
+            if (!Config.ShowAiQuota)
+            {
+                Config.ShowAiQuota = true;
+            }
+
+            if (string.Equals(tag, "Gemini", StringComparison.OrdinalIgnoreCase) && !Config.Ai.Gemini.Enabled)
+            {
+                Config.Ai.Gemini.Enabled = true;
+            }
+            else if (string.Equals(tag, "Claude", StringComparison.OrdinalIgnoreCase) && !Config.Ai.Claude.Enabled)
+            {
+                Config.Ai.Claude.Enabled = true;
+            }
+            else if (string.Equals(tag, "ChatGpt", StringComparison.OrdinalIgnoreCase) && !Config.Ai.ChatGpt.Enabled)
+            {
+                Config.Ai.ChatGpt.Enabled = true;
+            }
+
+            AiQuotaService.Instance.SyncStructure(Config.Ai);
+            OnPropertyChanged(nameof(Config));
+            ApplyWidgetOrderToPreview();
+
+            btn.IsEnabled = false;
+            try
+            {
+                await AiQuotaService.Instance.SignInProviderWebAsync(tag, Config.Ai);
+            }
+            finally
+            {
+                btn.IsEnabled = true;
+            }
+        }
+    }
 
     private void ClockFontSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
+        if (_isInitializing) return;
         OnPropertyChanged(nameof(PreviewClockDateFontSize));
         OnPropertyChanged(nameof(Config));
     }
 
     private void EdgeTriggerSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
+        if (_isInitializing) return;
         OnPropertyChanged(nameof(Config));
     }
 
     private void ColorTargetChanged(object sender, RoutedEventArgs e)
     {
+        if (_isInitializing) return;
         SyncHsvToActiveTarget();
     }
 
@@ -431,11 +715,13 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
 
     private void ColorComponentChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
+        if (_isInitializing) return;
         UpdatePreviewBrush();
     }
 
     private void TransparencyToggled(object sender, RoutedEventArgs e)
     {
+        if (_isInitializing) return;
         if (Config.UseTransparency && (Config.BackgroundOpacity < 0 || Config.BackgroundOpacity > 1.0))
         {
             Config.BackgroundOpacity = GlassOpacity;
@@ -447,6 +733,7 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
 
     private void OpacitySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
+        if (_isInitializing) return;
         OnPropertyChanged(nameof(OpacityPercentText));
         OnPropertyChanged(nameof(GlassStatusText));
         UpdatePreviewBrush();
@@ -486,6 +773,8 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         Config.BackgroundOpacity = GlassOpacity;
         Config.DockWidth = 175;
         Config.IconSize = 40;
+        Config.TopDockHeight = 118;
+        Config.TopIconSize = 40;
         Config.UseLightText = true;
         Config.AccentR = 55;
         Config.AccentG = 115;
@@ -503,9 +792,10 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         Config.MediaThumbnailOnly = false;
         Config.ShowResourceMonitor = false;
         Config.ShowHardwareModelNames = false;
+        Config.ShowAiQuota = false;
         Config.ShowPowerControl = false;
         Config.ShowCaffeine = false;
-        Config.WidgetOrder = new() { "Clock", "Media", "Volume", "Resource", "Power", "Caffeine", "Pagination" };
+        Config.WidgetOrder = new() { "Clock", "Media", "Volume", "Resource", "AiQuota", "Power", "Caffeine", "Pagination" };
         ApplyWidgetOrderToPreview();
         _pendingR = Config.BackgroundR;
         _pendingG = Config.BackgroundG;
@@ -514,6 +804,11 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         UpdatePreviewBrush();
         ThemeService.Apply(Config);
         OnPropertyChanged(nameof(Config));
+        OnPropertyChanged(nameof(DockSizeLabel));
+        OnPropertyChanged(nameof(ActiveDockMinSize));
+        OnPropertyChanged(nameof(ActiveDockSizeTag));
+        OnPropertyChanged(nameof(ActiveDockSize));
+        OnPropertyChanged(nameof(ActiveIconSize));
         OnPropertyChanged(nameof(AccentPreviewBrush));
         OnPropertyChanged(nameof(PreviewClockTime));
         OnPropertyChanged(nameof(PreviewClockDate));
@@ -602,6 +897,14 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         UpdateTextBrush();
         ThemeService.Apply(Config);
         OnPropertyChanged(nameof(Config));
+        OnPropertyChanged(nameof(IsDockSideLeft));
+        OnPropertyChanged(nameof(IsDockSideTop));
+        OnPropertyChanged(nameof(IsDockSideRight));
+        OnPropertyChanged(nameof(DockSizeLabel));
+        OnPropertyChanged(nameof(ActiveDockMinSize));
+        OnPropertyChanged(nameof(ActiveDockSizeTag));
+        OnPropertyChanged(nameof(ActiveDockSize));
+        OnPropertyChanged(nameof(ActiveIconSize));
         OnPropertyChanged(nameof(Hue));
         OnPropertyChanged(nameof(HexLabelText));
         OnPropertyChanged(nameof(ColorPickerTitle));
@@ -967,6 +1270,7 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
 
     private void TextColorChanged(object sender, RoutedEventArgs e)
     {
+        if (_isInitializing) return;
         UpdateTextBrush();
     }
 }

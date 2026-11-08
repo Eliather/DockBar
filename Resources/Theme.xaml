@@ -542,6 +542,63 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+        <Style.Triggers>
+            <Trigger Property="Orientation" Value="Vertical">
+                <Setter Property="Width" Value="24"/>
+                <Setter Property="Height" Value="NaN"/>
+                <Setter Property="HorizontalAlignment" Value="Center"/>
+                <Setter Property="VerticalAlignment" Value="Stretch"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Slider">
+                            <Grid Width="24" SnapsToDevicePixels="True">
+                                <Border Width="6"
+                                        CornerRadius="3"
+                                        Background="{DynamicResource AppInputBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                        BorderThickness="1"
+                                        HorizontalAlignment="Center"/>
+                                <Track x:Name="PART_Track" HorizontalAlignment="Center">
+                                    <Track.DecreaseRepeatButton>
+                                        <RepeatButton Focusable="False" OverridesDefaultStyle="True">
+                                            <RepeatButton.Template>
+                                                <ControlTemplate TargetType="RepeatButton">
+                                                    <Border Width="6"
+                                                            CornerRadius="3"
+                                                            Background="{DynamicResource AppAccentBrush}"
+                                                            HorizontalAlignment="Center"/>
+                                                </ControlTemplate>
+                                            </RepeatButton.Template>
+                                        </RepeatButton>
+                                    </Track.DecreaseRepeatButton>
+                                    <Track.Thumb>
+                                        <Thumb Width="14" Height="14">
+                                            <Thumb.Template>
+                                                <ControlTemplate TargetType="Thumb">
+                                                    <Border CornerRadius="3"
+                                                            Background="{DynamicResource AppTextBrush}"
+                                                            BorderBrush="{DynamicResource AppAccentBrush}"
+                                                            BorderThickness="1"/>
+                                                </ControlTemplate>
+                                            </Thumb.Template>
+                                        </Thumb>
+                                    </Track.Thumb>
+                                    <Track.IncreaseRepeatButton>
+                                        <RepeatButton Focusable="False" OverridesDefaultStyle="True">
+                                            <RepeatButton.Template>
+                                                <ControlTemplate TargetType="RepeatButton">
+                                                    <Border Background="Transparent" Width="6"/>
+                                                </ControlTemplate>
+                                            </RepeatButton.Template>
+                                        </RepeatButton>
+                                    </Track.IncreaseRepeatButton>
+                                </Track>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <!-- Sleek Media Seek Bar Slider (Compact 14px with circular thumb) -->
@@ -607,6 +664,67 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+        <Style.Triggers>
+            <Trigger Property="Orientation" Value="Vertical">
+                <Setter Property="Width" Value="14"/>
+                <Setter Property="MinWidth" Value="14"/>
+                <Setter Property="Height" Value="NaN"/>
+                <Setter Property="HorizontalAlignment" Value="Center"/>
+                <Setter Property="VerticalAlignment" Value="Stretch"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Slider">
+                            <Grid Width="14" HorizontalAlignment="Center" SnapsToDevicePixels="True">
+                                <Border Width="4"
+                                        CornerRadius="2"
+                                        Background="#35FFFFFF"
+                                        HorizontalAlignment="Center"/>
+                                <Track x:Name="PART_Track" HorizontalAlignment="Center">
+                                    <Track.DecreaseRepeatButton>
+                                        <RepeatButton Focusable="False" OverridesDefaultStyle="True">
+                                            <RepeatButton.Template>
+                                                <ControlTemplate TargetType="RepeatButton">
+                                                    <Border Width="4"
+                                                            CornerRadius="2"
+                                                            Background="{DynamicResource AppAccentBrush}"
+                                                            HorizontalAlignment="Center"/>
+                                                </ControlTemplate>
+                                            </RepeatButton.Template>
+                                        </RepeatButton>
+                                    </Track.DecreaseRepeatButton>
+                                    <Track.Thumb>
+                                        <Thumb Width="10" Height="10" Cursor="Hand" OverridesDefaultStyle="True">
+                                            <Thumb.Template>
+                                                <ControlTemplate TargetType="Thumb">
+                                                    <Border Width="10" Height="10"
+                                                            CornerRadius="5"
+                                                            Background="{DynamicResource AppTextBrush}"
+                                                            BorderBrush="{DynamicResource AppAccentBrush}"
+                                                            BorderThickness="1.5">
+                                                        <Border.Effect>
+                                                            <DropShadowEffect BlurRadius="3" ShadowDepth="1" Direction="270" Opacity="0.4"/>
+                                                        </Border.Effect>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Thumb.Template>
+                                        </Thumb>
+                                    </Track.Thumb>
+                                    <Track.IncreaseRepeatButton>
+                                        <RepeatButton Focusable="False" OverridesDefaultStyle="True">
+                                            <RepeatButton.Template>
+                                                <ControlTemplate TargetType="RepeatButton">
+                                                    <Border Background="Transparent" Width="4"/>
+                                                </ControlTemplate>
+                                            </RepeatButton.Template>
+                                        </RepeatButton>
+                                    </Track.IncreaseRepeatButton>
+                                </Track>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <!-- Vertical Hue Slider for Color Picker -->
@@ -664,6 +782,61 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+        <Style.Triggers>
+            <Trigger Property="Orientation" Value="Horizontal">
+                <Setter Property="Width" Value="NaN"/>
+                <Setter Property="Height" Value="14"/>
+                <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+                <Setter Property="IsDirectionReversed" Value="False"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Slider">
+                            <Grid Height="14" SnapsToDevicePixels="True">
+                                <Border Height="4"
+                                        CornerRadius="2"
+                                        Background="{DynamicResource AppInputBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                        BorderThickness="1"
+                                        VerticalAlignment="Center"/>
+                                <Track x:Name="PART_Track" VerticalAlignment="Center">
+                                    <Track.DecreaseRepeatButton>
+                                        <RepeatButton Focusable="False" OverridesDefaultStyle="True">
+                                            <RepeatButton.Template>
+                                                <ControlTemplate TargetType="RepeatButton">
+                                                    <Border Background="Transparent"/>
+                                                </ControlTemplate>
+                                            </RepeatButton.Template>
+                                        </RepeatButton>
+                                    </Track.DecreaseRepeatButton>
+                                    <Track.Thumb>
+                                        <Thumb Width="36" Height="10" Cursor="Hand">
+                                            <Thumb.Template>
+                                                <ControlTemplate TargetType="Thumb">
+                                                    <Border CornerRadius="3"
+                                                            Background="{DynamicResource AppTextBrush}"
+                                                            BorderBrush="{DynamicResource AppBorderStrongBrush}"
+                                                            BorderThickness="1"/>
+                                                </ControlTemplate>
+                                            </Thumb.Template>
+                                        </Thumb>
+                                    </Track.Thumb>
+                                    <Track.IncreaseRepeatButton>
+                                        <RepeatButton Focusable="False" OverridesDefaultStyle="True">
+                                            <RepeatButton.Template>
+                                                <ControlTemplate TargetType="RepeatButton">
+                                                    <Border Background="Transparent"/>
+                                                </ControlTemplate>
+                                            </RepeatButton.Template>
+                                        </RepeatButton>
+                                    </Track.IncreaseRepeatButton>
+                                </Track>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <!-- Vertical Scroller Slider in MainWindow Edit Mode -->
@@ -718,6 +891,61 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+        <Style.Triggers>
+            <Trigger Property="Orientation" Value="Horizontal">
+                <Setter Property="Width" Value="NaN"/>
+                <Setter Property="Height" Value="14"/>
+                <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+                <Setter Property="IsDirectionReversed" Value="False"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Slider">
+                            <Grid Height="14" SnapsToDevicePixels="True">
+                                <Border Height="4"
+                                        CornerRadius="2"
+                                        Background="{DynamicResource AppInputBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                        BorderThickness="1"
+                                        VerticalAlignment="Center"/>
+                                <Track x:Name="PART_Track" VerticalAlignment="Center">
+                                    <Track.DecreaseRepeatButton>
+                                        <RepeatButton Focusable="False" OverridesDefaultStyle="True">
+                                            <RepeatButton.Template>
+                                                <ControlTemplate TargetType="RepeatButton">
+                                                    <Border Background="Transparent"/>
+                                                </ControlTemplate>
+                                            </RepeatButton.Template>
+                                        </RepeatButton>
+                                    </Track.DecreaseRepeatButton>
+                                    <Track.Thumb>
+                                        <Thumb Width="36" Height="10" Cursor="Hand">
+                                            <Thumb.Template>
+                                                <ControlTemplate TargetType="Thumb">
+                                                    <Border CornerRadius="3"
+                                                            Background="{DynamicResource AppTextBrush}"
+                                                            BorderBrush="{DynamicResource AppBorderStrongBrush}"
+                                                            BorderThickness="1"/>
+                                                </ControlTemplate>
+                                            </Thumb.Template>
+                                        </Thumb>
+                                    </Track.Thumb>
+                                    <Track.IncreaseRepeatButton>
+                                        <RepeatButton Focusable="False" OverridesDefaultStyle="True">
+                                            <RepeatButton.Template>
+                                                <ControlTemplate TargetType="RepeatButton">
+                                                    <Border Background="Transparent"/>
+                                                </ControlTemplate>
+                                            </RepeatButton.Template>
+                                        </RepeatButton>
+                                    </Track.IncreaseRepeatButton>
+                                </Track>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <!-- Modern Sleek ScrollBar Style (matches DialogVerticalScrollerStyle, no Win95 arrows) -->

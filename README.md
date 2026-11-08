@@ -65,9 +65,10 @@ El desarrollo de DockBar se rige por cinco pilares fundamentales:
 
 1. **Efecto Glass y Estética Unificada**: Implementación de composición por hardware DWM (`WindowChrome GlassFrameThickness="-1"`) extendida a la ventana principal y a todas las ventanas secundarias (Ajustes, Agregar Enlace, Apps Instaladas, Actualizaciones, Renombrar, etc.). La interfaz respeta la opacidad, el color de fondo y el efecto Glass seleccionados por el usuario.
 2. **Organización Modular de Ajustes por Categorías**: Menú de configuración estructurado en pestañas independientes:
-   - **Básica**: Comportamiento de anclaje, visibilidad, opacidad y colores.
-   - **Utilidades**: Reloj digital y Monitor de Recursos del sistema.
-   - **Multimedia**: Previsualización y control de reproducción.
+   - **Básica**: Comportamiento de anclaje (Izquierda, Derecha, Superior), dimensiones, visibilidad, opacidad y colores.
+   - **Utilidades**: Reloj digital y Monitor de Recursos del sistema (CPU, RAM, GPU).
+   - **Multimedia**: Previsualización, carátulas inteligentes y control de reproducción.
+   - **IA**: Supervisión en tiempo real de cuotas de Inteligencia Artificial (5 Horas y Semanal) para Antigravity, Gemini, ChatGPT y Claude.
    - **Experimentales**: Gestión de energía del sistema, modo Cafeína, slider de páginas y organizador de widgets.
 3. **Paleta de Énfasis Secundario**: Personalización del color de acento para elementos interactivos como botones de acción (`Guardar`), deslizadores (`sliders`), interruptores (`switches`), casillas de selección y estados resaltados.
 4. **Selector de Color Dual (HSV y HEX)**: Selector de color con lienzo interactivo de saturación/brillo, barra de tono y entrada de código hexadecimal, aplicable tanto al fondo del dock como al color de énfasis.
@@ -78,34 +79,28 @@ El desarrollo de DockBar se rige por cinco pilares fundamentales:
 ## Características Principales
 
 ### Interfaz y Experiencia de Usuario (UI/UX)
-- **Anclaje Flexible**: Soporte para alineación en el borde izquierdo o derecho de la pantalla con comportamiento siempre visible (`TopMost`).
+- **Anclaje Flexible Tridireccional**: Soporte completo para anclar la barra en el lateral **Izquierdo**, **Derecho** o en el borde **Superior** (horizontal) de la pantalla con soporte Always on Top (`TopMost`).
+- **Diseño Normalizado y Compacto en Modo Superior**: Todos los módulos (Volumen, Multimedia, Cuotas de IA, Monitor de Recursos, Reloj, Encendido, Cafeína y Paginación) comparten una altura uniforme de `108px` y bordes alineados (`CornerRadius="8"`), con una altura compacta de `118px` que elimina márgenes vacíos.
 - **Ocultamiento Automático e Interactivo**: Transición suave de ocultado con zona de activación por borde (`Hotspot / Trigger`) calibrable entre 1 y 12 píxeles.
 - **Opción Mostrar Siempre (Always Show)**: Posibilidad de fijar la barra de forma permanente desactivando el auto-ocultado.
-- **Modo Edición y Reordenamiento**: Modificación visual para reordenar elementos mediante arrastrar y soltar (*drag & drop*), renombrar, cambiar iconos o eliminar accesos directos.
-- **Paginación Automática y Reordenable**: Sistema de navegación por páginas (flechas/slider) que se activa cuando los elementos superan la altura disponible, integrado en el panel de reordenamiento de widgets.
+- **Modo Edición y Reordenamiento**: Modificación visual para reordenar elementos mediante arrastrar y soltar (*drag & drop*) tanto en vertical como en horizontal, con soporte de rueda de ratón para desplazamiento continuo, renombrado, cambio de iconos o eliminación de accesos directos.
+- **Paginación Automática y Reordenable**: Sistema de navegación por páginas mediante botones clásicos o slider interactivo de tiempo real (orientado de abajo hacia arriba en modo superior), integrado en el panel de reordenamiento de widgets.
 - **Tooltips Estilizados en Dark Mode**: Tooltips modernos con fondo acrílico oscuro (`#F2161622`), esquinas redondeadas (`CornerRadius="8"`), borde semitransparente y sombra difusa (`BlurRadius="16"`).
-- **Vista Previa en Vivo**: Simulación dinámica en tiempo real de los cambios visuales dentro de la ventana de Ajustes antes de guardar.
+- **Vista Previa en Vivo Adaptativa**: Simulación dinámica en tiempo real dentro de la ventana de Ajustes que conmuta automáticamente entre la orientación vertical y horizontal según el anclaje seleccionado, permitiendo reordenar widgets por arrastre en ambas direcciones.
 - **Exclusión de Selectores de Tareas**: Oculto de la lista de ventanas de `Alt+Tab` y `Win+Tab`.
 - **Soporte Multilingüe Integrado**: Traducido completamente a Español, Inglés, Ruso y Chino Simplificado.
 
 ### Rendimiento y Optimización
 - **Rendimiento a 60 FPS (Zero GC Allocations)**: Control `MarqueeTextBlock` optimizado mediante caché de `FormattedText` y congelación de pinceles/máscaras (`ShadowBrush`, `EdgeFadingMask`), eliminando asignaciones de memoria durante la animación.
-- **Suspensión Inteligente de Recursos**: Pausa automática de lecturas de CPU, RAM, GPU y reloj cuando el dock se oculta o cuando se detectan aplicaciones a pantalla completa (juegos o vídeos).
+- **Apertura Instantánea de Ajustes**: Consultas y telemetría de IA desacopladas en segundo plano con temporizadores debounced, evitando bloqueos de red o congelamientos de UI al abrir la ventana de configuración.
+- **Suspensión Inteligente de Recursos**: Pausa automática de lecturas de CPU, RAM, GPU, IA y reloj cuando el dock se oculta o cuando se detectan aplicaciones a pantalla completa (juegos o vídeos).
 - **Filtrado Eficiente de Eventos de Ventana**: Uso de `WinEventHook` descartando eventos secundarios fuera de foco, reduciendo la carga del chequeo de pantalla completa en más del 95%.
 - **Gestión Determinista de Memoria COM**: Liberación explícita de punteros no administrados (`IImageList`) mediante `Marshal.ReleaseComObject`.
 - **Carga Instantánea de Aplicaciones (`StoreAppService`)**: Caché en memoria persistente (`ConcurrentDictionary`), resolución paralela multihilo (`Parallel.ForEach`) y precalentamiento silencioso 1 segundo tras el inicio.
 
-### Control Multimedia y Audio
-- **Controlador Multimedia Inteligente (GSMTC)**: Conexión con *Windows System Media Transport Controls* compatible con Spotify, navegadores (Chrome, Edge, Firefox) y reproductores locales.
-- **Previsualización Inteligente de Carátulas (Smart Artwork)**:
-  - Formato adaptativo 1:1 para pistas de música.
-  - Formato adaptativo 16:9 panorámico para contenido de vídeo.
-  - Modo solo miniatura hiperminimalista y control de reproducción mediante clic directo.
-- **Barra de Búsqueda Multimedia (Seek Bar)**: Deslizador de posición de reproducción con tiempo transcurrido/total, ajuste por rueda de ratón (±5s) y protección contra desincronización en streaming.
-- **Marquesina Animada (`MarqueeTextBlock`)**: Desplazamiento de texto continuo para títulos y artistas extensos.
-- **Controlador de Volumen Dinámico**: Control de volumen con integración `IMMNotificationClient` para detección y reconexión automática en caliente al cambiar de dispositivo de audio (auriculares, altavoces).
-
-### Monitorización y Utilidades
+### Monitorización y Cuotas de Inteligencia Artificial
+- **Monitor de Cuotas de IA (5HR / Week)**: Seguimiento visual de cuotas disponibles para Antigravity IDE, Google Gemini, OpenAI ChatGPT y Anthropic Claude en ventanas de 5 horas y límites semanales.
+- **Detección Web Automática y Soporte de Tokens**: Lectura transparente de sesiones activas sin forzar suscripciones API de pago, con soporte opcional de tokens web personalizados.
 - **Monitor de Recursos y Multi-GPU**: Identificación de hardware real y seguimiento de carga de CPU, RAM y GPU (soporte para NVIDIA NVML, AMD ADLX/DXGI e Intel).
 - **Modo Cafeína (Keep-Awake)**: Prevención de suspensión del sistema o apagado de pantalla durante descargas o tareas prolongadas.
 - **Gestión de Energía**: Accesos directos integrados para Bloquear, Hibernar, Reiniciar y Apagar el sistema.
@@ -118,8 +113,10 @@ La solución se compone de los siguientes archivos y servicios principales:
 
 | Componente / Archivo | Función y Responsabilidad |
 | :--- | :--- |
-| `MainWindow.xaml.cs` | Ventana principal de la barra lateral, gestión de eventos de ratón/tacto, animaciones y detección de pantalla completa. |
-| `SettingsWindow.xaml.cs` | Panel de configuración con pestañas modulares, selectores HSV/HEX y personalización de temas. |
+| `MainWindow.xaml.cs` | Ventana principal de la barra lateral, gestión de eventos de ratón/tacto, animaciones, soporte de anclaje (Izquierda/Derecha/Superior) y detección de pantalla completa. |
+| `SettingsWindow.xaml.cs` | Panel de configuración con pestañas modulares (Básica, Utilidades, Multimedia, IA, Experimentales), selectores HSV/HEX y personalización de temas. |
+| `DockPreviewControl.xaml.cs` | Vista previa interactiva en tiempo real con adaptación a orientación vertical u horizontal y reordenamiento de widgets. |
+| `AiQuotaService.cs` | Motor de consulta, auto-detección y telemetría de cuotas de Inteligencia Artificial (5HR y Semanal) desacoplado en segundo plano. |
 | `ThemeService.cs` | Motor centralizado de temas y composición de efectos DWM Glass por hardware. |
 | `StoreAppPickerWindow.xaml.cs` | Interfaz de selección para aplicaciones instaladas de Microsoft Store y del sistema. |
 | `StoreAppService.cs` | Motor de enumeración COM nativo, resolución paralela multihilo (`Parallel.ForEach`) y caché concurrente. |
@@ -171,10 +168,13 @@ La configuración del usuario y la lista de accesos directos se almacenan en for
 
 ```json
 {
-  "DockSide": "Left",
+  "DockSide": "Top",
   "DockWidth": 175,
   "IconSize": 40,
+  "TopDockHeight": 118,
+  "TopIconSize": 40,
   "AutoHideDelaySeconds": 0,
+  "AlwaysShow": false,
   "HideAnimationMs": 200,
   "UseTransparency": true,
   "BackgroundOpacity": 0.45,
@@ -187,18 +187,48 @@ La configuración del usuario y la lista de accesos directos se almacenan en for
   "UseLightText": true,
   "EnableTextShadow": true,
   "AutoStartEnabled": false,
+  "Clock": {
+    "ShowClock": true,
+    "ClockFontSize": 18,
+    "ClockFormat24H": true,
+    "ShowClockSeconds": false,
+    "ShowClockDate": true
+  },
+  "Media": {
+    "ShowVolumeControl": true,
+    "ShowMediaControl": true,
+    "ShowMediaSeekBar": true,
+    "ShowMediaThumbnail": true,
+    "MediaThumbnailOnly": false
+  },
+  "Ai": {
+    "ShowAiQuota": true,
+    "RefreshIntervalSeconds": 60,
+    "Antigravity": { "Enabled": true, "Show5Hr": true, "ShowWeek": false, "UseAutoDetect": true },
+    "Gemini": { "Enabled": true, "Show5Hr": true, "ShowWeek": true, "UseAutoDetect": true },
+    "Claude": { "Enabled": false, "Show5Hr": true, "ShowWeek": true, "UseAutoDetect": true },
+    "ChatGpt": { "Enabled": false, "Show5Hr": true, "ShowWeek": true, "UseAutoDetect": true }
+  },
+  "Experimental": {
+    "EdgeTriggerPx": 8,
+    "ShowResourceMonitor": true,
+    "ShowPowerControl": true,
+    "ShowCaffeine": true,
+    "UseSliderPagination": false,
+    "WidgetOrder": ["Clock", "Media", "Volume", "Resource", "AiQuota", "Power", "Caffeine", "Pagination"]
+  },
   "Shortcuts": [
     {
       "Name": "Explorador",
-      "Path": "C:\Windows\explorer.exe"
+      "Path": "C:\\Windows\\explorer.exe"
     },
     {
       "Name": "Documentos",
-      "Path": "C:\Users\Public\Documents"
+      "Path": "C:\\Users\\Public\\Documents"
     },
     {
       "Name": "Steam",
-      "Path": "C:\Program Files (x86)\Steam\Steam.exe"
+      "Path": "C:\\Program Files (x86)\\Steam\\Steam.exe"
     }
   ]
 }

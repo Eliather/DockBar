@@ -36,13 +36,23 @@ public sealed class EdgeHotspotWindow : Window
 
     public void ShowOnEdge(Rect bounds, DockSide side, double thickness)
     {
-        var hotspotWidth = Math.Max(1, thickness);
-        Width = hotspotWidth;
-        Height = Math.Max(1, bounds.Height);
-        Left = side == DockSide.Left
-            ? bounds.Left
-            : bounds.Right - hotspotWidth;
-        Top = bounds.Top;
+        var hotspotThickness = Math.Max(1, thickness);
+        if (side == DockSide.Top)
+        {
+            Width = Math.Max(1, bounds.Width);
+            Height = hotspotThickness;
+            Left = bounds.Left;
+            Top = bounds.Top;
+        }
+        else
+        {
+            Width = hotspotThickness;
+            Height = Math.Max(1, bounds.Height);
+            Left = side == DockSide.Left
+                ? bounds.Left
+                : bounds.Right - hotspotThickness;
+            Top = bounds.Top;
+        }
 
         _triggered = false;
 

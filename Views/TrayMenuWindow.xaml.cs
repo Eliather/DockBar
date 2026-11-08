@@ -108,10 +108,18 @@ public partial class TrayMenuWindow : Window, INotifyPropertyChanged
         private set { _dividerBrush = value; OnPropertyChanged(); }
     }
 
+    public Brush LeftSideBackgroundBrush => _config.DockSide == DockSide.Left ? HeaderPanelBrush : GlyphHostBrush;
+    public Brush LeftSideBorderBrush => _config.DockSide == DockSide.Left ? ButtonHoverBorderBrush : GlyphBorderBrush;
+    public Brush TopSideBackgroundBrush => _config.DockSide == DockSide.Top ? HeaderPanelBrush : GlyphHostBrush;
+    public Brush TopSideBorderBrush => _config.DockSide == DockSide.Top ? ButtonHoverBorderBrush : GlyphBorderBrush;
+    public Brush RightSideBackgroundBrush => _config.DockSide == DockSide.Right ? HeaderPanelBrush : GlyphHostBrush;
+    public Brush RightSideBorderBrush => _config.DockSide == DockSide.Right ? ButtonHoverBorderBrush : GlyphBorderBrush;
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public event EventHandler? PauseRequested;
     public event EventHandler? ToggleSideRequested;
+    public event EventHandler<DockSide>? SideSelected;
     public event EventHandler? SettingsRequested;
     public event EventHandler? UpdateRequested;
     public event EventHandler? ConfigFolderRequested;
@@ -361,6 +369,21 @@ public partial class TrayMenuWindow : Window, INotifyPropertyChanged
     private void ToggleSide_Click(object sender, RoutedEventArgs e)
     {
         CloseAndRaise(ToggleSideRequested);
+    }
+
+    private void SideLeft_Click(object sender, RoutedEventArgs e)
+    {
+        RequestClose(() => SideSelected?.Invoke(this, DockSide.Left));
+    }
+
+    private void SideTop_Click(object sender, RoutedEventArgs e)
+    {
+        RequestClose(() => SideSelected?.Invoke(this, DockSide.Top));
+    }
+
+    private void SideRight_Click(object sender, RoutedEventArgs e)
+    {
+        RequestClose(() => SideSelected?.Invoke(this, DockSide.Right));
     }
 
     private void Settings_Click(object sender, RoutedEventArgs e)

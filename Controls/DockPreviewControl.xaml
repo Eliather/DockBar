@@ -16,27 +16,63 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <TextBlock Grid.Row="0"
-                       Text="{local:Loc Key=Settings_ClockPreview}"
-                       Style="{DynamicResource SettingsSectionTitleStyle}"/>
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0"
+                           Text="{local:Loc Key=Settings_ClockPreview}"
+                           Style="{DynamicResource SettingsSectionTitleStyle}"
+                           VerticalAlignment="Center"/>
+                <Border Grid.Column="1"
+                        Style="{DynamicResource DialogSurfaceStyle}"
+                        Padding="2"
+                        CornerRadius="5"
+                        VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton Content="{local:Loc Key=Settings_DockSideLeft}"
+                                     IsChecked="{Binding IsDockSideLeft, Mode=TwoWay}"
+                                     Style="{DynamicResource DialogSegmentedRadioStyle}"
+                                     FontSize="10.5"
+                                     Padding="8,3"/>
+                        <RadioButton Content="{local:Loc Key=Settings_DockSideTop}"
+                                     IsChecked="{Binding IsDockSideTop, Mode=TwoWay}"
+                                     Margin="2,0,0,0"
+                                     Style="{DynamicResource DialogSegmentedRadioStyle}"
+                                     FontSize="10.5"
+                                     Padding="8,3"/>
+                        <RadioButton Content="{local:Loc Key=Settings_DockSideRight}"
+                                     IsChecked="{Binding IsDockSideRight, Mode=TwoWay}"
+                                     Margin="2,0,0,0"
+                                     Style="{DynamicResource DialogSegmentedRadioStyle}"
+                                     FontSize="10.5"
+                                     Padding="8,3"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
             <TextBlock Grid.Row="1"
                        Text="{local:Loc Key=Settings_PreviewHint}"
                        Style="{DynamicResource SettingsSectionBodyStyle}"/>
 
             <Border Grid.Row="2"
                     Style="{DynamicResource SettingsInsetCardStyle}"
-                    Padding="16"
+                    Padding="12"
                     VerticalAlignment="Stretch">
-                <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <!-- Marco de simulación del Dock -->
-                    <Border Width="170"
-                            Height="380"
+                <Grid HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                    <!-- Marco de simulación del Dock (Vertical o Superior según configuración) -->
+                    <Border x:Name="PreviewDockFrame"
+                            Width="175"
+                            MinHeight="380"
                             CornerRadius="10"
                             Background="{Binding PreviewBrush}"
                             BorderBrush="#44FFFFFF"
                             BorderThickness="1"
-                            Padding="10">
-                        <Grid>
+                            Padding="10"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                        <Grid x:Name="PreviewDockLayoutGrid">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
@@ -44,377 +80,765 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <!-- Acceso simulado superior -->
-                            <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,6,0,0">
-                                <Border Width="38" Height="38" CornerRadius="6" Background="#22FFFFFF" BorderBrush="#35FFFFFF" BorderThickness="1" HorizontalAlignment="Center"/>
+                            <!-- Acceso simulado -->
+                            <StackPanel x:Name="PreviewAppStack" Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,4,0,0">
+                                <Border Width="36" Height="36" CornerRadius="6" Background="#22FFFFFF" BorderBrush="#35FFFFFF" BorderThickness="1" HorizontalAlignment="Center"/>
                                 <TextBlock Text="App" Foreground="{Binding TextBrush}" FontSize="10" TextAlignment="Center" Margin="0,3,0,0" Opacity="0.85"/>
                             </StackPanel>
 
                             <!-- Indicador de espacio libre -->
-                            <Border Grid.Row="1"
-                                    Margin="8,10,8,10"
+                            <Border x:Name="PreviewFreeSpaceBorder"
+                                    Grid.Row="1"
+                                    MinHeight="32"
+                                    Margin="8,8,8,8"
                                     BorderBrush="#25FFFFFF"
                                     BorderThickness="1"
                                     CornerRadius="4"
                                     SnapsToDevicePixels="True">
-                                <TextBlock Text="[ Espacio libre ]"
+                                <TextBlock x:Name="PreviewFreeSpaceText"
+                                           Text="[ Espacio libre ]"
                                            Foreground="{Binding TextBrush}"
                                            Opacity="0.35"
-                                           FontSize="10"
+                                           FontSize="9.5"
+                                           TextAlignment="Center"
+                                           TextWrapping="Wrap"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center"/>
                             </Border>
 
-                            <!-- Vista previa en tiempo real de Widgets Reordenables -->
-                            <StackPanel x:Name="PreviewWidgetsPanel"
-                                        Grid.Row="2"
-                                        Orientation="Vertical"
-                                        HorizontalAlignment="Stretch"
-                                        Margin="0,0,0,6"
-                                        PreviewMouseMove="PreviewWidgetsPanel_MouseMove"
-                                        PreviewMouseLeftButtonUp="PreviewWidgetsPanel_MouseLeftButtonUp">
+                            <!-- Contenedor desplazable de Widgets Reordenables -->
+                            <ScrollViewer x:Name="PreviewWidgetsScroll"
+                                          Grid.Row="2"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          VerticalScrollBarVisibility="Disabled"
+                                          PreviewMouseWheel="PreviewWidgetsScroll_PreviewMouseWheel">
+                                <StackPanel x:Name="PreviewWidgetsPanel"
+                                            Orientation="Vertical"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Center"
+                                            Margin="0,0,0,6"
+                                            PreviewMouseMove="PreviewWidgetsPanel_MouseMove"
+                                            PreviewMouseLeftButtonUp="PreviewWidgetsPanel_MouseLeftButtonUp">
 
-                                <!-- Vista previa del Reloj -->
-                                <Border x:Name="PreviewClockBorder"
-                                        Tag="Clock"
-                                        Margin="0,0,0,6"
-                                        Padding="6,4"
-                                        CornerRadius="6"
-                                        Background="#14FFFFFF"
-                                        BorderBrush="Transparent"
-                                        BorderThickness="1"
-                                        HorizontalAlignment="Stretch"
-                                        Cursor="Hand"
-                                        ToolTip="{local:Loc Key=Settings_DragReorderTooltip}"
-                                        PreviewMouseLeftButtonDown="PreviewWidget_MouseLeftButtonDown"
-                                        Visibility="{Binding Config.ShowClock, Converter={StaticResource BoolToVisibilityConverter}}">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="⋮⋮" Foreground="{Binding TextBrush}" Opacity="0.4" FontSize="11" VerticalAlignment="Center" Margin="2,0,4,0"/>
-                                        <StackPanel Grid.Column="1" HorizontalAlignment="Center">
-                                            <TextBlock Text="{Binding PreviewClockTime}"
-                                                       Foreground="{Binding TextBrush}"
-                                                       FontWeight="SemiBold"
-                                                       FontSize="{Binding Config.ClockFontSize}"
-                                                       TextAlignment="Center"
-                                                       HorizontalAlignment="Center"/>
-                                            <TextBlock Text="{Binding PreviewClockDate}"
-                                                       Foreground="{Binding TextBrush}"
-                                                       FontSize="{Binding PreviewClockDateFontSize}"
-                                                       Opacity="0.82"
-                                                       TextAlignment="Center"
-                                                       HorizontalAlignment="Center"
-                                                       Margin="0,1,0,0"
-                                                       Visibility="{Binding Config.ShowClockDate, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                        </StackPanel>
-                                        <Border Grid.Column="2" Width="10"/>
-                                    </Grid>
-                                </Border>
+                                    <!-- 1. Vista previa del Reloj -->
+                                    <Border x:Name="PreviewClockBorder"
+                                            Tag="Clock"
+                                            Margin="0,0,0,6"
+                                            Padding="6,4"
+                                            CornerRadius="6"
+                                            Background="#14FFFFFF"
+                                            BorderBrush="Transparent"
+                                            BorderThickness="1"
+                                            HorizontalAlignment="Stretch"
+                                            Cursor="Hand"
+                                            ToolTip="{local:Loc Key=Settings_DragReorderTooltip}"
+                                            PreviewMouseLeftButtonDown="PreviewWidget_MouseLeftButtonDown"
+                                            Visibility="{Binding Config.ShowClock, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <Grid>
+                                            <!-- Reloj Modo Vertical (Izquierda / Derecha) -->
+                                            <Grid Visibility="{Binding IsDockSideTop, Converter={StaticResource InverseBoolConverter}}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="⋮⋮" Foreground="{Binding TextBrush}" Opacity="0.4" FontSize="11" VerticalAlignment="Center" Margin="2,0,4,0"/>
+                                                <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                                    <TextBlock Text="{Binding PreviewClockTime}"
+                                                               Foreground="{Binding TextBrush}"
+                                                               FontWeight="SemiBold"
+                                                               FontSize="{Binding Config.ClockFontSize}"
+                                                               TextAlignment="Center"
+                                                               HorizontalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding PreviewClockDate}"
+                                                               Foreground="{Binding TextBrush}"
+                                                               FontSize="{Binding PreviewClockDateFontSize}"
+                                                               Opacity="0.82"
+                                                               TextAlignment="Center"
+                                                               HorizontalAlignment="Center"
+                                                               Margin="0,1,0,0"
+                                                               Visibility="{Binding Config.ShowClockDate, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                </StackPanel>
+                                                <Border Grid.Column="2" Width="10"/>
+                                            </Grid>
 
-                                <!-- Vista previa de Multimedia -->
-                                <Border x:Name="PreviewMediaBorder"
-                                        Tag="Media"
-                                        Margin="0,0,0,6"
-                                        Padding="6,4"
-                                        CornerRadius="6"
-                                        Background="#14FFFFFF"
-                                        BorderBrush="Transparent"
-                                        BorderThickness="1"
-                                        HorizontalAlignment="Stretch"
-                                        Cursor="Hand"
-                                        ToolTip="{local:Loc Key=Settings_DragReorderTooltip}"
-                                        PreviewMouseLeftButtonDown="PreviewWidget_MouseLeftButtonDown"
-                                        Visibility="{Binding Config.ShowMediaControl, Converter={StaticResource BoolToVisibilityConverter}}">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="⋮⋮" Foreground="{Binding TextBrush}" Opacity="0.4" FontSize="11" VerticalAlignment="Center" Margin="2,0,4,0"/>
-                                        <StackPanel Grid.Column="1" Orientation="Vertical" HorizontalAlignment="Stretch">
-                                            <!-- Miniatura simulada -->
-                                            <Border Width="60" Height="45"
-                                                    CornerRadius="4"
-                                                    Background="#25000000"
-                                                    BorderBrush="#35FFFFFF"
-                                                    BorderThickness="1"
-                                                    HorizontalAlignment="Center"
-                                                    Margin="0,0,0,3"
-                                                    Visibility="{Binding Config.ShowMediaThumbnail, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                <Grid>
-                                                    <Path Data="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"
-                                                          Fill="{Binding AccentBrush}"
-                                                          Stretch="Uniform"
-                                                          Width="14" Height="14"
-                                                          HorizontalAlignment="Center"
-                                                          VerticalAlignment="Center"
-                                                          Opacity="0.85"/>
-                                                </Grid>
-                                            </Border>
-
-                                            <!-- Controles y texto (ocultos si está en modo solo miniatura) -->
-                                            <StackPanel Visibility="{Binding Config.MediaThumbnailOnly, Converter={StaticResource InverseBoolConverter}}">
-                                                <TextBlock Text="Song Title • Artist"
+                                            <!-- Reloj Modo Superior (Orientado en columna vertical) -->
+                                            <StackPanel Orientation="Vertical"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        MinWidth="66"
+                                                        Visibility="{Binding IsDockSideTop, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <TextBlock Text="⋯" Foreground="{Binding TextBrush}" Opacity="0.4" FontSize="11" HorizontalAlignment="Center" Margin="0,-2,0,2"/>
+                                                <TextBlock Text="{Binding PreviewClockMainTime}"
                                                            Foreground="{Binding TextBrush}"
-                                                           FontSize="10"
-                                                           FontWeight="SemiBold"
+                                                           FontWeight="Bold"
+                                                           FontSize="15"
                                                            TextAlignment="Center"
-                                                           Margin="0,0,0,2"/>
-                                                <!-- Mini barra de búsqueda en preview -->
-                                                <Grid Margin="0,0,0,3"
-                                                      Visibility="{Binding Config.ShowMediaSeekBar, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBlock Grid.Column="0" Text="1:24" Foreground="{Binding TextBrush}" Opacity="0.5" FontSize="8" VerticalAlignment="Center" Margin="0,0,3,0"/>
-                                                    <ProgressBar Grid.Column="1" Height="3" Minimum="0" Maximum="100" Value="42" Foreground="{Binding AccentBrush}" Background="#22FFFFFF" BorderThickness="0" VerticalAlignment="Center"/>
-                                                    <TextBlock Grid.Column="2" Text="3:30" Foreground="{Binding TextBrush}" Opacity="0.5" FontSize="8" VerticalAlignment="Center" Margin="3,0,0,0"/>
-                                                </Grid>
-                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                    <Border Width="16" Height="16" CornerRadius="3" Background="#18FFFFFF" Margin="2,0"/>
-                                                    <Border Width="18" Height="18" CornerRadius="3" Background="#25FFFFFF" Margin="2,0"/>
-                                                    <Border Width="16" Height="16" CornerRadius="3" Background="#18FFFFFF" Margin="2,0"/>
+                                                           HorizontalAlignment="Center"/>
+                                                <TextBlock Text="{Binding PreviewClockSubTime}"
+                                                           Foreground="{Binding TextBrush}"
+                                                           FontWeight="SemiBold"
+                                                           FontSize="9.5"
+                                                           Opacity="0.85"
+                                                           TextAlignment="Center"
+                                                           HorizontalAlignment="Center"
+                                                           Margin="0,1,0,0"
+                                                           Visibility="{Binding IsPreviewClockSubTimeVisible, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                <TextBlock Text="{Binding PreviewClockDate}"
+                                                           Foreground="{Binding TextBrush}"
+                                                           FontSize="9"
+                                                           Opacity="0.78"
+                                                           TextAlignment="Center"
+                                                           HorizontalAlignment="Center"
+                                                           Margin="0,2,0,0"
+                                                           Visibility="{Binding Config.ShowClockDate, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 2. Vista previa de Multimedia -->
+                                    <Border x:Name="PreviewMediaBorder"
+                                            Tag="Media"
+                                            Margin="0,0,0,6"
+                                            Padding="6,4"
+                                            CornerRadius="6"
+                                            Background="#14FFFFFF"
+                                            BorderBrush="Transparent"
+                                            BorderThickness="1"
+                                            HorizontalAlignment="Stretch"
+                                            Cursor="Hand"
+                                            ToolTip="{local:Loc Key=Settings_DragReorderTooltip}"
+                                            PreviewMouseLeftButtonDown="PreviewWidget_MouseLeftButtonDown"
+                                            Visibility="{Binding Config.ShowMediaControl, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <Grid>
+                                            <!-- Multimedia Modo Vertical (Izquierda / Derecha) -->
+                                            <Grid Visibility="{Binding IsDockSideTop, Converter={StaticResource InverseBoolConverter}}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="⋮⋮" Foreground="{Binding TextBrush}" Opacity="0.4" FontSize="11" VerticalAlignment="Center" Margin="2,0,4,0"/>
+                                                <StackPanel Grid.Column="1" Orientation="Vertical" HorizontalAlignment="Stretch">
+                                                    <Border Width="60" Height="45"
+                                                            CornerRadius="4"
+                                                            Background="#25000000"
+                                                            BorderBrush="#35FFFFFF"
+                                                            BorderThickness="1"
+                                                            HorizontalAlignment="Center"
+                                                            Margin="0,0,0,3"
+                                                            Visibility="{Binding Config.ShowMediaThumbnail, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                        <Grid>
+                                                            <Path Data="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"
+                                                                  Fill="{DynamicResource AppAccentBrush}"
+                                                                  Stretch="Uniform"
+                                                                  Width="14" Height="14"
+                                                                  HorizontalAlignment="Center"
+                                                                  VerticalAlignment="Center"
+                                                                  Opacity="0.85"/>
+                                                        </Grid>
+                                                    </Border>
+                                                    <StackPanel Visibility="{Binding Config.MediaThumbnailOnly, Converter={StaticResource InverseBoolConverter}}">
+                                                        <TextBlock Text="Song Title • Artist"
+                                                                   Foreground="{Binding TextBrush}"
+                                                                   FontSize="10"
+                                                                   FontWeight="SemiBold"
+                                                                   TextAlignment="Center"
+                                                                   Margin="0,0,0,2"/>
+                                                        <Grid Margin="0,0,0,3"
+                                                              Visibility="{Binding Config.ShowMediaSeekBar, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Grid.Column="0" Text="1:24" Foreground="{Binding TextBrush}" Opacity="0.5" FontSize="8" VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                                            <ProgressBar Grid.Column="1" Height="3" Minimum="0" Maximum="100" Value="42" Foreground="{DynamicResource AppAccentBrush}" Background="#22FFFFFF" BorderThickness="0" VerticalAlignment="Center"/>
+                                                            <TextBlock Grid.Column="2" Text="3:30" Foreground="{Binding TextBrush}" Opacity="0.5" FontSize="8" VerticalAlignment="Center" Margin="3,0,0,0"/>
+                                                        </Grid>
+                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                            <Border Width="16" Height="16" CornerRadius="3" Background="#18FFFFFF" Margin="2,0"/>
+                                                            <Border Width="18" Height="18" CornerRadius="3" Background="#25FFFFFF" Margin="2,0"/>
+                                                            <Border Width="16" Height="16" CornerRadius="3" Background="#18FFFFFF" Margin="2,0"/>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <!-- Multimedia Modo Superior (Horizontal compacto con botones verticales a la derecha) -->
+                                            <StackPanel Orientation="Vertical"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        Visibility="{Binding IsDockSideTop, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <TextBlock Text="⋯" Foreground="{Binding TextBrush}" Opacity="0.4" FontSize="11" HorizontalAlignment="Center" Margin="0,-2,0,2"/>
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <StackPanel Width="108" VerticalAlignment="Center">
+                                                        <Border Width="48" Height="30"
+                                                                CornerRadius="4"
+                                                                Background="#25000000"
+                                                                BorderBrush="#35FFFFFF"
+                                                                BorderThickness="1"
+                                                                HorizontalAlignment="Center"
+                                                                Margin="0,0,0,2"
+                                                                Visibility="{Binding Config.ShowMediaThumbnail, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                            <Path Data="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"
+                                                                  Fill="{DynamicResource AppAccentBrush}"
+                                                                  Stretch="Uniform"
+                                                                  Width="11" Height="11"
+                                                                  HorizontalAlignment="Center"
+                                                                  VerticalAlignment="Center"
+                                                                  Opacity="0.85"/>
+                                                        </Border>
+                                                        <StackPanel Visibility="{Binding Config.MediaThumbnailOnly, Converter={StaticResource InverseBoolConverter}}">
+                                                            <TextBlock Text="Song Title • Artist"
+                                                                       Foreground="{Binding TextBrush}"
+                                                                       FontSize="8.5"
+                                                                       FontWeight="SemiBold"
+                                                                       TextAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       Margin="0,0,0,2"/>
+                                                            <Grid Visibility="{Binding Config.ShowMediaSeekBar, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock Grid.Column="0" Text="1:24" Foreground="{Binding TextBrush}" Opacity="0.5" FontSize="7.5" VerticalAlignment="Center" Margin="0,0,2,0"/>
+                                                                <ProgressBar Grid.Column="1" Height="3" Minimum="0" Maximum="100" Value="42" Foreground="{DynamicResource AppAccentBrush}" Background="#22FFFFFF" BorderThickness="0" VerticalAlignment="Center"/>
+                                                                <TextBlock Grid.Column="2" Text="3:30" Foreground="{Binding TextBrush}" Opacity="0.5" FontSize="7.5" VerticalAlignment="Center" Margin="2,0,0,0"/>
+                                                            </Grid>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Vertical"
+                                                                VerticalAlignment="Center"
+                                                                Margin="5,0,0,0"
+                                                                Visibility="{Binding Config.MediaThumbnailOnly, Converter={StaticResource InverseBoolConverter}}">
+                                                        <Border Width="15" Height="15" CornerRadius="3" Background="#18FFFFFF" Margin="0,1"/>
+                                                        <Border Width="15" Height="15" CornerRadius="3" Background="#25FFFFFF" Margin="0,1"/>
+                                                        <Border Width="15" Height="15" CornerRadius="3" Background="#18FFFFFF" Margin="0,1"/>
+                                                    </StackPanel>
                                                 </StackPanel>
                                             </StackPanel>
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
+                                        </Grid>
+                                    </Border>
 
-                                <!-- Vista previa de Volumen -->
-                                <Border x:Name="PreviewVolumeBorder"
-                                        Tag="Volume"
-                                        Margin="0,0,0,2"
-                                        Padding="6,4"
-                                        CornerRadius="6"
-                                        Background="#14FFFFFF"
-                                        BorderBrush="Transparent"
-                                        BorderThickness="1"
-                                        HorizontalAlignment="Stretch"
-                                        Cursor="Hand"
-                                        ToolTip="{local:Loc Key=Settings_DragReorderTooltip}"
-                                        PreviewMouseLeftButtonDown="PreviewWidget_MouseLeftButtonDown"
-                                        Visibility="{Binding Config.ShowVolumeControl, Converter={StaticResource BoolToVisibilityConverter}}">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="⋮⋮" Foreground="{Binding TextBrush}" Opacity="0.4" FontSize="11" VerticalAlignment="Center" Margin="2,0,4,0"/>
-                                        <Border Grid.Column="1" Width="14" Height="14" CornerRadius="2" Background="#20FFFFFF"/>
-                                        <Border Grid.Column="2" Height="4" CornerRadius="2" Background="{DynamicResource AppAccentBrush}" Margin="4,0"/>
-                                        <TextBlock Grid.Column="3" Text="75%" Foreground="{Binding TextBrush}" FontSize="9" FontWeight="SemiBold"/>
-                                    </Grid>
-                                </Border>
-
-                                <!-- Vista previa de Monitor de Recursos -->
-                                <Border x:Name="PreviewResourceBorder"
-                                        Tag="Resource"
-                                        Margin="0,0,0,6"
-                                        Padding="6,4"
-                                        CornerRadius="6"
-                                        Background="#14FFFFFF"
-                                        BorderBrush="Transparent"
-                                        BorderThickness="1"
-                                        HorizontalAlignment="Stretch"
-                                        Cursor="Hand"
-                                        ToolTip="{local:Loc Key=Settings_DragReorderTooltip}"
-                                        PreviewMouseLeftButtonDown="PreviewWidget_MouseLeftButtonDown"
-                                        Visibility="{Binding Config.ShowResourceMonitor, Converter={StaticResource BoolToVisibilityConverter}}">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="⋮⋮" Foreground="{Binding TextBrush}" Opacity="0.4" FontSize="11" VerticalAlignment="Center" Margin="2,0,4,0"/>
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Grid.IsSharedSizeScope="True">
-                                            <Grid Margin="0,0,0,2">
+                                    <!-- 3. Vista previa de Volumen -->
+                                    <Border x:Name="PreviewVolumeBorder"
+                                            Tag="Volume"
+                                            Margin="0,0,0,6"
+                                            Padding="6,4"
+                                            CornerRadius="6"
+                                            Background="#14FFFFFF"
+                                            BorderBrush="Transparent"
+                                            BorderThickness="1"
+                                            HorizontalAlignment="Stretch"
+                                            Cursor="Hand"
+                                            ToolTip="{local:Loc Key=Settings_DragReorderTooltip}"
+                                            PreviewMouseLeftButtonDown="PreviewWidget_MouseLeftButtonDown"
+                                            Visibility="{Binding Config.ShowVolumeControl, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <Grid>
+                                            <!-- Volumen Modo Vertical (Izquierda / Derecha) -->
+                                            <Grid Visibility="{Binding IsDockSideTop, Converter={StaticResource InverseBoolConverter}}">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="PrevResLabel"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
                                                     <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="PrevResVal"/>
+                                                    <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="{Binding PreviewCpuLabel, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                           Foreground="{Binding TextBrush}" FontSize="8.5" FontWeight="Bold" Opacity="0.75"
-                                                           VerticalAlignment="Center"
-                                                           MaxWidth="55" TextTrimming="CharacterEllipsis"/>
-                                                <Border Grid.Column="1" Height="3" CornerRadius="1.5" Background="{DynamicResource AppAccentBrush}" Margin="4,0" VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="2" Text="15%" Foreground="{Binding TextBrush}" FontSize="8.5" FontWeight="SemiBold" VerticalAlignment="Center" TextAlignment="Right"/>
+                                                <TextBlock Grid.Column="0" Text="⋮⋮" Foreground="{Binding TextBrush}" Opacity="0.4" FontSize="11" VerticalAlignment="Center" Margin="2,0,4,0"/>
+                                                <Border Grid.Column="1" Width="14" Height="14" CornerRadius="2" Background="#20FFFFFF"/>
+                                                <Border Grid.Column="2" Height="4" CornerRadius="2" Background="{DynamicResource AppAccentBrush}" Margin="4,0"/>
+                                                <TextBlock Grid.Column="3" Text="75%" Foreground="{Binding TextBrush}" FontSize="9" FontWeight="SemiBold"/>
                                             </Grid>
-                                            <Grid Margin="0,0,0,2">
+
+                                            <!-- Volumen Modo Superior (Columna vertical: 75% arriba, barra vertical en medio, icono abajo) -->
+                                            <StackPanel Orientation="Vertical"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        MinWidth="28"
+                                                        Visibility="{Binding IsDockSideTop, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <TextBlock Text="⋯" Foreground="{Binding TextBrush}" Opacity="0.4" FontSize="11" HorizontalAlignment="Center" Margin="0,-2,0,2"/>
+                                                <TextBlock Text="75%" Foreground="{Binding TextBrush}" FontSize="8" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                                <Border Width="5" Height="34" CornerRadius="2.5" Background="#24FFFFFF" Margin="0,3,0,3" HorizontalAlignment="Center" ClipToBounds="True">
+                                                    <Border Width="5" Height="25" CornerRadius="2.5" Background="{DynamicResource AppAccentBrush}" VerticalAlignment="Bottom"/>
+                                                </Border>
+                                                <Border Width="14" Height="16" CornerRadius="2" Background="#20FFFFFF" HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 4. Vista previa de Monitor de Recursos -->
+                                    <Border x:Name="PreviewResourceBorder"
+                                            Tag="Resource"
+                                            Margin="0,0,0,6"
+                                            Padding="6,4"
+                                            CornerRadius="6"
+                                            Background="#14FFFFFF"
+                                            BorderBrush="Transparent"
+                                            BorderThickness="1"
+                                            HorizontalAlignment="Stretch"
+                                            Cursor="Hand"
+                                            ToolTip="{local:Loc Key=Settings_DragReorderTooltip}"
+                                            PreviewMouseLeftButtonDown="PreviewWidget_MouseLeftButtonDown"
+                                            Visibility="{Binding Config.ShowResourceMonitor, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <Grid>
+                                            <!-- Recursos Modo Vertical -->
+                                            <Grid Visibility="{Binding IsDockSideTop, Converter={StaticResource InverseBoolConverter}}">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="PrevResLabel"/>
+                                                    <ColumnDefinition Width="Auto"/>
                                                     <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="PrevResVal"/>
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="RAM" Foreground="{Binding TextBrush}" FontSize="8.5" FontWeight="Bold" Opacity="0.75" VerticalAlignment="Center"/>
-                                                <Border Grid.Column="1" Height="3" CornerRadius="1.5" Background="{DynamicResource AppAccentBrush}" Margin="4,0" VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="2" Text="42%" Foreground="{Binding TextBrush}" FontSize="8.5" FontWeight="SemiBold" VerticalAlignment="Center" TextAlignment="Right"/>
+                                                <TextBlock Grid.Column="0" Text="⋮⋮" Foreground="{Binding TextBrush}" Opacity="0.4" FontSize="11" VerticalAlignment="Center" Margin="2,0,4,0"/>
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Grid.IsSharedSizeScope="True">
+                                                    <Grid Margin="0,0,0,2">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto" SharedSizeGroup="PrevResLabel"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto" SharedSizeGroup="PrevResVal"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="{Binding PreviewCpuLabel, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                   Foreground="{Binding TextBrush}" FontSize="8.5" FontWeight="Bold" Opacity="0.75"
+                                                                   VerticalAlignment="Center"
+                                                                   MaxWidth="55" TextTrimming="CharacterEllipsis"/>
+                                                        <Border Grid.Column="1" Height="3" CornerRadius="1.5" Background="{DynamicResource AppAccentBrush}" Margin="4,0" VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="2" Text="15%" Foreground="{Binding TextBrush}" FontSize="8.5" FontWeight="SemiBold" VerticalAlignment="Center" TextAlignment="Right"/>
+                                                    </Grid>
+                                                    <Grid Margin="0,0,0,2">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto" SharedSizeGroup="PrevResLabel"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto" SharedSizeGroup="PrevResVal"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="RAM" Foreground="{Binding TextBrush}" FontSize="8.5" FontWeight="Bold" Opacity="0.75" VerticalAlignment="Center"/>
+                                                        <Border Grid.Column="1" Height="3" CornerRadius="1.5" Background="{DynamicResource AppAccentBrush}" Margin="4,0" VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="2" Text="42%" Foreground="{Binding TextBrush}" FontSize="8.5" FontWeight="SemiBold" VerticalAlignment="Center" TextAlignment="Right"/>
+                                                    </Grid>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto" SharedSizeGroup="PrevResLabel"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto" SharedSizeGroup="PrevResVal"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="{Binding PreviewGpuLabel, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                   Foreground="{Binding TextBrush}" FontSize="8.5" FontWeight="Bold" Opacity="0.75"
+                                                                   VerticalAlignment="Center"
+                                                                   MaxWidth="55" TextTrimming="CharacterEllipsis"/>
+                                                        <Border Grid.Column="1" Height="3" CornerRadius="1.5" Background="{DynamicResource AppAccentBrush}" Margin="4,0" VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="2" Text="28%" Foreground="{Binding TextBrush}" FontSize="8.5" FontWeight="SemiBold" VerticalAlignment="Center" TextAlignment="Right"/>
+                                                    </Grid>
+                                                </StackPanel>
                                             </Grid>
-                                            <Grid>
+
+                                            <!-- Recursos Modo Superior -->
+                                            <StackPanel Orientation="Vertical"
+                                                        Width="104"
+                                                        VerticalAlignment="Center"
+                                                        Visibility="{Binding IsDockSideTop, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <TextBlock Text="⋯" Foreground="{Binding TextBrush}" Opacity="0.4" FontSize="11" HorizontalAlignment="Center" Margin="0,-2,0,2"/>
+                                                <StackPanel VerticalAlignment="Center" Grid.IsSharedSizeScope="True">
+                                                    <Grid Margin="0,0,0,2">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto" SharedSizeGroup="PrevResTopLabel"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto" SharedSizeGroup="PrevResTopVal"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="{Binding PreviewCpuLabel, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                   Foreground="{Binding TextBrush}" FontSize="8" FontWeight="Bold" Opacity="0.75"
+                                                                   VerticalAlignment="Center" MaxWidth="42" TextTrimming="CharacterEllipsis"/>
+                                                        <Border Grid.Column="1" Height="3" CornerRadius="1.5" Background="{DynamicResource AppAccentBrush}" Margin="3,0" VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="2" Text="15%" Foreground="{Binding TextBrush}" FontSize="8" FontWeight="SemiBold" VerticalAlignment="Center" TextAlignment="Right"/>
+                                                    </Grid>
+                                                    <Grid Margin="0,0,0,2">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto" SharedSizeGroup="PrevResTopLabel"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto" SharedSizeGroup="PrevResTopVal"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="RAM" Foreground="{Binding TextBrush}" FontSize="8" FontWeight="Bold" Opacity="0.75" VerticalAlignment="Center"/>
+                                                        <Border Grid.Column="1" Height="3" CornerRadius="1.5" Background="{DynamicResource AppAccentBrush}" Margin="3,0" VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="2" Text="42%" Foreground="{Binding TextBrush}" FontSize="8" FontWeight="SemiBold" VerticalAlignment="Center" TextAlignment="Right"/>
+                                                    </Grid>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto" SharedSizeGroup="PrevResTopLabel"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto" SharedSizeGroup="PrevResTopVal"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="{Binding PreviewGpuLabel, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                   Foreground="{Binding TextBrush}" FontSize="8" FontWeight="Bold" Opacity="0.75"
+                                                                   VerticalAlignment="Center" MaxWidth="42" TextTrimming="CharacterEllipsis"/>
+                                                        <Border Grid.Column="1" Height="3" CornerRadius="1.5" Background="{DynamicResource AppAccentBrush}" Margin="3,0" VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="2" Text="28%" Foreground="{Binding TextBrush}" FontSize="8" FontWeight="SemiBold" VerticalAlignment="Center" TextAlignment="Right"/>
+                                                    </Grid>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 5. Vista previa de Cuotas de IA (5HR / Week) -->
+                                    <Border x:Name="PreviewAiQuotaBorder"
+                                            Tag="AiQuota"
+                                            Margin="0,0,0,6"
+                                            Padding="6,4"
+                                            CornerRadius="6"
+                                            Background="#14FFFFFF"
+                                            BorderBrush="Transparent"
+                                            BorderThickness="1"
+                                            HorizontalAlignment="Stretch"
+                                            Cursor="Hand"
+                                            ToolTip="{local:Loc Key=Settings_DragReorderTooltip}"
+                                            PreviewMouseLeftButtonDown="PreviewWidget_MouseLeftButtonDown"
+                                            Visibility="{Binding Config.ShowAiQuota, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <Grid>
+                                            <!-- IA Modo Vertical (Izquierda / Derecha: barras horizontales) -->
+                                            <Grid Visibility="{Binding IsDockSideTop, Converter={StaticResource InverseBoolConverter}}">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="PrevResLabel"/>
+                                                    <ColumnDefinition Width="Auto"/>
                                                     <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="PrevResVal"/>
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="{Binding PreviewGpuLabel, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                           Foreground="{Binding TextBrush}" FontSize="8.5" FontWeight="Bold" Opacity="0.75"
-                                                           VerticalAlignment="Center"
-                                                           MaxWidth="55" TextTrimming="CharacterEllipsis"/>
-                                                <Border Grid.Column="1" Height="3" CornerRadius="1.5" Background="{DynamicResource AppAccentBrush}" Margin="4,0" VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="2" Text="28%" Foreground="{Binding TextBrush}" FontSize="8.5" FontWeight="SemiBold" VerticalAlignment="Center" TextAlignment="Right"/>
+                                                <TextBlock Grid.Column="0" Text="⋮⋮" Foreground="{Binding TextBrush}" Opacity="0.4" FontSize="11" VerticalAlignment="Center" Margin="2,0,4,0"/>
+                                                <ItemsControl Grid.Column="1"
+                                                              VerticalAlignment="Center"
+                                                              Grid.IsSharedSizeScope="True"
+                                                              ItemsSource="{Binding AiQuotaServiceInstance.Bars, RelativeSource={RelativeSource AncestorType=Window}}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Grid Margin="0,1,0,1" ToolTip="{Binding DetailText}">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="PrevAiLabel"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="PrevAiVal"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock Grid.Column="0"
+                                                                           Text="{Binding Label}"
+                                                                           Foreground="{Binding TextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                           FontSize="8.5"
+                                                                           FontWeight="Bold"
+                                                                           Opacity="0.88"
+                                                                           VerticalAlignment="Center"/>
+                                                                <ProgressBar Grid.Column="1"
+                                                                             Height="3.5"
+                                                                             Margin="4,0"
+                                                                             Minimum="0"
+                                                                             Maximum="100"
+                                                                             Value="{Binding AvailablePercent, Mode=OneWay}"
+                                                                             Foreground="{Binding BarBrush}"
+                                                                             Background="#24FFFFFF"
+                                                                             BorderThickness="0"
+                                                                             VerticalAlignment="Center"/>
+                                                                <TextBlock Grid.Column="2"
+                                                                           Text="{Binding PercentText}"
+                                                                           Foreground="{Binding TextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                           FontSize="8.5"
+                                                                           FontWeight="SemiBold"
+                                                                           VerticalAlignment="Center"
+                                                                           TextAlignment="Right"/>
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
                                             </Grid>
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
 
-                                <!-- Vista previa de Gestión de Encendido -->
-                                <Border x:Name="PreviewPowerBorder"
-                                        Tag="Power"
-                                        Margin="0,0,0,4"
-                                        Padding="6,4"
-                                        CornerRadius="6"
-                                        Background="#14FFFFFF"
-                                        BorderBrush="Transparent"
-                                        BorderThickness="1"
-                                        HorizontalAlignment="Stretch"
-                                        Cursor="Hand"
-                                        ToolTip="{local:Loc Key=Settings_DragReorderTooltip}"
-                                        PreviewMouseLeftButtonDown="PreviewWidget_MouseLeftButtonDown"
-                                        Visibility="{Binding Config.ShowPowerControl, Converter={StaticResource BoolToVisibilityConverter}}">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="⋮⋮" Foreground="{Binding TextBrush}" Opacity="0.4" FontSize="11" VerticalAlignment="Center" Margin="2,0,4,0"/>
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center">
-                                            <Border Width="16" Height="16" CornerRadius="3" Background="#18FFFFFF" BorderBrush="#25FFFFFF" BorderThickness="1" Margin="2,0" ToolTip="{local:Loc Key=Dock_PowerLock}">
-                                                <Viewbox Width="9" Height="9">
-                                                    <Grid Width="24" Height="24">
-                                                        <Path Stroke="{Binding TextBrush}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
-                                                              Data="M8.5,10V6.5A3.5,3.5 0 0 1 15.5,6.5V10 M6.5,10H17.5A1.5,1.5 0 0 1 19,11.5V18.5A1.5,1.5 0 0 1 17.5,20H6.5A1.5,1.5 0 0 1 5,18.5V11.5A1.5,1.5 0 0 1 6.5,10Z M12,14V16.5"/>
-                                                    </Grid>
-                                                </Viewbox>
-                                            </Border>
-                                            <Border Width="16" Height="16" CornerRadius="3" Background="#18FFFFFF" BorderBrush="#25FFFFFF" BorderThickness="1" Margin="2,0" ToolTip="{local:Loc Key=Dock_PowerHibernate}">
-                                                <Viewbox Width="9" Height="9">
-                                                    <Grid Width="24" Height="24">
-                                                        <Path Stroke="{Binding TextBrush}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
-                                                              Data="M12,3 A6,6 0 0 0 21,12 A9,9 0 1 1 12,3 Z"/>
-                                                    </Grid>
-                                                </Viewbox>
-                                            </Border>
-                                            <Border Width="16" Height="16" CornerRadius="3" Background="#18FFFFFF" BorderBrush="#25FFFFFF" BorderThickness="1" Margin="2,0" ToolTip="{local:Loc Key=Dock_PowerRestart}">
-                                                <Viewbox Width="9" Height="9">
-                                                    <Grid Width="24" Height="24">
-                                                        <Path Stroke="{Binding TextBrush}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
-                                                              Data="M21,12 A9,9 0 1 1 12,3 C14.52,3 16.93,4 18.74,5.74 L21,8 M21,3 V8 H16"/>
-                                                    </Grid>
-                                                </Viewbox>
-                                            </Border>
-                                            <Border Width="16" Height="16" CornerRadius="3" Background="#18FFFFFF" BorderBrush="#25FFFFFF" BorderThickness="1" Margin="2,0" ToolTip="{local:Loc Key=Dock_PowerShutdown}">
-                                                <Viewbox Width="9" Height="9">
-                                                    <Grid Width="24" Height="24">
-                                                        <Path Stroke="{Binding TextBrush}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
-                                                              Data="M12,3 V11 M18.36,6.64 A9,9 0 1 1 5.64,6.64"/>
-                                                    </Grid>
-                                                </Viewbox>
-                                            </Border>
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
+                                            <!-- IA Modo Superior (Columnas verticales lado a lado) -->
+                                            <StackPanel Orientation="Vertical"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        Visibility="{Binding IsDockSideTop, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <TextBlock Text="⋯" Foreground="{Binding TextBrush}" Opacity="0.4" FontSize="11" HorizontalAlignment="Center" Margin="0,-2,0,2"/>
+                                                <ItemsControl HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center"
+                                                              ItemsSource="{Binding AiQuotaServiceInstance.Bars, RelativeSource={RelativeSource AncestorType=Window}}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <StackPanel Orientation="Vertical"
+                                                                        Margin="3,0,3,0"
+                                                                        MinWidth="22"
+                                                                        HorizontalAlignment="Center"
+                                                                        ToolTip="{Binding DetailText}">
+                                                                <TextBlock Text="{Binding PercentText}"
+                                                                           Foreground="{Binding TextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                           FontSize="8"
+                                                                           FontWeight="SemiBold"
+                                                                           HorizontalAlignment="Center"
+                                                                           TextAlignment="Center"/>
+                                                                <Border Width="5"
+                                                                        Height="34"
+                                                                        Margin="0,3,0,3"
+                                                                        CornerRadius="2.5"
+                                                                        Background="#24FFFFFF"
+                                                                        HorizontalAlignment="Center"
+                                                                        ClipToBounds="True">
+                                                                    <ProgressBar Orientation="Vertical"
+                                                                                 Width="5"
+                                                                                 Height="34"
+                                                                                 Minimum="0"
+                                                                                 Maximum="100"
+                                                                                 Value="{Binding AvailablePercent, Mode=OneWay}"
+                                                                                 Foreground="{Binding BarBrush}"
+                                                                                 Background="Transparent"
+                                                                                 BorderThickness="0"/>
+                                                                </Border>
+                                                                <StackPanel Height="16" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                                    <TextBlock Text="{Binding ProviderShortLabel}"
+                                                                               Foreground="{Binding TextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                               FontSize="6.5"
+                                                                               FontWeight="Bold"
+                                                                               Opacity="0.75"
+                                                                               HorizontalAlignment="Center"
+                                                                               TextAlignment="Center"/>
+                                                                    <TextBlock Text="{Binding WindowShortLabel}"
+                                                                               Foreground="{Binding BarBrush}"
+                                                                               FontSize="7"
+                                                                               FontWeight="Bold"
+                                                                               Margin="0,-1,0,0"
+                                                                               HorizontalAlignment="Center"
+                                                                               TextAlignment="Center"/>
+                                                                </StackPanel>
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
 
-                                <!-- Vista previa de Caffeine -->
-                                <Border x:Name="PreviewCaffeineBorder"
-                                        Tag="Caffeine"
-                                        Margin="0,0,0,2"
-                                        Padding="6,4"
-                                        CornerRadius="6"
-                                        Background="#14FFFFFF"
-                                        BorderBrush="Transparent"
-                                        BorderThickness="1"
-                                        HorizontalAlignment="Stretch"
-                                        Cursor="Hand"
-                                        ToolTip="{local:Loc Key=Settings_DragReorderTooltip}"
-                                        PreviewMouseLeftButtonDown="PreviewWidget_MouseLeftButtonDown"
-                                        Visibility="{Binding Config.ShowCaffeine, Converter={StaticResource BoolToVisibilityConverter}}">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="⋮⋮" Foreground="{Binding TextBrush}" Opacity="0.4" FontSize="11" VerticalAlignment="Center" Margin="2,0,4,0"/>
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center">
-                                            <Viewbox Width="13" Height="13" Margin="0,0,4,0">
-                                                <Grid Width="24" Height="24">
-                                                    <Path Data="M2,19h18v2H2V19z M20,3H4v10c0,2.21,1.79,4,4,4h6c2.21,0,4-1.79,4-4v-3h2c1.1,0,2-0.9,2-2V5C22,3.9,21.1,3,20,3z M16,13c0,1.1-0.9,2-2,2H8c-1.1,0-2-0.9-2-2V5h10V13z M20,8h-2V5h2V8z"
-                                                          Fill="{DynamicResource AppAccentBrush}"/>
-                                                </Grid>
-                                            </Viewbox>
-                                            <TextBlock Text="Awake" Foreground="{Binding TextBrush}" FontSize="9.5" FontWeight="SemiBold"/>
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
-
-                                <!-- Vista previa de Paginación (Flechas o Slider) -->
-                                <Border x:Name="PreviewPaginationBorder"
-                                        Tag="Pagination"
-                                        Margin="0,0,0,2"
-                                        Padding="6,4"
-                                        CornerRadius="6"
-                                        Background="#14FFFFFF"
-                                        BorderBrush="Transparent"
-                                        BorderThickness="1"
-                                        HorizontalAlignment="Stretch"
-                                        Cursor="Hand"
-                                        ToolTip="{local:Loc Key=Settings_DragReorderTooltip}"
-                                        PreviewMouseLeftButtonDown="PreviewWidget_MouseLeftButtonDown">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="⋮⋮" Foreground="{Binding TextBrush}" Opacity="0.4" FontSize="11" VerticalAlignment="Center" Margin="2,0,4,0"/>
-                                        
-                                        <!-- Modo Flechas Clásico -->
-                                        <StackPanel Grid.Column="1"
-                                                    Orientation="Horizontal"
-                                                    HorizontalAlignment="Center"
-                                                    Visibility="{Binding Config.UseSliderPagination, Converter={StaticResource InverseBoolConverter}}">
-                                            <TextBlock Text="◀" Foreground="{Binding TextBrush}" FontSize="9" VerticalAlignment="Center" Margin="0,0,5,0" Opacity="0.7"/>
-                                            <TextBlock Text="1 / 2" Foreground="{Binding TextBrush}" FontSize="9.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                            <TextBlock Text="▶" Foreground="{Binding TextBrush}" FontSize="9" VerticalAlignment="Center" Margin="5,0,0,0" Opacity="0.7"/>
-                                        </StackPanel>
-
-                                        <!-- Modo Slider Experimental -->
-                                        <StackPanel Grid.Column="1"
-                                                    Orientation="Vertical"
-                                                    HorizontalAlignment="Stretch"
-                                                    Margin="4,0,4,0"
-                                                    Visibility="{Binding Config.UseSliderPagination, Converter={StaticResource BoolToVisibilityConverter}}">
-                                            <TextBlock Text="1 / 2" Foreground="{Binding TextBrush}" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,1"/>
-                                            <Grid Height="6" VerticalAlignment="Center">
-                                                <Border Height="2" Background="#30FFFFFF" CornerRadius="1" VerticalAlignment="Center"/>
-                                                <Ellipse Width="6" Height="6" Fill="{DynamicResource AppAccentBrush}" HorizontalAlignment="Center"/>
+                                    <!-- 6. Vista previa de Gestión de Encendido -->
+                                    <Border x:Name="PreviewPowerBorder"
+                                            Tag="Power"
+                                            Margin="0,0,0,4"
+                                            Padding="6,4"
+                                            CornerRadius="6"
+                                            Background="#14FFFFFF"
+                                            BorderBrush="Transparent"
+                                            BorderThickness="1"
+                                            HorizontalAlignment="Stretch"
+                                            Cursor="Hand"
+                                            ToolTip="{local:Loc Key=Settings_DragReorderTooltip}"
+                                            PreviewMouseLeftButtonDown="PreviewWidget_MouseLeftButtonDown"
+                                            Visibility="{Binding Config.ShowPowerControl, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <Grid>
+                                            <!-- Encendido Modo Vertical (Fila de 4 botones) -->
+                                            <Grid Visibility="{Binding IsDockSideTop, Converter={StaticResource InverseBoolConverter}}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="⋮⋮" Foreground="{Binding TextBrush}" Opacity="0.4" FontSize="11" VerticalAlignment="Center" Margin="2,0,4,0"/>
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center">
+                                                    <Border Width="16" Height="16" CornerRadius="3" Background="#18FFFFFF" BorderBrush="#25FFFFFF" BorderThickness="1" Margin="2,0" ToolTip="{local:Loc Key=Dock_PowerLock}">
+                                                        <Viewbox Width="9" Height="9">
+                                                            <Grid Width="24" Height="24">
+                                                                <Path Stroke="{Binding TextBrush}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                                                      Data="M8.5,10V6.5A3.5,3.5 0 0 1 15.5,6.5V10 M6.5,10H17.5A1.5,1.5 0 0 1 19,11.5V18.5A1.5,1.5 0 0 1 17.5,20H6.5A1.5,1.5 0 0 1 5,18.5V11.5A1.5,1.5 0 0 1 6.5,10Z M12,14V16.5"/>
+                                                            </Grid>
+                                                        </Viewbox>
+                                                    </Border>
+                                                    <Border Width="16" Height="16" CornerRadius="3" Background="#18FFFFFF" BorderBrush="#25FFFFFF" BorderThickness="1" Margin="2,0" ToolTip="{local:Loc Key=Dock_PowerHibernate}">
+                                                        <Viewbox Width="9" Height="9">
+                                                            <Grid Width="24" Height="24">
+                                                                <Path Stroke="{Binding TextBrush}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                                                      Data="M12,3 A6,6 0 0 0 21,12 A9,9 0 1 1 12,3 Z"/>
+                                                            </Grid>
+                                                        </Viewbox>
+                                                    </Border>
+                                                    <Border Width="16" Height="16" CornerRadius="3" Background="#18FFFFFF" BorderBrush="#25FFFFFF" BorderThickness="1" Margin="2,0" ToolTip="{local:Loc Key=Dock_PowerRestart}">
+                                                        <Viewbox Width="9" Height="9">
+                                                            <Grid Width="24" Height="24">
+                                                                <Path Stroke="{Binding TextBrush}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                                                      Data="M21,12 A9,9 0 1 1 12,3 C14.52,3 16.93,4 18.74,5.74 L21,8 M21,3 V8 H16"/>
+                                                            </Grid>
+                                                        </Viewbox>
+                                                    </Border>
+                                                    <Border Width="16" Height="16" CornerRadius="3" Background="#18FFFFFF" BorderBrush="#25FFFFFF" BorderThickness="1" Margin="2,0" ToolTip="{local:Loc Key=Dock_PowerShutdown}">
+                                                        <Viewbox Width="9" Height="9">
+                                                            <Grid Width="24" Height="24">
+                                                                <Path Stroke="{Binding TextBrush}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                                                      Data="M12,3 V11 M18.36,6.64 A9,9 0 1 1 5.64,6.64"/>
+                                                            </Grid>
+                                                        </Viewbox>
+                                                    </Border>
+                                                </StackPanel>
                                             </Grid>
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
-                            </StackPanel>
 
-                            <!-- Botones de acción inferiores simulados -->
-                            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,2">
-                                <Border Width="20" Height="20" CornerRadius="4" Background="#16FFFFFF" BorderBrush="#25FFFFFF" BorderThickness="1" Margin="2,0"/>
-                                <Border Width="20" Height="20" CornerRadius="4" Background="#16FFFFFF" BorderBrush="#25FFFFFF" BorderThickness="1" Margin="2,0"/>
-                                <Border Width="20" Height="20" CornerRadius="4" Background="#16FFFFFF" BorderBrush="#25FFFFFF" BorderThickness="1" Margin="2,0"/>
+                                            <!-- Encendido Modo Superior (Columna vertical de 4 botones) -->
+                                            <StackPanel Orientation="Vertical"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        Visibility="{Binding IsDockSideTop, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <TextBlock Text="⋯" Foreground="{Binding TextBrush}" Opacity="0.4" FontSize="11" HorizontalAlignment="Center" Margin="0,-2,0,2"/>
+                                                <Border Width="15" Height="15" CornerRadius="3" Background="#18FFFFFF" BorderBrush="#25FFFFFF" BorderThickness="1" Margin="0,1" ToolTip="{local:Loc Key=Dock_PowerLock}">
+                                                    <Viewbox Width="8.5" Height="8.5">
+                                                        <Grid Width="24" Height="24">
+                                                            <Path Stroke="{Binding TextBrush}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                                                  Data="M8.5,10V6.5A3.5,3.5 0 0 1 15.5,6.5V10 M6.5,10H17.5A1.5,1.5 0 0 1 19,11.5V18.5A1.5,1.5 0 0 1 17.5,20H6.5A1.5,1.5 0 0 1 5,18.5V11.5A1.5,1.5 0 0 1 6.5,10Z M12,14V16.5"/>
+                                                        </Grid>
+                                                    </Viewbox>
+                                                </Border>
+                                                <Border Width="15" Height="15" CornerRadius="3" Background="#18FFFFFF" BorderBrush="#25FFFFFF" BorderThickness="1" Margin="0,1" ToolTip="{local:Loc Key=Dock_PowerHibernate}">
+                                                    <Viewbox Width="8.5" Height="8.5">
+                                                        <Grid Width="24" Height="24">
+                                                            <Path Stroke="{Binding TextBrush}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                                                  Data="M12,3 A6,6 0 0 0 21,12 A9,9 0 1 1 12,3 Z"/>
+                                                        </Grid>
+                                                    </Viewbox>
+                                                </Border>
+                                                <Border Width="15" Height="15" CornerRadius="3" Background="#18FFFFFF" BorderBrush="#25FFFFFF" BorderThickness="1" Margin="0,1" ToolTip="{local:Loc Key=Dock_PowerRestart}">
+                                                    <Viewbox Width="8.5" Height="8.5">
+                                                        <Grid Width="24" Height="24">
+                                                            <Path Stroke="{Binding TextBrush}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                                                  Data="M21,12 A9,9 0 1 1 12,3 C14.52,3 16.93,4 18.74,5.74 L21,8 M21,3 V8 H16"/>
+                                                        </Grid>
+                                                    </Viewbox>
+                                                </Border>
+                                                <Border Width="15" Height="15" CornerRadius="3" Background="#18FFFFFF" BorderBrush="#25FFFFFF" BorderThickness="1" Margin="0,1" ToolTip="{local:Loc Key=Dock_PowerShutdown}">
+                                                    <Viewbox Width="8.5" Height="8.5">
+                                                        <Grid Width="24" Height="24">
+                                                            <Path Stroke="{Binding TextBrush}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                                                  Data="M12,3 V11 M18.36,6.64 A9,9 0 1 1 5.64,6.64"/>
+                                                        </Grid>
+                                                    </Viewbox>
+                                                </Border>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 7. Vista previa de Caffeine -->
+                                    <Border x:Name="PreviewCaffeineBorder"
+                                            Tag="Caffeine"
+                                            Margin="0,0,0,2"
+                                            Padding="6,4"
+                                            CornerRadius="6"
+                                            Background="#14FFFFFF"
+                                            BorderBrush="Transparent"
+                                            BorderThickness="1"
+                                            HorizontalAlignment="Stretch"
+                                            Cursor="Hand"
+                                            ToolTip="{local:Loc Key=Settings_DragReorderTooltip}"
+                                            PreviewMouseLeftButtonDown="PreviewWidget_MouseLeftButtonDown"
+                                            Visibility="{Binding Config.ShowCaffeine, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <Grid>
+                                            <!-- Caffeine Modo Vertical -->
+                                            <Grid Visibility="{Binding IsDockSideTop, Converter={StaticResource InverseBoolConverter}}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="⋮⋮" Foreground="{Binding TextBrush}" Opacity="0.4" FontSize="11" VerticalAlignment="Center" Margin="2,0,4,0"/>
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center">
+                                                    <Viewbox Width="13" Height="13" Margin="0,0,4,0">
+                                                        <Grid Width="24" Height="24">
+                                                            <Path Data="M2,19h18v2H2V19z M20,3H4v10c0,2.21,1.79,4,4,4h6c2.21,0,4-1.79,4-4v-3h2c1.1,0,2-0.9,2-2V5C22,3.9,21.1,3,20,3z M16,13c0,1.1-0.9,2-2,2H8c-1.1,0-2-0.9-2-2V5h10V13z M20,8h-2V5h2V8z"
+                                                                  Fill="{DynamicResource AppAccentBrush}"/>
+                                                        </Grid>
+                                                    </Viewbox>
+                                                    <TextBlock Text="Awake" Foreground="{Binding TextBrush}" FontSize="9.5" FontWeight="SemiBold"/>
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <!-- Caffeine Modo Superior -->
+                                            <StackPanel Orientation="Vertical"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        Visibility="{Binding IsDockSideTop, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <TextBlock Text="⋯" Foreground="{Binding TextBrush}" Opacity="0.4" FontSize="11" HorizontalAlignment="Center" Margin="0,-2,0,4"/>
+                                                <Viewbox Width="15" Height="15" Margin="0,0,0,3" HorizontalAlignment="Center">
+                                                    <Grid Width="24" Height="24">
+                                                        <Path Data="M2,19h18v2H2V19z M20,3H4v10c0,2.21,1.79,4,4,4h6c2.21,0,4-1.79,4-4v-3h2c1.1,0,2-0.9,2-2V5C22,3.9,21.1,3,20,3z M16,13c0,1.1-0.9,2-2,2H8c-1.1,0-2-0.9-2-2V5h10V13z M20,8h-2V5h2V8z"
+                                                              Fill="{DynamicResource AppAccentBrush}"/>
+                                                    </Grid>
+                                                </Viewbox>
+                                                <TextBlock Text="Awake" Foreground="{Binding TextBrush}" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 8. Vista previa de Paginación (Flechas o Slider) -->
+                                    <Border x:Name="PreviewPaginationBorder"
+                                            Tag="Pagination"
+                                            Margin="0,0,0,2"
+                                            Padding="6,4"
+                                            CornerRadius="6"
+                                            Background="#14FFFFFF"
+                                            BorderBrush="Transparent"
+                                            BorderThickness="1"
+                                            HorizontalAlignment="Stretch"
+                                            Cursor="Hand"
+                                            ToolTip="{local:Loc Key=Settings_DragReorderTooltip}"
+                                            PreviewMouseLeftButtonDown="PreviewWidget_MouseLeftButtonDown">
+                                        <Grid>
+                                            <!-- Paginación Modo Vertical (Izquierda / Derecha) -->
+                                            <Grid Visibility="{Binding IsDockSideTop, Converter={StaticResource InverseBoolConverter}}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="⋮⋮" Foreground="{Binding TextBrush}" Opacity="0.4" FontSize="11" VerticalAlignment="Center" Margin="2,0,4,0"/>
+                                                <StackPanel Grid.Column="1"
+                                                            Orientation="Horizontal"
+                                                            HorizontalAlignment="Center"
+                                                            Visibility="{Binding Config.UseSliderPagination, Converter={StaticResource InverseBoolConverter}}">
+                                                    <TextBlock Text="◀" Foreground="{Binding TextBrush}" FontSize="9" VerticalAlignment="Center" Margin="0,0,5,0" Opacity="0.7"/>
+                                                    <TextBlock Text="1 / 2" Foreground="{Binding TextBrush}" FontSize="9.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="▶" Foreground="{Binding TextBrush}" FontSize="9" VerticalAlignment="Center" Margin="5,0,0,0" Opacity="0.7"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1"
+                                                            Orientation="Vertical"
+                                                            HorizontalAlignment="Stretch"
+                                                            Margin="4,0,4,0"
+                                                            Visibility="{Binding Config.UseSliderPagination, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                    <TextBlock Text="1 / 2" Foreground="{Binding TextBrush}" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,1"/>
+                                                    <Grid Height="6" VerticalAlignment="Center">
+                                                        <Border Height="2" Background="#30FFFFFF" CornerRadius="1" VerticalAlignment="Center"/>
+                                                        <Ellipse Width="6" Height="6" Fill="{DynamicResource AppAccentBrush}" HorizontalAlignment="Center"/>
+                                                    </Grid>
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <!-- Paginación Modo Superior (Flechas arriba/abajo o slider vertical) -->
+                                            <StackPanel Orientation="Vertical"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        MinWidth="26"
+                                                        Visibility="{Binding IsDockSideTop, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <TextBlock Text="⋯" Foreground="{Binding TextBrush}" Opacity="0.4" FontSize="11" HorizontalAlignment="Center" Margin="0,-2,0,2"/>
+                                                <StackPanel Orientation="Vertical"
+                                                            HorizontalAlignment="Center"
+                                                            Visibility="{Binding Config.UseSliderPagination, Converter={StaticResource InverseBoolConverter}}">
+                                                    <TextBlock Text="▲" Foreground="{Binding TextBrush}" FontSize="8" HorizontalAlignment="Center" Opacity="0.7"/>
+                                                    <TextBlock Text="1/2" Foreground="{Binding TextBrush}" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,4,0,4"/>
+                                                    <TextBlock Text="▼" Foreground="{Binding TextBrush}" FontSize="8" HorizontalAlignment="Center" Opacity="0.7"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Vertical"
+                                                            HorizontalAlignment="Center"
+                                                            Visibility="{Binding Config.UseSliderPagination, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                    <TextBlock Text="1/2" Foreground="{Binding TextBrush}" FontSize="8" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,3"/>
+                                                    <Grid Width="8" Height="36" HorizontalAlignment="Center">
+                                                        <Border Width="2" Background="#30FFFFFF" CornerRadius="1" HorizontalAlignment="Center"/>
+                                                        <Border Width="2" Height="18" Background="{DynamicResource AppAccentBrush}" CornerRadius="1" HorizontalAlignment="Center" VerticalAlignment="Bottom"/>
+                                                        <Ellipse Width="6" Height="6" Fill="{DynamicResource AppAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Grid>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+                            </ScrollViewer>
+
+                            <!-- Botones de acción simulados (+, Ajustes, Editar, Cerrar) -->
+                            <StackPanel x:Name="PreviewActionButtonsStack"
+                                        Grid.Row="3"
+                                        Orientation="Horizontal"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Margin="0,4,0,2">
+                                <Border Width="18" Height="18" CornerRadius="4" Background="#16FFFFFF" BorderBrush="#25FFFFFF" BorderThickness="1" Margin="2"/>
+                                <Border Width="18" Height="18" CornerRadius="4" Background="#16FFFFFF" BorderBrush="#25FFFFFF" BorderThickness="1" Margin="2"/>
+                                <Border Width="18" Height="18" CornerRadius="4" Background="#16FFFFFF" BorderBrush="#25FFFFFF" BorderThickness="1" Margin="2"/>
+                                <Border Width="18" Height="18" CornerRadius="4" Background="#16FFFFFF" BorderBrush="#25FFFFFF" BorderThickness="1" Margin="2"/>
                             </StackPanel>
                         </Grid>
                     </Border>

@@ -43,6 +43,7 @@ DockBar/
 │   ├── LocExtension.cs           # Extensión de marcado XAML para localización dinámica
 │   └── WindowSwitcherHelper.cs   # Detección y filtrado de ventanas activas (Alt+Tab hook)
 ├── Models/                  # Modelos de datos y entidades serializables
+│   ├── AiConfig.cs               # Configuración de proveedores y cuotas de IA
 │   ├── AudioEndpointItem.cs      # Dispositivos de reproducción de audio
 │   ├── ColorTheme.cs             # Esquema de color y temas personalizados
 │   ├── DockConfig.cs             # Configuración raíz de la aplicación (shortcuts.json)
@@ -64,6 +65,7 @@ DockBar/
 │   ├── install-cert.ps1          # Instala certificados locales de desarrollo
 │   └── .store-credentials.example.json # Plantilla de credenciales de la Store API
 ├── Services/                # Capa de lógica de negocio y servicios desacoplados
+│   ├── AiQuotaService.cs         # Consulta, auto-detección y telemetría de cuotas de IA (5HR / Week)
 │   ├── AudioService.cs           # Control de volumen y cambio de endpoints (CoreAudio)
 │   ├── AutoStartService.cs       # Gestión del inicio automático en Windows (Registry / MSIX)
 │   ├── ConfigService.cs          # Lectura y persistencia segura de %APPDATA%\DockBar\shortcuts.json
@@ -122,6 +124,20 @@ DockBar/
 * **Packaged (MSIX):** Usa `Windows.ApplicationModel.StartupTask`.
 * **Standalone (NSIS / Desarrollo):** Usa la clave de registro `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`.
 * **Protección DEBUG:** En compilación `DEBUG`, la función `ApplyRegistry` está desactivada para evitar que Windows ejecute binarios de desarrollo (`bin\Debug\...`) al reiniciar el equipo.
+
+### 3.5. Orientación Multidireccional y Normalización de Módulos (`Views/MainWindow.xaml.cs`)
+* **Soporte de Anclaje:** Soporta `DockSide.Left`, `DockSide.Right` y `DockSide.Top` (modo superior horizontal).
+* **Normalización Visual en Modo Superior:**
+  * En modo `Top`, todos los módulos (`ClockPanel`, `MediaPanel`, `VolumePanel`, `ResourcePanel`, `AiQuotaPanel`, `PowerPanel`, `CaffeinePanel`, `DockPaginationGrid`, `ActionButtonsPanel`) comparten una altura unificada de `108px` y `CornerRadius="8"`, garantizando alineación horizontal perfecta.
+  * El contenedor raíz aplica un padding compacto (`10,4,10,4`) con altura por defecto de `118px` (mínimo `116px`), eliminando espacios vacíos verticales.
+  * La columna de botones de acción y control de energía usa botones de `24px` con espaciado de `4px` (`4 × 24 + 3 × 4 = 108px`).
+  * En modo edición horizontal, el scroll del ratón y el arrastre de elementos soportan auto-desplazamiento lateral sin cortes.
+
+### 3.6. Telemetría y Monitor de Cuotas de IA (`Services/AiQuotaService.cs`)
+* **Monitoreo en Tiempo Real:** Supervisa cuotas disponibles para Antigravity IDE, Google Gemini, OpenAI ChatGPT y Anthropic Claude en períodos de **5 Horas** y **Límite Semanal**.
+* **Detección Web y Tokens:** Utiliza auto-detección mediante cookies/sesiones locales y tokens web sin forzar dependencias de API keys de pago, además de permitir tokens configurados por el usuario.
+* **Desacoplamiento Asíncrono:** La inicialización y consultas de cuota se ejecutan en tareas de fondo con temporizadores debounced, evitando retrasos de apertura en la ventana de Ajustes (`SettingsWindow`).
+* **Representación Adaptativa:** Muestra barras horizontales en docks laterales y columnas verticales lado a lado con códigos de color de proveedor en dock Superior.
 
 ---
 

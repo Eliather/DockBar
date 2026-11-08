@@ -160,7 +160,8 @@
         <Style TargetType="ToolTip" BasedOn="{StaticResource DockToolTipStyle}"/>
     </Window.Resources>
 
-    <Border Background="{Binding DockBackgroundBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+    <Border x:Name="RootDockBorder"
+            Background="{Binding DockBackgroundBrush, RelativeSource={RelativeSource AncestorType=Window}}"
             BorderBrush="{Binding DockBorderBrush, RelativeSource={RelativeSource AncestorType=Window}}"
             BorderThickness="{Binding DockBorderThickness, RelativeSource={RelativeSource AncestorType=Window}}"
             Padding="10"
@@ -176,10 +177,12 @@
                           Grid.Row="0"
                           ItemsSource="{Binding VisibleShortcuts}"
                           HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          ClipToBounds="True"
                           Visibility="{Binding IsEditMode, Converter={StaticResource InverseBoolConverter}}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <StackPanel/>
+                        <StackPanel Orientation="{Binding ItemsOrientation, RelativeSource={RelativeSource AncestorType=Window}}"/>
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
@@ -224,17 +227,24 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            <Grid Grid.Row="0"
+            <Grid x:Name="EditModeGrid"
+                  Grid.Row="0"
                   Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibilityConverter}}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
                 <ScrollViewer x:Name="EditListScroll"
+                              Grid.Row="0"
                               Grid.Column="0"
                               VerticalScrollBarVisibility="Hidden"
                               HorizontalScrollBarVisibility="Disabled"
+                              PreviewMouseWheel="EditListScroll_PreviewMouseWheel"
                               ScrollChanged="EditListScroll_ScrollChanged">
                     <ItemsControl ItemsSource="{Binding Shortcuts}"
                                   AlternationCount="1000"
@@ -245,143 +255,298 @@
                                   DragOver="ShortcutList_DragOver">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <StackPanel/>
+                                <StackPanel Orientation="{Binding ItemsOrientation, RelativeSource={RelativeSource AncestorType=Window}}"/>
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Padding="6" Background="Transparent" x:Name="ItemBorder" BorderBrush="Transparent" BorderThickness="1">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Setter Property="BorderBrush" Value="Transparent"/>
-                                            <Setter Property="BorderThickness" Value="1"/>
-                                            <Style.Triggers>
-                                                <DataTrigger>
-                                                    <DataTrigger.Binding>
-                                                        <MultiBinding Converter="{StaticResource StringEqualsMultiToBoolConverter}">
-                                                            <Binding Path="Path"/>
-                                                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="DragHoverPath"/>
-                                                        </MultiBinding>
-                                                    </DataTrigger.Binding>
-                                                    <Setter Property="BorderBrush" Value="{Binding DataContext.DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
-                                                    <Setter Property="BorderThickness" Value="1.5"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Rectangle Height="1.5"
-                                                   StrokeDashArray="2 2"
-                                                   Stroke="{Binding DataContext.DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                   VerticalAlignment="Top">
-                                            <Rectangle.Visibility>
-                                                <MultiBinding Converter="{StaticResource IntEqualsMultiToVisibilityConverter}">
-                                                    <Binding RelativeSource="{RelativeSource AncestorType=ContentPresenter}" Path="(ItemsControl.AlternationIndex)"/>
-                                                    <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="DropInsertIndex"/>
-                                                </MultiBinding>
-                                            </Rectangle.Visibility>
-                                        </Rectangle>
-                                        <Button Style="{StaticResource CharmItemButtonStyle}"
-                                                Click="Shortcut_Click"
-                                                Tag="{Binding}"
-                                                IsHitTestVisible="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBoolConverter}}">
-                                            <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                                <Grid>
+                                    <!-- Diseño Modo Izquierda / Derecha (Intacto) -->
+                                    <Border Padding="6"
+                                            Background="Transparent"
+                                            x:Name="ItemBorder"
+                                            BorderBrush="Transparent"
+                                            BorderThickness="1"
+                                            Visibility="{Binding DataContext.IsHorizontalDock, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBoolConverter}}">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="BorderBrush" Value="Transparent"/>
+                                                <Setter Property="BorderThickness" Value="1"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Value="True">
+                                                        <DataTrigger.Binding>
+                                                            <MultiBinding Converter="{StaticResource StringEqualsMultiToBoolConverter}">
+                                                                <Binding Path="Path"/>
+                                                                <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="DragHoverPath"/>
+                                                            </MultiBinding>
+                                                        </DataTrigger.Binding>
+                                                        <Setter Property="BorderBrush" Value="{Binding DataContext.DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                                        <Setter Property="BorderThickness" Value="1.5"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Rectangle Height="1.5"
+                                                       StrokeDashArray="2 2"
+                                                       Stroke="{Binding DataContext.DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                       VerticalAlignment="Top">
+                                                <Rectangle.Visibility>
+                                                    <MultiBinding Converter="{StaticResource IntEqualsMultiToVisibilityConverter}">
+                                                        <Binding RelativeSource="{RelativeSource AncestorType=ContentPresenter}" Path="(ItemsControl.AlternationIndex)"/>
+                                                        <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="DropInsertIndex"/>
+                                                    </MultiBinding>
+                                                </Rectangle.Visibility>
+                                            </Rectangle>
+                                            <Button Style="{StaticResource CharmItemButtonStyle}"
+                                                    Click="Shortcut_Click"
+                                                    Tag="{Binding}"
+                                                    IsHitTestVisible="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBoolConverter}}">
+                                                <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                                                    <Image Width="{Binding IconSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                           Height="{Binding IconSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                           Source="{Binding Icon}"
+                                                           VerticalAlignment="Center"
+                                                           Stretch="Uniform"
+                                                           RenderOptions.BitmapScalingMode="HighQuality"
+                                                           SnapsToDevicePixels="True">
+                                                        <Image.Effect>
+                                                            <DropShadowEffect Color="#66000000"
+                                                                              BlurRadius="10"
+                                                                              ShadowDepth="0"
+                                                                              Opacity="0.8"/>
+                                                        </Image.Effect>
+                                                    </Image>
+                                                    <TextBlock Text="{Binding Name}"
+                                                               Margin="0,8,0,0"
+                                                               Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                               Effect="{Binding DockTextShadowEffect, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                               TextAlignment="Center"
+                                                               TextWrapping="Wrap"
+                                                               FontSize="12"
+                                                               Opacity="0.9"/>
+                                                </StackPanel>
+                                            </Button>
+                                            <StackPanel Grid.Column="1"
+                                                        Orientation="{Binding DataContext.ActionButtonsOrientation, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        VerticalAlignment="Center"
+                                                        Visibility="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <Button Style="{StaticResource BottomIconButtonStyle}"
+                                                        Width="28"
+                                                        Height="28"
+                                                        Margin="{Binding DataContext.EditItemFirstButtonMargin, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        Click="Rename_Click"
+                                                        Tag="{Binding}">
+                                                    <Button.ToolTip>
+                                                        <ToolTip Style="{StaticResource DockToolTipStyle}"
+                                                                 Content="{local:Loc Key=Dock_TooltipRename}"/>
+                                                    </Button.ToolTip>
+                                                    <Viewbox Width="13" Height="13">
+                                                        <Grid Width="24" Height="24">
+                                                            <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M6.5,17.5L9.75,16.75L17.75,8.75L15.25,6.25L7.25,14.25Z"/>
+                                                            <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M14,7.5L16.5,10"/>
+                                                        </Grid>
+                                                    </Viewbox>
+                                                </Button>
+                                                <Button Style="{StaticResource BottomIconButtonStyle}"
+                                                        Width="28"
+                                                        Height="28"
+                                                        Margin="{Binding DataContext.EditItemButtonMargin, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        Click="ChangeIcon_Click"
+                                                        Tag="{Binding}">
+                                                    <Button.ToolTip>
+                                                        <ToolTip Style="{StaticResource DockToolTipStyle}"
+                                                                 Content="{local:Loc Key=Dock_TooltipChangeIcon}"/>
+                                                    </Button.ToolTip>
+                                                    <Viewbox Width="13" Height="13">
+                                                        <Grid Width="24" Height="24">
+                                                            <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M5.5,6.75H18.5C19.05,6.75 19.5,7.2 19.5,7.75V16.25C19.5,16.8 19.05,17.25 18.5,17.25H5.5C4.95,17.25 4.5,16.8 4.5,16.25V7.75C4.5,7.2 4.95,6.75 5.5,6.75Z"/>
+                                                            <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M6.75,15L10.5,11.25L13,13.75L16.25,10.5L18,12.25"/>
+                                                            <Ellipse Width="3"
+                                                                     Height="3"
+                                                                     Stroke="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                     StrokeThickness="1.4"
+                                                                     Fill="Transparent"
+                                                                     HorizontalAlignment="Right"
+                                                                     VerticalAlignment="Top"
+                                                                     Margin="0,0,8,6"/>
+                                                        </Grid>
+                                                    </Viewbox>
+                                                </Button>
+                                                <Button Style="{StaticResource BottomIconButtonStyle}"
+                                                        Width="28"
+                                                        Height="28"
+                                                        Margin="{Binding DataContext.EditItemButtonMargin, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        Click="Remove_Click"
+                                                        Tag="{Binding}">
+                                                    <Button.ToolTip>
+                                                        <ToolTip Style="{StaticResource DockToolTipStyle}"
+                                                                 Content="{local:Loc Key=Dock_TooltipRemove}"/>
+                                                    </Button.ToolTip>
+                                                    <Viewbox Width="13" Height="13">
+                                                        <Grid Width="24" Height="24">
+                                                            <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M9,7V5.75C9,5.06 9.56,4.5 10.25,4.5H13.75C14.44,4.5 15,5.06 15,5.75V7"/>
+                                                            <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M5.5,7H18.5"/>
+                                                            <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M7.75,8.5L8.5,18H15.5L16.25,8.5"/>
+                                                            <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M10,10.5V15 M14,10.5V15"/>
+                                                        </Grid>
+                                                    </Viewbox>
+                                                </Button>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Diseño Exclusivo Modo Superior (Tarjetas compactas con barra de acciones inferior) -->
+                                    <Border x:Name="TopEditCardBorder"
+                                            Width="102"
+                                            Margin="4,2"
+                                            Padding="6,6,6,6"
+                                            CornerRadius="8"
+                                            Cursor="SizeAll"
+                                            VerticalAlignment="Center"
+                                            Visibility="{Binding DataContext.IsHorizontalDock, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="#14FFFFFF"/>
+                                                <Setter Property="BorderBrush" Value="#26FFFFFF"/>
+                                                <Setter Property="BorderThickness" Value="1"/>
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="#22FFFFFF"/>
+                                                        <Setter Property="BorderBrush" Value="#48FFFFFF"/>
+                                                    </Trigger>
+                                                    <DataTrigger Value="True">
+                                                        <DataTrigger.Binding>
+                                                            <MultiBinding Converter="{StaticResource StringEqualsMultiToBoolConverter}">
+                                                                <Binding Path="Path"/>
+                                                                <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="DragHoverPath"/>
+                                                            </MultiBinding>
+                                                        </DataTrigger.Binding>
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}"/>
+                                                        <Setter Property="BorderThickness" Value="1.5"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid>
+                                            <Rectangle Width="2"
+                                                       StrokeDashArray="2 2"
+                                                       Stroke="{DynamicResource AppAccentBrush}"
+                                                       HorizontalAlignment="Left"
+                                                       VerticalAlignment="Stretch"
+                                                       Margin="-4,0,0,0">
+                                                <Rectangle.Visibility>
+                                                    <MultiBinding Converter="{StaticResource IntEqualsMultiToVisibilityConverter}">
+                                                        <Binding RelativeSource="{RelativeSource AncestorType=ContentPresenter}" Path="(ItemsControl.AlternationIndex)"/>
+                                                        <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="DropInsertIndex"/>
+                                                    </MultiBinding>
+                                                </Rectangle.Visibility>
+                                            </Rectangle>
+
+                                            <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
                                                 <Image Width="{Binding IconSize, RelativeSource={RelativeSource AncestorType=Window}}"
                                                        Height="{Binding IconSize, RelativeSource={RelativeSource AncestorType=Window}}"
                                                        Source="{Binding Icon}"
+                                                       HorizontalAlignment="Center"
                                                        VerticalAlignment="Center"
                                                        Stretch="Uniform"
                                                        RenderOptions.BitmapScalingMode="HighQuality"
-                                                       SnapsToDevicePixels="True">
+                                                       SnapsToDevicePixels="True"
+                                                       IsHitTestVisible="False">
                                                     <Image.Effect>
                                                         <DropShadowEffect Color="#66000000"
-                                                                          BlurRadius="10"
+                                                                          BlurRadius="8"
                                                                           ShadowDepth="0"
                                                                           Opacity="0.8"/>
                                                     </Image.Effect>
                                                 </Image>
+
                                                 <TextBlock Text="{Binding Name}"
-                                                           Margin="0,8,0,0"
+                                                           Margin="0,4,0,5"
+                                                           MaxWidth="88"
                                                            Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
                                                            Effect="{Binding DockTextShadowEffect, RelativeSource={RelativeSource AncestorType=Window}}"
                                                            TextAlignment="Center"
-                                                           TextWrapping="Wrap"
-                                                           FontSize="12"
-                                                           Opacity="0.9"/>
+                                                           TextWrapping="NoWrap"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           FontSize="10.5"
+                                                           FontWeight="SemiBold"
+                                                           Opacity="0.92"
+                                                           ToolTip="{Binding Name}"/>
+
+                                                <StackPanel Orientation="Horizontal"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center">
+                                                    <Button Style="{StaticResource BottomIconButtonStyle}"
+                                                            Width="25"
+                                                            Height="25"
+                                                            Margin="0,0,3,0"
+                                                            Click="Rename_Click"
+                                                            Tag="{Binding}">
+                                                        <Button.ToolTip>
+                                                            <ToolTip Style="{StaticResource DockToolTipStyle}"
+                                                                     Content="{local:Loc Key=Dock_TooltipRename}"/>
+                                                        </Button.ToolTip>
+                                                        <Viewbox Width="12" Height="12">
+                                                            <Grid Width="24" Height="24">
+                                                                <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M6.5,17.5L9.75,16.75L17.75,8.75L15.25,6.25L7.25,14.25Z"/>
+                                                                <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M14,7.5L16.5,10"/>
+                                                            </Grid>
+                                                        </Viewbox>
+                                                    </Button>
+                                                    <Button Style="{StaticResource BottomIconButtonStyle}"
+                                                            Width="25"
+                                                            Height="25"
+                                                            Margin="0,0,3,0"
+                                                            Click="ChangeIcon_Click"
+                                                            Tag="{Binding}">
+                                                        <Button.ToolTip>
+                                                            <ToolTip Style="{StaticResource DockToolTipStyle}"
+                                                                     Content="{local:Loc Key=Dock_TooltipChangeIcon}"/>
+                                                        </Button.ToolTip>
+                                                        <Viewbox Width="12" Height="12">
+                                                            <Grid Width="24" Height="24">
+                                                                <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M5.5,6.75H18.5C19.05,6.75 19.5,7.2 19.5,7.75V16.25C19.5,16.8 19.05,17.25 18.5,17.25H5.5C4.95,17.25 4.5,16.8 4.5,16.25V7.75C4.5,7.2 4.95,6.75 5.5,6.75Z"/>
+                                                                <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M6.75,15L10.5,11.25L13,13.75L16.25,10.5L18,12.25"/>
+                                                                <Ellipse Width="3"
+                                                                         Height="3"
+                                                                         Stroke="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                         StrokeThickness="1.4"
+                                                                         Fill="Transparent"
+                                                                         HorizontalAlignment="Right"
+                                                                         VerticalAlignment="Top"
+                                                                         Margin="0,0,8,6"/>
+                                                            </Grid>
+                                                        </Viewbox>
+                                                    </Button>
+                                                    <Button Style="{StaticResource BottomIconButtonStyle}"
+                                                            Width="25"
+                                                            Height="25"
+                                                            Margin="0"
+                                                            Click="Remove_Click"
+                                                            Tag="{Binding}">
+                                                        <Button.ToolTip>
+                                                            <ToolTip Style="{StaticResource DockToolTipStyle}"
+                                                                     Content="{local:Loc Key=Dock_TooltipRemove}"/>
+                                                        </Button.ToolTip>
+                                                        <Viewbox Width="12" Height="12">
+                                                            <Grid Width="24" Height="24">
+                                                                <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M9,7V5.75C9,5.06 9.56,4.5 10.25,4.5H13.75C14.44,4.5 15,5.06 15,5.75V7"/>
+                                                                <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M5.5,7H18.5"/>
+                                                                <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M7.75,8.5L8.5,18H15.5L16.25,8.5"/>
+                                                                <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M10,10.5V15 M14,10.5V15"/>
+                                                            </Grid>
+                                                        </Viewbox>
+                                                    </Button>
+                                                </StackPanel>
                                             </StackPanel>
-                                        </Button>
-                                        <StackPanel Grid.Column="1"
-                                                    Orientation="Horizontal"
-                                                    VerticalAlignment="Center"
-                                                    Visibility="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}">
-                                            <Button Style="{StaticResource BottomIconButtonStyle}"
-                                                    Width="28"
-                                                    Height="28"
-                                                    Margin="4,0,0,0"
-                                                    Click="Rename_Click"
-                                                    Tag="{Binding}">
-                                                <Button.ToolTip>
-                                                    <ToolTip Style="{StaticResource DockToolTipStyle}"
-                                                             Content="{local:Loc Key=Dock_TooltipRename}"/>
-                                                </Button.ToolTip>
-                                                <Viewbox Width="13" Height="13">
-                                                    <Grid Width="24" Height="24">
-                                                        <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M6.5,17.5L9.75,16.75L17.75,8.75L15.25,6.25L7.25,14.25Z"/>
-                                                        <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M14,7.5L16.5,10"/>
-                                                    </Grid>
-                                                </Viewbox>
-                                            </Button>
-                                            <Button Style="{StaticResource BottomIconButtonStyle}"
-                                                    Width="28"
-                                                    Height="28"
-                                                    Margin="4,0,0,0"
-                                                    Click="ChangeIcon_Click"
-                                                    Tag="{Binding}">
-                                                <Button.ToolTip>
-                                                    <ToolTip Style="{StaticResource DockToolTipStyle}"
-                                                             Content="{local:Loc Key=Dock_TooltipChangeIcon}"/>
-                                                </Button.ToolTip>
-                                                <Viewbox Width="13" Height="13">
-                                                    <Grid Width="24" Height="24">
-                                                        <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M5.5,6.75H18.5C19.05,6.75 19.5,7.2 19.5,7.75V16.25C19.5,16.8 19.05,17.25 18.5,17.25H5.5C4.95,17.25 4.5,16.8 4.5,16.25V7.75C4.5,7.2 4.95,6.75 5.5,6.75Z"/>
-                                                        <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M6.75,15L10.5,11.25L13,13.75L16.25,10.5L18,12.25"/>
-                                                        <Ellipse Width="3"
-                                                                 Height="3"
-                                                                 Stroke="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                 StrokeThickness="1.4"
-                                                                 Fill="Transparent"
-                                                                 HorizontalAlignment="Right"
-                                                                 VerticalAlignment="Top"
-                                                                 Margin="0,0,8,6"/>
-                                                    </Grid>
-                                                </Viewbox>
-                                            </Button>
-                                            <Button Style="{StaticResource BottomIconButtonStyle}"
-                                                    Width="28"
-                                                    Height="28"
-                                                    Margin="4,0,0,0"
-                                                    Click="Remove_Click"
-                                                    Tag="{Binding}">
-                                                <Button.ToolTip>
-                                                    <ToolTip Style="{StaticResource DockToolTipStyle}"
-                                                             Content="{local:Loc Key=Dock_TooltipRemove}"/>
-                                                </Button.ToolTip>
-                                                <Viewbox Width="13" Height="13">
-                                                    <Grid Width="24" Height="24">
-                                                        <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M9,7V5.75C9,5.06 9.56,4.5 10.25,4.5H13.75C14.44,4.5 15,5.06 15,5.75V7"/>
-                                                        <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M5.5,7H18.5"/>
-                                                        <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M7.75,8.5L8.5,18H15.5L16.25,8.5"/>
-                                                        <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M10,10.5V15 M14,10.5V15"/>
-                                                    </Grid>
-                                                </Viewbox>
-                                            </Button>
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
@@ -409,7 +574,7 @@
                         HorizontalAlignment="Center"
                         Margin="0,2,0,2"
                         Padding="10,4"
-                        CornerRadius="6"
+                        CornerRadius="8"
                         Cursor="Arrow"
                         Visibility="{Binding IsClockVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}"
                         ToolTip="{Binding ClockFullDateTooltip, RelativeSource={RelativeSource AncestorType=Window}}">
@@ -423,7 +588,7 @@
                             </Style.Triggers>
                         </Style>
                     </Border.Style>
-                    <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                    <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
                         <TextBlock Text="{Binding ClockTimeString, RelativeSource={RelativeSource AncestorType=Window}}"
                                    Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
                                    Effect="{Binding DockTextShadowEffect, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -431,6 +596,16 @@
                                    FontWeight="SemiBold"
                                    HorizontalAlignment="Center"
                                    TextAlignment="Center"/>
+                        <TextBlock Text="{Binding ClockSubTimeString, RelativeSource={RelativeSource AncestorType=Window}}"
+                                   Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                   Effect="{Binding DockTextShadowEffect, RelativeSource={RelativeSource AncestorType=Window}}"
+                                   FontSize="{Binding ClockSubTimeFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                   FontWeight="SemiBold"
+                                   Opacity="0.88"
+                                   Margin="0,-1,0,1"
+                                   HorizontalAlignment="Center"
+                                   TextAlignment="Center"
+                                   Visibility="{Binding IsClockSubTimeVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}"/>
                         <TextBlock Text="{Binding ClockDateString, RelativeSource={RelativeSource AncestorType=Window}}"
                                    Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
                                    Effect="{Binding DockTextShadowEffect, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -448,90 +623,94 @@
                         HorizontalAlignment="Stretch"
                         Margin="2,2,2,3"
                         Padding="6,5"
-                        CornerRadius="6"
+                        CornerRadius="8"
                         Background="#10FFFFFF"
                         BorderBrush="#1EFFFFFF"
                         BorderThickness="1"
                         Visibility="{Binding IsMediaVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <StackPanel Orientation="Vertical" HorizontalAlignment="Stretch">
-                        <!-- Recuadro de Miniatura / Carátula (Cuadrado para canciones, Panorámico para videos) -->
-                        <Border x:Name="MediaThumbnailBorder"
-                                HorizontalAlignment="Center"
-                                CornerRadius="6"
-                                ClipToBounds="True"
-                                Background="#18000000"
-                                BorderBrush="#25FFFFFF"
-                                BorderThickness="1"
-                                Margin="0,0,0,4"
-                                Cursor="Hand"
-                                ToolTip="{Binding MediaThumbnailTooltip, RelativeSource={RelativeSource AncestorType=Window}}"
-                                MouseLeftButtonUp="MediaThumbnail_Click"
-                                Visibility="{Binding MediaThumbnailVisibility, RelativeSource={RelativeSource AncestorType=Window}}">
-                            <Image Source="{Binding MediaThumbnail, RelativeSource={RelativeSource AncestorType=Window}}"
-                                   Stretch="Uniform"
-                                   MaxWidth="150"
-                                   MaxHeight="120"
-                                   SnapsToDevicePixels="True"
-                                   RenderOptions.BitmapScalingMode="HighQuality"/>
-                        </Border>
+                    <StackPanel x:Name="MediaRootStack" Orientation="Vertical" HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                        <StackPanel x:Name="MediaInfoStack" Orientation="Vertical" HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                            <!-- Recuadro de Miniatura / Carátula (Cuadrado para canciones, Panorámico para videos) -->
+                            <Border x:Name="MediaThumbnailBorder"
+                                    HorizontalAlignment="Center"
+                                    CornerRadius="6"
+                                    ClipToBounds="True"
+                                    Background="#18000000"
+                                    BorderBrush="#25FFFFFF"
+                                    BorderThickness="1"
+                                    Margin="0,0,0,4"
+                                    Cursor="Hand"
+                                    ToolTip="{Binding MediaThumbnailTooltip, RelativeSource={RelativeSource AncestorType=Window}}"
+                                    MouseLeftButtonUp="MediaThumbnail_Click"
+                                    Visibility="{Binding MediaThumbnailVisibility, RelativeSource={RelativeSource AncestorType=Window}}">
+                                <Image Source="{Binding MediaThumbnail, RelativeSource={RelativeSource AncestorType=Window}}"
+                                       Stretch="Uniform"
+                                       MaxWidth="150"
+                                       MaxHeight="120"
+                                       SnapsToDevicePixels="True"
+                                       RenderOptions.BitmapScalingMode="HighQuality"/>
+                            </Border>
 
-                        <!-- Título y Artista con Marquesina en Movimiento -->
-                        <controls:MarqueeTextBlock Height="18"
-                                                   Text="{Binding MediaTrackText, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                   Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                   FontSize="11"
-                                                   FontWeight="SemiBold"
-                                                   Margin="2,0,2,2"
-                                                   ToolTip="{Binding MediaTrackText, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                   Visibility="{Binding MediaTitleVisibility, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                            <!-- Título y Artista con Marquesina en Movimiento -->
+                            <controls:MarqueeTextBlock Height="18"
+                                                       Text="{Binding MediaTrackText, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                       Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                       FontSize="11"
+                                                       FontWeight="SemiBold"
+                                                       Margin="2,0,2,2"
+                                                       ToolTip="{Binding MediaTrackText, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                       Visibility="{Binding MediaTitleVisibility, RelativeSource={RelativeSource AncestorType=Window}}"/>
 
-                        <!-- Slider horizontal de progreso y búsqueda (Opcional) -->
-                        <Grid Visibility="{Binding IsMediaSeekBarVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}"
-                              Margin="2,1,2,3">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
+                            <!-- Slider horizontal de progreso y búsqueda (Opcional) -->
+                            <Grid Visibility="{Binding IsMediaSeekBarVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}"
+                                  Margin="2,1,2,3">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
 
-                            <!-- Tiempo actual transcurrido -->
-                            <TextBlock Grid.Column="0"
-                                       Text="{Binding MediaPositionText, RelativeSource={RelativeSource AncestorType=Window}}"
-                                       Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
-                                       FontSize="9"
-                                       FontWeight="SemiBold"
-                                       Opacity="0.75"
-                                       VerticalAlignment="Center"
-                                       Margin="0,0,3,0"/>
+                                <!-- Tiempo actual transcurrido -->
+                                <TextBlock Grid.Column="0"
+                                           Text="{Binding MediaPositionText, RelativeSource={RelativeSource AncestorType=Window}}"
+                                           Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                           FontSize="9"
+                                           FontWeight="SemiBold"
+                                           Opacity="0.75"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,3,0"/>
 
-                            <!-- Deslizador de reproducción -->
-                            <Slider Grid.Column="1"
-                                    x:Name="MediaSeekSlider"
-                                    Height="14"
-                                    Margin="3,0,3,0"
-                                    VerticalAlignment="Center"
-                                    Minimum="0"
-                                    Maximum="100"
-                                    IsMoveToPointEnabled="True"
-                                    IsEnabled="{Binding CanSeekMedia, RelativeSource={RelativeSource AncestorType=Window}}"
-                                    Style="{DynamicResource MediaSeekSliderStyle}"
-                                    PreviewMouseWheel="MediaSeekSlider_MouseWheel"
-                                    ValueChanged="MediaSeekSlider_ValueChanged"/>
+                                <!-- Deslizador de reproducción -->
+                                <Slider Grid.Column="1"
+                                        x:Name="MediaSeekSlider"
+                                        Height="14"
+                                        Margin="3,0,3,0"
+                                        VerticalAlignment="Center"
+                                        Minimum="0"
+                                        Maximum="100"
+                                        IsMoveToPointEnabled="True"
+                                        IsEnabled="{Binding CanSeekMedia, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        Style="{DynamicResource MediaSeekSliderStyle}"
+                                        PreviewMouseWheel="MediaSeekSlider_MouseWheel"
+                                        ValueChanged="MediaSeekSlider_ValueChanged"/>
 
-                            <!-- Duración total de la pista -->
-                            <TextBlock Grid.Column="2"
-                                       Text="{Binding MediaDurationText, RelativeSource={RelativeSource AncestorType=Window}}"
-                                       Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
-                                       FontSize="9"
-                                       FontWeight="SemiBold"
-                                       Opacity="0.75"
-                                       VerticalAlignment="Center"
-                                       Margin="3,0,0,0"/>
-                        </Grid>
+                                <!-- Duración total de la pista -->
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding MediaDurationText, RelativeSource={RelativeSource AncestorType=Window}}"
+                                           Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                           FontSize="9"
+                                           FontWeight="SemiBold"
+                                           Opacity="0.75"
+                                           VerticalAlignment="Center"
+                                           Margin="3,0,0,0"/>
+                            </Grid>
+                        </StackPanel>
 
                         <!-- Botones de Control: Anterior, Reproducir/Pausa, Siguiente -->
-                        <StackPanel Orientation="Horizontal"
+                        <StackPanel x:Name="MediaControlsStack"
+                                    Orientation="{Binding ActionButtonsOrientation, RelativeSource={RelativeSource AncestorType=Window}}"
                                     HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
                                     Visibility="{Binding MediaControlsVisibility, RelativeSource={RelativeSource AncestorType=Window}}">
                             <Button Style="{StaticResource BottomIconButtonStyle}"
                                     Width="26" Height="26"
@@ -550,7 +729,7 @@
 
                             <Button Style="{StaticResource BottomIconButtonStyle}"
                                     Width="28" Height="28"
-                                    Margin="6,0,6,0"
+                                    Margin="{Binding MediaPlayButtonMargin, RelativeSource={RelativeSource AncestorType=Window}}"
                                     Click="MediaPlayPause_Click">
                                 <Button.ToolTip>
                                     <ToolTip Style="{StaticResource DockToolTipStyle}" Content="{local:Loc Key=Dock_MediaPlayPause}"/>
@@ -587,7 +766,7 @@
                         HorizontalAlignment="Stretch"
                         Margin="2,2,2,3"
                         Padding="6,4"
-                        CornerRadius="6"
+                        CornerRadius="8"
                         Background="#10FFFFFF"
                         BorderBrush="#1EFFFFFF"
                         BorderThickness="1"
@@ -597,7 +776,7 @@
                     <Border.ToolTip>
                         <ToolTip Style="{StaticResource DockToolTipStyle}" Content="{Binding VolumeTooltip, RelativeSource={RelativeSource AncestorType=Window}}"/>
                     </Border.ToolTip>
-                    <Grid VerticalAlignment="Center">
+                    <Grid x:Name="VolumeLayoutGrid" VerticalAlignment="Center">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
@@ -605,7 +784,8 @@
                         </Grid.ColumnDefinitions>
 
                         <!-- Botón Mute / Unmute -->
-                        <Button Grid.Column="0"
+                        <Button x:Name="VolumeMuteButton"
+                                Grid.Column="0"
                                 Width="24" Height="24"
                                 Background="Transparent"
                                 BorderThickness="0"
@@ -622,7 +802,8 @@
                         </Button>
 
                         <!-- Deslizador de volumen -->
-                        <Slider Grid.Column="1"
+                        <Slider x:Name="VolumeSlider"
+                                Grid.Column="1"
                                 Margin="4,0,4,0"
                                 VerticalAlignment="Center"
                                 Minimum="0"
@@ -632,7 +813,8 @@
                                 ValueChanged="VolumeSlider_ValueChanged"/>
 
                         <!-- Porcentaje -->
-                        <TextBlock Grid.Column="2"
+                        <TextBlock x:Name="VolumePercentLabel"
+                                   Grid.Column="2"
                                    Text="{Binding VolumePercentText, RelativeSource={RelativeSource AncestorType=Window}}"
                                    Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
                                    Effect="{Binding DockTextShadowEffect, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -649,7 +831,7 @@
                         HorizontalAlignment="Stretch"
                         Margin="2,2,2,3"
                         Padding="8,5"
-                        CornerRadius="6"
+                        CornerRadius="8"
                         BorderBrush="#1EFFFFFF"
                         BorderThickness="1"
                         Cursor="Hand"
@@ -747,19 +929,158 @@
                     </StackPanel>
                 </Border>
 
+                <!-- Monitor de Cuotas de IA (5HR / Week) -->
+                <Border x:Name="AiQuotaPanel"
+                        HorizontalAlignment="Stretch"
+                        Margin="2,2,2,3"
+                        Padding="8,5"
+                        CornerRadius="8"
+                        BorderBrush="#1EFFFFFF"
+                        BorderThickness="1"
+                        Cursor="Hand"
+                        MouseLeftButtonUp="AiQuotaPanel_MouseLeftButtonUp"
+                        Visibility="{Binding IsAiQuotaVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}"
+                        ToolTip="{Binding AiQuotaTooltip, RelativeSource={RelativeSource AncestorType=Window}}"
+                        ToolTipService.InitialShowDelay="150"
+                        ToolTipService.BetweenShowDelay="80"
+                        ToolTipService.ShowDuration="25000">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="#10FFFFFF"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#22FFFFFF"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <Grid VerticalAlignment="Center">
+                        <!-- Diseño Horizontal de barras (Modo Izquierda / Derecha) -->
+                        <ItemsControl x:Name="AiQuotaHorizontalList"
+                                      ItemsSource="{Binding AiQuotaBars, RelativeSource={RelativeSource AncestorType=Window}}"
+                                      VerticalAlignment="Center"
+                                      Grid.IsSharedSizeScope="True"
+                                      Visibility="{Binding IsHorizontalDock, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBoolConverter}}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,3" ToolTip="{Binding TooltipText}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="AiLabel"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="AiValue"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Label}"
+                                                   Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                   FontSize="9" FontWeight="Bold" Opacity="0.90"
+                                                   VerticalAlignment="Center"
+                                                   MaxWidth="72" TextTrimming="CharacterEllipsis"/>
+                                        <ProgressBar Grid.Column="1" Margin="6,0,6,0" Height="4"
+                                                     VerticalAlignment="Center"
+                                                     Value="{Binding AvailablePercent, Mode=OneWay}"
+                                                     Minimum="0" Maximum="100" BorderThickness="0"
+                                                     Background="#1FFFFFFF" Foreground="{Binding BarBrush}"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding PercentText}"
+                                                   Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                   FontSize="9" FontWeight="SemiBold"
+                                                   VerticalAlignment="Center"
+                                                   MinWidth="26" TextAlignment="Right"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Diseño Vertical de barras (Modo Superior) -->
+                        <ItemsControl x:Name="AiQuotaVerticalList"
+                                      ItemsSource="{Binding AiQuotaBars, RelativeSource={RelativeSource AncestorType=Window}}"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      Visibility="{Binding IsHorizontalDock, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="4,0,4,0" MinWidth="26" ToolTip="{Binding TooltipText}">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Grid.Row="0"
+                                                   Text="{Binding PercentText}"
+                                                   Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                   Effect="{Binding DockTextShadowEffect, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                   FontSize="9.5"
+                                                   FontWeight="SemiBold"
+                                                   HorizontalAlignment="Center"
+                                                   TextAlignment="Center"/>
+                                        <Border Grid.Row="1"
+                                                Width="6"
+                                                Height="50"
+                                                Margin="0,4,0,4"
+                                                CornerRadius="3"
+                                                Background="#1FFFFFFF"
+                                                HorizontalAlignment="Center"
+                                                ClipToBounds="True">
+                                            <ProgressBar Orientation="Vertical"
+                                                         Width="6"
+                                                         Height="50"
+                                                         Minimum="0"
+                                                         Maximum="100"
+                                                         Value="{Binding AvailablePercent, Mode=OneWay}"
+                                                         Background="Transparent"
+                                                         Foreground="{Binding BarBrush}"
+                                                         BorderThickness="0"/>
+                                        </Border>
+                                        <StackPanel Grid.Row="2"
+                                                    Height="22"
+                                                    Orientation="Vertical"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding ProviderShortLabel}"
+                                                       Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                       FontSize="7.5"
+                                                       FontWeight="Bold"
+                                                       Opacity="0.78"
+                                                       HorizontalAlignment="Center"
+                                                       TextAlignment="Center"/>
+                                            <TextBlock Text="{Binding WindowShortLabel}"
+                                                       Foreground="{Binding BarBrush}"
+                                                       FontSize="8.5"
+                                                       FontWeight="Bold"
+                                                       Margin="0,-1,0,0"
+                                                       HorizontalAlignment="Center"
+                                                       TextAlignment="Center"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+                </Border>
+
                 <!-- Gestión de Encendido (Bloquear, Hibernar, Reiniciar, Apagar) -->
                 <Border x:Name="PowerPanel"
                         HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
                         Margin="0,3,0,3"
                         Visibility="{Binding IsPowerVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <StackPanel x:Name="PowerButtonsStack"
+                                Orientation="{Binding ActionButtonsOrientation, RelativeSource={RelativeSource AncestorType=Window}}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
                         <Button Style="{StaticResource BottomIconButtonStyle}"
+                                Width="{Binding ActionButtonSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                Height="{Binding ActionButtonSize, RelativeSource={RelativeSource AncestorType=Window}}"
                                 Click="PowerLock_Click">
                             <Button.ToolTip>
                                 <ToolTip Style="{StaticResource DockToolTipStyle}"
                                          Content="{local:Loc Key=Dock_PowerLock}"/>
                             </Button.ToolTip>
-                            <Viewbox Width="16" Height="16">
+                            <Viewbox Width="{Binding ActionButtonIconSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                     Height="{Binding ActionButtonIconSize, RelativeSource={RelativeSource AncestorType=Window}}">
                                 <Grid Width="24" Height="24">
                                     <Path Style="{StaticResource DockActionStrokeIconStyle}"
                                           Data="M8.5,10V6.5A3.5,3.5 0 0 1 15.5,6.5V10 M6.5,10H17.5A1.5,1.5 0 0 1 19,11.5V18.5A1.5,1.5 0 0 1 17.5,20H6.5A1.5,1.5 0 0 1 5,18.5V11.5A1.5,1.5 0 0 1 6.5,10Z M12,14V16.5"/>
@@ -767,13 +1088,16 @@
                             </Viewbox>
                         </Button>
                         <Button Style="{StaticResource BottomIconButtonStyle}"
-                                Margin="8,0,0,0"
+                                Width="{Binding ActionButtonSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                Height="{Binding ActionButtonSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                Margin="{Binding ActionButtonSpacingMargin, RelativeSource={RelativeSource AncestorType=Window}}"
                                 Click="PowerHibernate_Click">
                             <Button.ToolTip>
                                 <ToolTip Style="{StaticResource DockToolTipStyle}"
                                          Content="{local:Loc Key=Dock_PowerHibernate}"/>
                             </Button.ToolTip>
-                            <Viewbox Width="16" Height="16">
+                            <Viewbox Width="{Binding ActionButtonIconSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                     Height="{Binding ActionButtonIconSize, RelativeSource={RelativeSource AncestorType=Window}}">
                                 <Grid Width="24" Height="24">
                                     <Path Style="{StaticResource DockActionStrokeIconStyle}"
                                           Data="M12,3 A6,6 0 0 0 21,12 A9,9 0 1 1 12,3 Z"/>
@@ -781,13 +1105,16 @@
                             </Viewbox>
                         </Button>
                         <Button Style="{StaticResource BottomIconButtonStyle}"
-                                Margin="8,0,0,0"
+                                Width="{Binding ActionButtonSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                Height="{Binding ActionButtonSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                Margin="{Binding ActionButtonSpacingMargin, RelativeSource={RelativeSource AncestorType=Window}}"
                                 Click="PowerRestart_Click">
                             <Button.ToolTip>
                                 <ToolTip Style="{StaticResource DockToolTipStyle}"
                                          Content="{local:Loc Key=Dock_PowerRestart}"/>
                             </Button.ToolTip>
-                            <Viewbox Width="16" Height="16">
+                            <Viewbox Width="{Binding ActionButtonIconSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                     Height="{Binding ActionButtonIconSize, RelativeSource={RelativeSource AncestorType=Window}}">
                                 <Grid Width="24" Height="24">
                                     <Path Style="{StaticResource DockActionStrokeIconStyle}"
                                           Data="M21,12 A9,9 0 1 1 12,3 C14.52,3 16.93,4 18.74,5.74 L21,8 M21,3 V8 H16"/>
@@ -795,13 +1122,16 @@
                             </Viewbox>
                         </Button>
                         <Button Style="{StaticResource BottomIconButtonStyle}"
-                                Margin="8,0,0,0"
+                                Width="{Binding ActionButtonSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                Height="{Binding ActionButtonSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                Margin="{Binding ActionButtonSpacingMargin, RelativeSource={RelativeSource AncestorType=Window}}"
                                 Click="PowerShutdown_Click">
                             <Button.ToolTip>
                                 <ToolTip Style="{StaticResource DockToolTipStyle}"
                                          Content="{local:Loc Key=Dock_PowerShutdown}"/>
                             </Button.ToolTip>
-                            <Viewbox Width="16" Height="16">
+                            <Viewbox Width="{Binding ActionButtonIconSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                     Height="{Binding ActionButtonIconSize, RelativeSource={RelativeSource AncestorType=Window}}">
                                 <Grid Width="24" Height="24">
                                     <Path Style="{StaticResource DockActionStrokeIconStyle}"
                                           Data="M12,3 V11 M18.36,6.64 A9,9 0 1 1 5.64,6.64"/>
@@ -814,9 +1144,10 @@
                 <!-- Modo Caffeine (Mantener pantalla encendida) -->
                 <Border x:Name="CaffeinePanel"
                         HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
                         Margin="0,2,0,2"
                         Padding="8,4"
-                        CornerRadius="6"
+                        CornerRadius="8"
                         Cursor="Hand"
                         MouseLeftButtonUp="CaffeinePanel_MouseLeftButtonUp"
                         Visibility="{Binding IsCaffeineVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}"
@@ -831,8 +1162,11 @@
                             </Style.Triggers>
                         </Style>
                     </Border.Style>
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Viewbox Width="15" Height="15" Margin="0,0,5,0">
+                    <StackPanel x:Name="CaffeineStack"
+                                Orientation="{Binding ActionButtonsOrientation, RelativeSource={RelativeSource AncestorType=Window}}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                        <Viewbox x:Name="CaffeineIconViewbox" Width="15" Height="15" Margin="0,0,5,0" HorizontalAlignment="Center">
                             <Grid Width="24" Height="24">
                                 <Path Data="M2,19h18v2H2V19z M20,3H4v10c0,2.21,1.79,4,4,4h6c2.21,0,4-1.79,4-4v-3h2c1.1,0,2-0.9,2-2V5C22,3.9,21.1,3,20,3z M16,13c0,1.1-0.9,2-2,2H8c-1.1,0-2-0.9-2-2V5h10V13z M20,8h-2V5h2V8z"
                                       Fill="{Binding CaffeineBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
@@ -842,6 +1176,7 @@
                                    Foreground="{Binding CaffeineBrush, RelativeSource={RelativeSource AncestorType=Window}}"
                                    FontSize="10"
                                    FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"
                                    VerticalAlignment="Center"/>
                     </StackPanel>
                 </Border>
@@ -849,12 +1184,14 @@
                 <!-- Panel de Paginación (Reordenable como parte de los widgets) -->
                 <Grid x:Name="DockPaginationGrid"
                       Margin="0,4,0,4"
+                      VerticalAlignment="Center"
                       Visibility="{Binding PaginationVisibility}"
                       PreviewMouseWheel="PaginationPanel_MouseWheel">
                     <!-- Modo Clásico: Botones Anterior / Siguiente -->
                     <StackPanel x:Name="PaginationPanel"
-                                Orientation="Horizontal"
+                                Orientation="{Binding ActionButtonsOrientation, RelativeSource={RelativeSource AncestorType=Window}}"
                                 HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
                                 Visibility="{Binding ButtonPaginationVisibility}">
                         <Button Style="{StaticResource BottomIconButtonStyle}"
                                 Width="28"
@@ -862,12 +1199,17 @@
                                 Click="PrevPage_Click">
                             <Viewbox Width="14" Height="14">
                                 <Grid Width="24" Height="24">
-                                    <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M14.5,5L8.5,12L14.5,19"/>
+                                    <Path Style="{StaticResource DockActionStrokeIconStyle}"
+                                          Data="{Binding PaginationPrevIconData, RelativeSource={RelativeSource AncestorType=Window}}"/>
                                 </Grid>
                             </Viewbox>
                         </Button>
-                        <TextBlock Text="{Binding PageInfo}"
+                        <TextBlock x:Name="PaginationLabel"
+                                   Text="{Binding PageInfo}"
                                    Margin="8,0,8,0"
+                                   FontSize="10.5"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"
                                    VerticalAlignment="Center"
                                    Foreground="{Binding DockTextBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
                         <Button Style="{StaticResource BottomIconButtonStyle}"
@@ -876,7 +1218,8 @@
                                 Click="NextPage_Click">
                             <Viewbox Width="14" Height="14">
                                 <Grid Width="24" Height="24">
-                                    <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M9.5,5L15.5,12L9.5,19"/>
+                                    <Path Style="{StaticResource DockActionStrokeIconStyle}"
+                                          Data="{Binding PaginationNextIconData, RelativeSource={RelativeSource AncestorType=Window}}"/>
                                 </Grid>
                             </Viewbox>
                         </Button>
@@ -886,6 +1229,7 @@
                     <StackPanel x:Name="PaginationSliderPanel"
                                 Orientation="Vertical"
                                 HorizontalAlignment="Stretch"
+                                VerticalAlignment="Center"
                                 Margin="8,0,8,0"
                                 Visibility="{Binding SliderPaginationVisibility}">
                         <TextBlock Text="{Binding PageInfo}"
@@ -907,41 +1251,55 @@
                 </Grid>
             </StackPanel>
 
-            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,10">
+            <StackPanel x:Name="ActionButtonsPanel"
+                        Grid.Row="2"
+                        Orientation="{Binding ActionButtonsOrientation, RelativeSource={RelativeSource AncestorType=Window}}"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Margin="0,10,0,10">
                 <Button Style="{StaticResource BottomIconButtonStyle}"
                         x:Name="AddButton"
+                        Width="{Binding ActionButtonSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                        Height="{Binding ActionButtonSize, RelativeSource={RelativeSource AncestorType=Window}}"
                         Click="AddShortcutMenu_Click">
                     <Button.ToolTip>
                         <ToolTip Style="{StaticResource DockToolTipStyle}"
                                  Content="{local:Loc Key=Dock_TooltipAdd}"/>
                     </Button.ToolTip>
-                    <Viewbox Width="16" Height="16">
+                    <Viewbox Width="{Binding ActionButtonIconSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                             Height="{Binding ActionButtonIconSize, RelativeSource={RelativeSource AncestorType=Window}}">
                         <Grid Width="24" Height="24">
                             <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M12,7V17 M7,12H17"/>
                         </Grid>
                     </Viewbox>
                 </Button>
                 <Button Style="{StaticResource BottomIconButtonStyle}"
-                        Margin="8,0,0,0"
+                        Width="{Binding ActionButtonSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                        Height="{Binding ActionButtonSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                        Margin="{Binding ActionButtonSpacingMargin, RelativeSource={RelativeSource AncestorType=Window}}"
                         Click="Settings_Click">
                     <Button.ToolTip>
                         <ToolTip Style="{StaticResource DockToolTipStyle}"
                                  Content="{local:Loc Key=Dock_TooltipSettings}"/>
                     </Button.ToolTip>
-                    <Viewbox Width="16" Height="16">
+                    <Viewbox Width="{Binding ActionButtonIconSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                             Height="{Binding ActionButtonIconSize, RelativeSource={RelativeSource AncestorType=Window}}">
                         <Grid Width="24" Height="24">
                             <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M6.5,8H17.5 M6.5,12H17.5 M6.5,16H17.5"/>
                         </Grid>
                     </Viewbox>
                 </Button>
                 <Button Style="{StaticResource BottomIconButtonStyle}"
-                        Margin="8,0,0,0"
+                        Width="{Binding ActionButtonSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                        Height="{Binding ActionButtonSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                        Margin="{Binding ActionButtonSpacingMargin, RelativeSource={RelativeSource AncestorType=Window}}"
                         Click="ToggleEdit_Click">
                     <Button.ToolTip>
                         <ToolTip Style="{StaticResource DockToolTipStyle}"
                                  Content="{local:Loc Key=Dock_TooltipEditMode}"/>
                     </Button.ToolTip>
-                    <Viewbox Width="16" Height="16">
+                    <Viewbox Width="{Binding ActionButtonIconSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                             Height="{Binding ActionButtonIconSize, RelativeSource={RelativeSource AncestorType=Window}}">
                         <Grid Width="24" Height="24">
                             <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M6.5,17.5L9.75,16.75L17.75,8.75L15.25,6.25L7.25,14.25Z"/>
                             <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M13.75,7.75L16.25,10.25"/>
@@ -949,13 +1307,16 @@
                     </Viewbox>
                 </Button>
                 <Button Style="{StaticResource BottomIconButtonStyle}"
-                        Margin="8,0,0,0"
+                        Width="{Binding ActionButtonSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                        Height="{Binding ActionButtonSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                        Margin="{Binding ActionButtonSpacingMargin, RelativeSource={RelativeSource AncestorType=Window}}"
                         Click="Close_Click">
                     <Button.ToolTip>
                         <ToolTip Style="{StaticResource DockToolTipStyle}"
                                  Content="{local:Loc Key=Dock_TooltipClose}"/>
                     </Button.ToolTip>
-                    <Viewbox Width="16" Height="16">
+                    <Viewbox Width="{Binding ActionButtonIconSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                             Height="{Binding ActionButtonIconSize, RelativeSource={RelativeSource AncestorType=Window}}">
                         <Grid Width="24" Height="24">
                             <Path Style="{StaticResource DockActionStrokeIconStyle}" Data="M8,8L16,16 M16,8L8,16"/>
                         </Grid>

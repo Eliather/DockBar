@@ -104,9 +104,6 @@ public static class AutoStartService
 #if DEBUG
         try
         {
-            // En desarrollo (DEBUG), nunca registramos ejecutables de desarrollo (bin\Debug, etc.)
-            // para evitar que Windows ejecute la versión en desarrollo en el arranque del sistema.
-            // Si el registro quedó apuntando previamente a una carpeta de compilación, lo limpiamos.
             using var key = Registry.CurrentUser.OpenSubKey(RunKey, true);
             var currentVal = key?.GetValue(ValueName) as string;
             if (!string.IsNullOrWhiteSpace(currentVal) &&
@@ -114,7 +111,7 @@ public static class AutoStartService
                  currentVal.Contains(@"\bin\Release\", StringComparison.OrdinalIgnoreCase)))
             {
                 key?.DeleteValue(ValueName, false);
-                Debug.WriteLine("[AutoStartService] Se eliminó la ruta de desarrollo residual del inicio de Windows.");
+                Debug.WriteLine("[AutoStartService] Removed residual dev path from Windows startup.");
             }
         }
         catch (Exception ex)
